@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<!--
+  MINHAS FINANÇAS — Copyright © 2026 Matheus. Todos os direitos reservados.
+
+  ANTES DE USAR, troque as duas linhas marcadas com "TROQUE AQUI" lá embaixo
+  pelos dados do SEU projeto no Supabase (Project Settings → API).
+
+  A chave "publishable"/"anon" pode ficar aqui à vista — ela é feita para isso.
+  Quem protege os dados é o RLS do banco.sql, não o segredo da chave.
+
+  A chave "service_role" NUNCA pode entrar neste arquivo. Ela ignora o RLS e
+  dá acesso a tudo de todo mundo. Ela vive só no servidor do Supabase.
+-->
+<html lang="pt-BR" translate="no">
+<head>
+  <meta charset="utf-8">
+  <meta name="google" content="notranslate">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#4f46e5">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Finanças">
+  <title>Minhas Finanças</title>
+
+  <!-- Se alguém tentar embutir o site num iframe para roubar a sessão, quebra pra fora. -->
+  <script>if (window.top !== window.self) { try { window.top.location = window.self.location; } catch (e) { document.documentElement.style.display = "none"; } }</script>
+
+  <link rel="stylesheet" href="style.css?v=1">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body class="notranslate">
+
+  <!-- ─── TOPO ─────────────────────────────────────────────────────── -->
+  <header class="topo" id="topo" style="display:none">
+    <div class="topo-dentro">
+      <div class="topo-esq" onclick="voltarInicio()">
+        <button id="btn-voltar" class="topo-voltar" style="display:none"
+                aria-label="Voltar" onclick="event.stopPropagation(); voltarTela()">
+          <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <div class="topo-marca">
+          <span>💰</span>
+          <div>
+            <h1>MINHAS FINANÇAS</h1>
+            <p>Seu dinheiro sob controle</p>
+          </div>
+        </div>
+      </div>
+      <button class="topo-perfil" onclick="abrirAjustes()" aria-label="Ajustes">
+        <span id="iniciais">?</span>
+      </button>
+    </div>
+  </header>
+
+  <main id="cartao" class="cartao">
+    <!-- Tela de entrada (login/cadastro/recuperar). Montada pelo script. -->
+    <div id="area-login"></div>
+
+    <!-- Menu principal. Só aparece depois de entrar. -->
+    <nav id="menu" class="menu" style="display:none">
+      <button class="menu-botao" onclick="abrirResumo()">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+        Resumo do mês
+      </button>
+      <button class="menu-botao" onclick="abrirLancar('saida')">
+        <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+        Lançar saída
+      </button>
+      <button class="menu-botao" onclick="abrirLancar('entrada')">
+        <svg viewBox="0 0 24 24"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+        Lançar entrada
+      </button>
+      <button class="menu-botao" onclick="abrirContas()">
+        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Contas a pagar
+      </button>
+      <button class="menu-botao" onclick="abrirHistorico()">
+        <svg viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><line x1="8" y1="11" x2="16" y2="11"/><line x1="8" y1="15" x2="13" y2="15"/></svg>
+        Histórico
+      </button>
+      <button class="menu-botao" onclick="abrirAjustes()">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        Ajustes
+      </button>
+    </nav>
+
+    <!-- Toda tela interna é desenhada aqui dentro. -->
+    <div id="area" class="area"></div>
+  </main>
+
+  <div id="avisos" class="avisos" aria-live="polite"></div>
+
+  <script>
+    /* ══ TROQUE AQUI ══════════════════════════════════════════════════
+       Supabase → seu projeto → Project Settings → API
+       - URL do projeto
+       - chave "publishable" (ou "anon public", nos projetos mais antigos)
+       NUNCA ponha aqui a chave "service_role".
+    ═══════════════════════════════════════════════════════════════════ */
+    const SUPABASE_URL = "https://SEUPROJETO.supabase.co";
+    const SUPABASE_KEY = "COLE_AQUI_A_CHAVE_PUBLICAVEL";
+  </script>
+  <script src="script.js?v=1"></script>
+</body>
+</html>
