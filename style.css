@@ -453,7 +453,25 @@ body.escuro .lancamento-tela.entrada .lancamento-cabecalho-icone { background: #
 .lancamento-form .campo input,
 .lancamento-form .campo select { display: block; padding: 0 13px; background: var(--fundo); }
 
-.lancamento-form input[type="date"] { min-width: 0; max-width: 100%; }
+.lancamento-form .lancamento-campo-data { width: 100%; min-width: 0; max-width: 100%; }
+
+.lancamento-form input[type="date"] {
+  display: block;
+  box-sizing: border-box;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  inline-size: 100%;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.lancamento-form input[type="date"]::-webkit-date-and-time-value {
+  min-width: 0;
+  text-align: left;
+}
 
 .lancamento-valor {
   display: grid;
