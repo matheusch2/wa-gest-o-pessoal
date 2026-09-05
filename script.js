@@ -158,7 +158,7 @@ function telaLogin(modo) {
       <label>E-mail</label>
       <div class="campo-icone">
         ${ICO_EMAIL}
-        <input type="email" id="email" placeholder="voce@email.com" autocomplete="email">
+        <input type="email" id="email" placeholder="seu e-mail" autocomplete="email">
       </div>
     </div>`;
 
