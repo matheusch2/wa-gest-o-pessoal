@@ -27,7 +27,7 @@
   <!-- Se alguém tentar embutir o site num iframe para roubar a sessão, quebra pra fora. -->
   <script>if (window.top !== window.self) { try { window.top.location = window.self.location; } catch (e) { document.documentElement.style.display = "none"; } }</script>
 
-  <link rel="stylesheet" href="style.css?v=20">
+  <link rel="stylesheet" href="style.css?v=21">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
@@ -67,11 +67,11 @@
         Resumo do mês
       </button>
       <button class="menu-botao" onclick="abrirLancar('saida')">
-        <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+        <svg viewBox="0 0 24 24"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
         Lançar saída
       </button>
       <button class="menu-botao" onclick="abrirLancar('entrada')">
-        <svg viewBox="0 0 24 24"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+        <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
         Lançar entrada
       </button>
       <button class="menu-botao" onclick="abrirContas()">
@@ -119,9 +119,9 @@
   <script src="js/core.js?v=2"></script>
   <script src="js/auth.js?v=1"></script>
   <script src="js/resumo.js?v=6"></script>
-  <script src="js/lancamentos.js?v=5"></script>
+  <script src="js/lancamentos.js?v=6"></script>
   <script src="js/contas.js?v=2"></script>
-  <script src="js/historico.js?v=2"></script>
+  <script src="js/historico.js?v=3"></script>
   <script src="js/ajustes.js?v=1"></script>
   <script src="js/embreve.js?v=1"></script>
   <script src="js/app.js?v=1"></script>

@@ -5,6 +5,20 @@
 
 /* ═══ LANÇAR ══════════════════════════════════════════════════════════ */
 
+/* A seta mostra o FLUXO do dinheiro, não o efeito no saldo: entrada cai
+   na conta (↓) e saída vai embora dela (↑). É a leitura que o app do
+   banco já ensinou ao olho de quem usa.
+
+   O outro caminho possível seria "saldo sobe / saldo desce" (entrada ↑),
+   mas nesta tela o valor já vem com sinal (+/−) e cor (verde/vermelho):
+   se a seta repetisse "isso é bom ou ruim" pela terceira vez, não
+   acrescentaria nada. Apontando o fluxo, ela informa algo novo.
+
+   Estão nomeadas aqui de propósito: espalhar o SVG solto pelas telas foi
+   o que deixou o menu dizendo uma coisa e as listas outra. */
+const ICO_SETA_ENTRADA = `<svg viewBox="0 0 24 24" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>`;
+const ICO_SETA_SAIDA = `<svg viewBox="0 0 24 24" aria-hidden="true"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>`;
+
 function abrirLancar(tipo) { abrirTela(() => desenharLancar(tipo)); }
 
 function desenharLancar(tipo) {
@@ -15,9 +29,7 @@ function desenharLancar(tipo) {
   // de virar dois lançamentos: a segunda gravação bate no índice único.
   const chave = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random());
 
-  const seta = entrada
-    ? `<svg viewBox="0 0 24 24" aria-hidden="true"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>`
-    : `<svg viewBox="0 0 24 24" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>`;
+  const seta = entrada ? ICO_SETA_ENTRADA : ICO_SETA_SAIDA;
   const icoTexto = `<svg viewBox="0 0 24 24" aria-hidden="true"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="16" y2="12"/><line x1="4" y1="17" x2="12" y2="17"/></svg>`;
   const icoData = `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`;
   const icoEtiqueta = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.6 13.4 12 22l-9-9V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>`;
@@ -130,9 +142,7 @@ function abrirEdicaoLancamento(id, volta) {
 
   const entrada = l.tipo === "entrada";
   const cats = categorias.filter(c => c.tipo === l.tipo);
-  const seta = entrada
-    ? `<svg viewBox="0 0 24 24" aria-hidden="true"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>`
-    : `<svg viewBox="0 0 24 24" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>`;
+  const seta = entrada ? ICO_SETA_ENTRADA : ICO_SETA_SAIDA;
   const icoTexto = `<svg viewBox="0 0 24 24" aria-hidden="true"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="16" y2="12"/><line x1="4" y1="17" x2="12" y2="17"/></svg>`;
   const icoData = `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`;
   const icoEtiqueta = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.6 13.4 12 22l-9-9V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>`;
