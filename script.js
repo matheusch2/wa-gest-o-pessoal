@@ -514,7 +514,7 @@ function linhaLancamento(l) {
   const entrada = l.tipo === "entrada";
   return `
     <div class="item">
-      <div class="item-icone">${entrada ? "↓" : "↑"}</div>
+      <div class="item-icone">${entrada ? "↑" : "↓"}</div>
       <div class="item-txt">
         <strong>${esc(l.descricao || l.categoria)}</strong>
         <small>${esc(l.categoria)} · ${dataBR(l.data)}</small>
@@ -842,7 +842,7 @@ function desenharHistorico() {
         <div class="lista">
           ${itens.map(l => `
             <div class="item" id="lanc-${l.id}">
-              <div class="item-icone">${l.tipo === "entrada" ? "↓" : "↑"}</div>
+              <div class="item-icone">${l.tipo === "entrada" ? "↑" : "↓"}</div>
               <div class="item-txt">
                 <strong>${esc(l.descricao || l.categoria)}</strong>
                 <small>${esc(l.categoria)} · ${dataBR(l.data)}</small>
