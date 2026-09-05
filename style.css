@@ -411,19 +411,14 @@ button:active:not(:disabled) { transform: scale(.98); }
 .lancamento-tela { width: 100%; }
 
 .lancamento-cabecalho {
-  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 11px;
-  min-height: 42px;
   margin-bottom: 16px;
-  text-align: center;
 }
 
 .lancamento-cabecalho-icone {
-  position: absolute;
-  left: 0;
   display: grid;
   place-items: center;
   width: 42px;
@@ -473,16 +468,28 @@ body.escuro .lancamento-tela.entrada .lancamento-cabecalho-icone { background: #
   -webkit-appearance: none;
   appearance: none;
   text-align: center;
+  line-height: 48px;
 }
 
 .lancamento-form input[type="date"]::-webkit-date-and-time-value {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 100%;
+  height: 100%;
   min-width: 0;
+  margin: 0;
+  padding: 0;
   text-align: center;
 }
 
 .lancamento-form input[type="date"]::-webkit-datetime-edit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 100%;
+  height: 100%;
+  padding: 0;
   text-align: center;
 }
 
