@@ -160,7 +160,7 @@ function linhaLancamento(l) {
   const entrada = l.tipo === "entrada";
   return `
     <div class="item">
-      <div class="item-icone">${iconeDoLancamento(l)}</div>
+      <div class="item-icone ${entrada ? "entrada" : "saida"}">${iconeDoLancamento(l)}</div>
       <div class="item-txt">
         <strong>${esc(l.descricao || l.categoria)}</strong>
         <small>${esc(l.categoria)} · ${dataBR(l.data)}</small>
