@@ -5,7 +5,12 @@
 
 /* ═══ CONTAS A PAGAR ══════════════════════════════════════════════════ */
 
-function abrirContas() { abrirTela(desenharContas); }
+// Qual aba está aberta. Trocar de aba não empilha tela: é a mesma tela
+// mostrando outro recorte, então o "Voltar" continua indo pro menu.
+let _contasFiltro = "todos";
+
+function abrirContas() { _contasFiltro = "todos"; abrirTela(desenharContas); }
+function filtrarContas(f) { _contasFiltro = f; desenharContas(); }
 
 function desenharContas() {
   destruirGrafico();
@@ -15,6 +20,20 @@ function desenharContas() {
   const total = abertas.reduce((s, c) => s + Number(c.valor), 0);
 
   const vencidas = abertas.filter(c => c.vencimento < hoje);
+  // "Vencendo" é o que vence de hoje até 5 dias — a janela em que ainda dá
+  // tempo de pagar sem juros.
+  const vencendo = abertas.filter(c => {
+    const dias = Math.round((_parseDataLocal(c.vencimento) - _parseDataLocal(hoje)) / 86400000);
+    return dias >= 0 && dias <= 5;
+  });
+
+  const abas = [
+    { id: "todos", rotulo: "A pagar", itens: abertas, vazio: "Nenhuma conta em aberto. 🎉" },
+    { id: "vencendo", rotulo: "Vencendo", itens: vencendo, vazio: "Nada vencendo nos próximos dias." },
+    { id: "vencidos", rotulo: "Vencidos", itens: vencidas, vazio: "Nenhuma conta vencida. 🎉" },
+    { id: "pagos", rotulo: "Pagos", itens: pagas, vazio: "Nenhuma conta paga ainda." },
+  ];
+  const abaAtual = abas.find(a => a.id === _contasFiltro) || abas[0];
 
   const linha = (c) => {
     const dias = Math.round((_parseDataLocal(c.vencimento) - _parseDataLocal(hoje)) / 86400000);
@@ -65,18 +84,15 @@ function desenharContas() {
       Nova conta
     </button>
 
-    ${abertas.length ? `
-      <div class="bloco" style="margin-top:14px">
-        <div class="bloco-topo"><h2>Em aberto</h2></div>
-        <div class="lista">${abertas.map(linha).join("")}</div>
-      </div>`
-    : `<div class="bloco" style="margin-top:14px"><p class="vazio">Nenhuma conta em aberto. 🎉</p></div>`}
+    <div class="contas-abas">
+      ${abas.map(a => `
+        <button class="contas-aba${a.id === abaAtual.id ? " ativa" : ""}"
+                onclick="filtrarContas('${a.id}')">${a.rotulo}</button>`).join("")}
+    </div>
 
-    ${pagas.length ? `
-      <div class="bloco">
-        <div class="bloco-topo"><h2>Pagas recentemente</h2></div>
-        <div class="lista">${pagas.map(linha).join("")}</div>
-      </div>` : ""}
+    ${abaAtual.itens.length
+      ? `<div class="lista">${abaAtual.itens.map(linha).join("")}</div>`
+      : `<div class="bloco"><p class="vazio">${abaAtual.vazio}</p></div>`}
 
     <button class="botao-fraco" onclick="voltarInicio()">Voltar</button>
   `;

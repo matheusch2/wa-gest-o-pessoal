@@ -394,6 +394,30 @@ body.escuro .item.vencendo { border-color: #574a24; background: #322c17; }
 }
 .conta-repete input { width: 20px !important; height: 20px !important; min-width: 20px; margin: 0; accent-color: var(--marca); }
 
+/* Abas no desenho das abas de boletos do WA Aqua: dividem a largura por
+   igual e a ativa se marca por cor e sublinhado. */
+.contas-abas {
+  display: flex;
+  border-bottom: 1px solid var(--borda);
+  margin: 16px 0 14px;
+}
+
+.contas-aba {
+  flex: 1;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  padding: 9px 3px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fraco);
+  cursor: pointer;
+  text-align: center;
+  width: auto;
+}
+.contas-aba.ativa { color: var(--marca-txt); border-bottom-color: var(--marca-txt); }
+
 /* Quanto eu devo é O número desta tela — sai do cantinho e vira o topo. */
 .contas-total {
   background: linear-gradient(115deg, var(--marca-esc), var(--marca));
