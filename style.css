@@ -192,6 +192,10 @@ body {
 
 .menu-botao:active { background: var(--marca-toque); }
 
+/* Em número ímpar de botões, o último ocupa a linha inteira: um bloco
+   sozinho num canto parece que faltou alguma coisa ali do lado. */
+.menu-botao:last-child:nth-child(odd) { grid-column: 1 / -1; }
+
 .menu-botao svg {
   width: 30px;
   height: 30px;
