@@ -188,3 +188,86 @@ window.addEventListener("popstate", () => {
 function destruirGrafico() {
   if (grafico) { try { grafico.destroy(); } catch (e) {} grafico = null; }
 }
+
+/* ═══ DINHEIRO NA DIGITAÇÃO ═══════════════════════════════════════════
+   Enquanto a pessoa digita, o campo vai pondo o ponto de milhar e
+   guardando a vírgula pros centavos: "250000" aparece como "250.000".
+   Sem isso, um valor de seis dígitos vira uma fileira de números que
+   ninguém confere de olho — e é dinheiro.
+
+   O ponto digitado vira vírgula. O teclado do celular quase sempre
+   oferece ponto no lugar da vírgula, e quem digita "250.75" quer
+   R$ 250,75. Se o ponto fosse tratado como milhar aqui, viraria
+   R$ 25.075,00 — erro de 100x que passa por qualquer validação de
+   "número positivo" e vai pro banco calado. */
+
+function _formatarMoedaDigitando(input, evento) {
+  const posicao = input.selectionStart;
+  const tamanhoAntes = input.value.length;
+
+  let v = input.value;
+
+  // Só o ponto RECÉM-DIGITADO vira vírgula, e é por isso que o evento é
+  // preciso aqui: os outros pontos do campo foram postos por esta função
+  // como separador de milhar. Sem essa distinção, ao digitar o quinto
+  // dígito de "2.500" o ponto do milhar virava vírgula e R$ 250.000
+  // viravam R$ 2,50.
+  if (evento?.data === "." && posicao > 0) {
+    v = v.slice(0, posicao - 1) + "," + v.slice(posicao);
+  }
+
+  // A esta altura todo ponto restante é separador de milhar: sai pra
+  // contagem ser refeita do zero logo abaixo.
+  v = v.replace(/[^\d,]/g, "");
+
+  const pedacos = v.split(",");
+  if (pedacos.length > 2) v = pedacos[0] + "," + pedacos.slice(1).join("");
+
+  let [inteiro, centavos] = v.split(",");
+  if (centavos !== undefined) centavos = centavos.slice(0, 2); // dinheiro tem 2 casas
+  const inteiroFmt = (inteiro || "").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+
+  input.value = centavos !== undefined ? inteiroFmt + "," + centavos : inteiroFmt;
+
+  // Devolve o cursor pro lugar: sem isto, cada ponto inserido joga o
+  // cursor pro fim e a pessoa digita o resto do número fora de ordem.
+  const diferenca = input.value.length - tamanhoAntes;
+  try { input.setSelectionRange(posicao + diferenca, posicao + diferenca); } catch (e) {}
+}
+
+// Ao sair do campo, escreve por extenso com os centavos: "250" vira
+// "250,00". A pessoa confere o valor final antes de salvar.
+function formatarMoedaBlur(input) {
+  const v = (input.value || "").trim();
+  if (!v) return;
+  const n = parseMoedaBR(v);
+  if (n === null) { input.value = ""; return; }
+  input.value = n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function _ligarFormatacaoMoeda(input) {
+  if (input._moedaLigada) return;
+  input._moedaLigada = true;
+  input.addEventListener("input", (e) => _formatarMoedaDigitando(input, e));
+  input.addEventListener("blur", () => formatarMoedaBlur(input));
+}
+
+// As telas são desenhadas com innerHTML, então os campos nascem depois que
+// a página carregou. O observador liga a formatação em cada campo de
+// dinheiro que aparece — assim nenhuma tela nova precisa lembrar disso.
+(function observarCamposDeMoeda() {
+  const SELETOR = 'input[type="text"][inputmode="decimal"]';
+  const observador = new MutationObserver(mudancas => {
+    for (const m of mudancas) {
+      for (const no of m.addedNodes) {
+        if (no.nodeType !== 1) continue;
+        if (no.matches?.(SELETOR)) _ligarFormatacaoMoeda(no);
+        no.querySelectorAll?.(SELETOR).forEach(_ligarFormatacaoMoeda);
+      }
+    }
+  });
+  document.addEventListener("DOMContentLoaded", () => {
+    document.querySelectorAll(SELETOR).forEach(_ligarFormatacaoMoeda);
+    observador.observe(document.body, { childList: true, subtree: true });
+  });
+})();
