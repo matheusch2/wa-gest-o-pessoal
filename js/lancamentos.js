@@ -47,7 +47,7 @@ function desenharLancar(tipo) {
         </select>
       </div>
 
-      <div class="campo">
+      <div class="campo lancamento-campo-data">
         <label>Data</label>
         <input type="date" id="lc-data" value="${_hojeLocal()}">
       </div>
