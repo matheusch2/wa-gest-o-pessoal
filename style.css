@@ -520,21 +520,20 @@ button:active:not(:disabled) { transform: scale(.98); }
   grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   gap: 8px;
-  height: 58px !important;
-  padding: 0 14px;
-  border: 2px solid var(--cor-tipo);
+  padding: 0 13px;
+  border: 1.5px solid var(--cor-tipo);
   border-radius: 12px;
   background: var(--papel);
 }
 
-.lancamento-valor > span { color: var(--cor-tipo); font-size: 19px; font-weight: 800; }
+.lancamento-valor > span { color: var(--cor-tipo); font-size: 15px; font-weight: 800; }
 
 .lancamento-valor input {
   height: 100% !important;
   padding: 0 !important;
   border: none !important;
   background: transparent !important;
-  font-size: 27px !important;
+  font-size: 20px !important;
   font-weight: 800;
   color: var(--cor-tipo) !important;
   font-variant-numeric: tabular-nums;
