@@ -16,12 +16,22 @@ function desenharLancar(tipo) {
   const chave = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random());
 
   document.getElementById("area").innerHTML = `
-    <h2 class="titulo">${entrada ? "Nova entrada" : "Nova saída"}</h2>
+    <section class="lancamento-tela ${entrada ? "entrada" : "saida"}">
+    <div class="lancamento-cabecalho">
+      <span class="lancamento-cabecalho-icone" aria-hidden="true">${entrada ? "↑" : "↓"}</span>
+      <div>
+        <h2>${entrada ? "Nova entrada" : "Nova saída"}</h2>
+        <p>${entrada ? "Registre um recebimento" : "Registre um gasto"}</p>
+      </div>
+    </div>
 
-    <div class="bloco">
-      <div class="campo">
+    <div class="bloco lancamento-form">
+      <div class="campo lancamento-campo-valor">
         <label>Valor</label>
-        <input type="text" inputmode="decimal" id="lc-valor" placeholder="0,00" autocomplete="off">
+        <div class="lancamento-valor">
+          <span>R$</span>
+          <input type="text" inputmode="decimal" id="lc-valor" placeholder="0,00" autocomplete="off">
+        </div>
       </div>
 
       <div class="campo">
@@ -29,27 +39,28 @@ function desenharLancar(tipo) {
         <input type="text" id="lc-desc" placeholder="${entrada ? "Ex: salário de agosto" : "Ex: compra do mês"}" autocomplete="off">
       </div>
 
-      <div class="dois">
-        <div class="campo">
-          <label>Data</label>
-          <input type="date" id="lc-data" value="${_hojeLocal()}">
-        </div>
-        <div class="campo">
-          <label>Categoria</label>
-          <select id="lc-cat">
-            ${cats.map(c => `<option value="${esc(c.nome)}">${esc(c.nome)}</option>`).join("")}
-            ${cats.length ? "" : `<option value="Outros">Outros</option>`}
-          </select>
-        </div>
+      <div class="campo">
+        <label>Categoria</label>
+        <select id="lc-cat">
+          ${cats.map(c => `<option value="${esc(c.nome)}">${esc(c.nome)}</option>`).join("")}
+          ${cats.length ? "" : `<option value="Outros">Outros</option>`}
+        </select>
+      </div>
+
+      <div class="campo">
+        <label>Data</label>
+        <input type="date" id="lc-data" value="${_hojeLocal()}">
       </div>
 
       <button class="botao ${entrada ? "entrada" : "saida"}"
               onclick="salvarLancamento(this, '${tipo}', '${chave}')">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
         ${entrada ? "Lançar entrada" : "Lançar saída"}
       </button>
     </div>
 
-    <button class="botao-fraco" onclick="voltarTela()">Voltar</button>
+    <button class="botao-fraco lancamento-voltar" onclick="voltarTela()">Voltar</button>
+    </section>
   `;
 
   document.getElementById("lc-valor").focus();
