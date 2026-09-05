@@ -1074,3 +1074,15 @@ body.escuro .resumo-secao .item-icone.entrada { background: #17372d; }
   .resumo-grafico-total { width: 70px; }
   .resumo-grafico-total strong { font-size: 9.5px; }
 }
+
+/* Aviso das telas ainda por construir (Cartão, Metas, Meu plano). */
+.em-breve-txt { margin: 0; font-size: 14px; line-height: 1.6; color: var(--texto); text-align: center; }
+.em-breve-selo {
+  margin: 14px 0 0;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: var(--fraco);
+}
