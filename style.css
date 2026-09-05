@@ -1,22 +1,22 @@
-/* Minhas Finanças — Copyright © 2026 Matheus.
+/* WA Finanças — Copyright © 2026 Matheus.
 
-   POR QUE ÍNDIGO, E NÃO O VERDE DO WA AQUA:
-   aqui dentro o verde JÁ QUER DIZER "entrou dinheiro" e o vermelho "saiu".
-   Se a marca também fosse verde, o topo, os botões e os valores de entrada
-   ficariam todos no mesmo tom e o olho perderia a única pista que importa.
-   Pelo mesmo motivo a marca não é vermelha nem amarela — o amarelo já é o
-   aviso de conta vencendo.
+   Marca alinhada ao WA Aqua: verde-petróleo como cor principal, dourado
+   como detalhe (vem direto da logo). Dentro do app o verde-esmeralda de
+   "entrada" e o vermelho de "saída" continuam sendo tons DIFERENTES do
+   verde da marca — se fossem iguais, o olho perderia a pista que mais
+   importa aqui dentro: pra onde o dinheiro foi.
 
-   Trocar a identidade toda é trocar as três primeiras linhas de cada bloco
+   Trocar a identidade toda é trocar as primeiras linhas de cada bloco
    abaixo. O resto do arquivo usa só os nomes. */
 
 :root {
-  --marca: #4f46e5;       /* índigo */
-  --marca-esc: #3730a3;
-  --marca-cl: #eceafd;
-  --entrada: #059669;     /* verde = entrou */
-  --saida: #dc2626;       /* vermelho = saiu */
-  --aviso: #b45309;       /* âmbar = vencendo */
+  --marca: #0e6f5c;        /* verde-petróleo, do WA Aqua */
+  --marca-esc: #0a4a3d;
+  --marca-cl: #e3f4ef;
+  --dourado: #c9992e;      /* detalhe dourado, da logo do WA Finanças */
+  --entrada: #059669;      /* verde-esmeralda = entrou (tom distinto da marca) */
+  --saida: #dc2626;        /* vermelho = saiu */
+  --aviso: #b45309;        /* âmbar = vencendo */
   --fundo: #f3f4f8;
   --papel: #ffffff;
   --borda: #e2e2ee;
@@ -25,9 +25,10 @@
 }
 
 body.escuro {
-  --marca: #818cf8;
-  --marca-esc: #312e81;
-  --marca-cl: #241f52;
+  --marca: #4fb59d;
+  --marca-esc: #12352c;
+  --marca-cl: #16332b;
+  --dourado: #e0b74f;
   --fundo: #0e0e1a;
   --papel: #191a2b;
   --borda: #2e2f45;
@@ -87,7 +88,7 @@ body {
 .topo-voltar svg { width: 18px; height: 18px; fill: none; stroke: #fff; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
 
 .topo-marca { display: flex; align-items: center; gap: 10px; min-width: 0; }
-.topo-marca > span { font-size: 26px; }
+.topo-marca img { width: 34px; height: 34px; border-radius: 9px; flex-shrink: 0; }
 .topo-marca h1 { margin: 0; font-size: 15px; font-weight: 800; letter-spacing: .3px; }
 .topo-marca p { margin: 1px 0 0; font-size: 11px; opacity: .85; }
 
@@ -277,6 +278,24 @@ body.escuro .item.vencendo { border-color: #574a24; background: #322c17; }
 
 .campo textarea { min-height: 74px; resize: vertical; }
 
+/* Campo com ícone à esquerda (e-mail/senha, estilo do WA Aqua) */
+.campo-icone { position: relative; }
+.campo-icone svg {
+  position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
+  width: 18px; height: 18px; fill: none; stroke: var(--fraco); stroke-width: 2;
+  stroke-linecap: round; stroke-linejoin: round; pointer-events: none;
+}
+.campo-icone input { padding-left: 40px; }
+.campo-icone input[type="password"],
+.campo-icone input.tem-olho { padding-right: 42px; }
+
+.olho-senha {
+  position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+  width: 32px; height: 32px; border: none; background: none; cursor: pointer;
+  display: grid; place-items: center; color: var(--fraco); padding: 0;
+}
+.olho-senha svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
 .dois { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
 .botao {
@@ -284,7 +303,7 @@ body.escuro .item.vencendo { border-color: #574a24; background: #322c17; }
   background: var(--marca);
   color: #fff;
   border: none;
-  border-radius: 12px;
+  border-radius: 14px;
   padding: 15px;
   font-size: 15.5px;
   font-weight: 800;
@@ -295,6 +314,8 @@ body.escuro .item.vencendo { border-color: #574a24; background: #322c17; }
   gap: 8px;
 }
 
+.botao svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+
 .botao:disabled { opacity: .6; cursor: default; }
 .botao.saida { background: var(--saida); }
 .botao.entrada { background: var(--entrada); }
@@ -304,13 +325,19 @@ body.escuro .item.vencendo { border-color: #574a24; background: #322c17; }
   background: transparent;
   color: var(--marca);
   border: 1.5px solid var(--borda);
-  border-radius: 12px;
+  border-radius: 14px;
   padding: 13px;
   font-size: 14.5px;
   font-weight: 700;
   cursor: pointer;
   margin-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
+
+.botao-fraco svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
 
 
 
@@ -336,23 +363,55 @@ body.escuro .item.vencendo { border-color: #574a24; background: #322c17; }
 
 /* ─── ENTRADA (login) ───────────────────────────────────────────────── */
 
+.login-tela {
+  min-height: 100dvh;
+  background: linear-gradient(180deg, var(--marca-cl) 0%, var(--fundo) 65%), url('assets/fundo.jpg');
+  background-size: cover;
+  background-position: top center;
+  background-blend-mode: normal;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: clamp(28px, 8vh, 64px) 20px 40px;
+}
+
+body.escuro .login-tela { background: linear-gradient(180deg, var(--marca-cl) 0%, var(--fundo) 70%); }
+
+.login-logo { margin-bottom: 16px; }
+.login-logo img {
+  width: 84px; height: 84px;
+  border-radius: 20px;
+  display: block;
+  filter: drop-shadow(0 12px 24px rgba(10,74,61,.32));
+}
+
+.login-titulo { margin: 0 0 3px; font-size: 24px; font-weight: 900; letter-spacing: .4px; color: var(--marca-esc); text-transform: uppercase; text-align: center; }
+body.escuro .login-titulo { color: var(--marca); }
+.login-subtitulo { margin: 0 0 22px; font-size: 13.5px; color: var(--fraco); text-align: center; }
+
 .login {
+  width: 100%;
   max-width: 380px;
-  margin: 6vh auto 0;
   background: var(--papel);
   border: 1px solid var(--borda);
   border-radius: 20px;
-  padding: 28px 24px;
+  padding: 26px 22px;
+  box-shadow: 0 20px 44px -18px rgba(10,74,61,.24);
 }
 
-.login-topo { text-align: center; margin-bottom: 20px; }
-.login-topo .moeda { font-size: 44px; }
-.login-topo h2 { margin: 8px 0 2px; font-size: 21px; font-weight: 900; color: var(--marca); text-transform: uppercase; }
-.login-topo p { margin: 0; font-size: 13.5px; color: var(--fraco); }
-
 .login-msg { display: none; font-size: 13px; margin-bottom: 12px; text-align: center; }
+
+.login-divisor { display: flex; align-items: center; gap: 10px; margin-top: 16px; font-size: 12.5px; color: var(--fraco); }
+.login-divisor::before, .login-divisor::after { content: ""; flex: 1; height: 1px; background: var(--borda); }
+
 .login-troca { text-align: center; margin-top: 14px; font-size: 13.5px; color: var(--fraco); }
 .login-troca button { background: none; border: none; color: var(--marca); font-weight: 800; cursor: pointer; font-size: 13.5px; width: auto; padding: 0; }
+
+.link-esqueci {
+  display: block; width: 100%; margin-top: 12px; background: none; border: none;
+  color: var(--marca); font-weight: 700; font-size: 13.5px; text-decoration: underline;
+  text-underline-offset: 2px; cursor: pointer; padding: 4px; text-align: center;
+}
 
 
 /* ─── AVISOS (no lugar do alert do navegador) ───────────────────────── */

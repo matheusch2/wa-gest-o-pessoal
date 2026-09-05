@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-  MINHAS FINANÇAS — Copyright © 2026 Matheus. Todos os direitos reservados.
+  WA FINANÇAS — Copyright © 2026 Matheus. Todos os direitos reservados.
 
   ANTES DE USAR, troque as duas linhas marcadas com "TROQUE AQUI" lá embaixo
   pelos dados do SEU projeto no Supabase (Project Settings → API).
@@ -16,16 +16,18 @@
   <meta charset="utf-8">
   <meta name="google" content="notranslate">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="theme-color" content="#4f46e5">
+  <meta name="theme-color" content="#0e6f5c">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-title" content="Finanças">
-  <title>Minhas Finanças</title>
+  <meta name="apple-mobile-web-app-title" content="WA Finanças">
+  <link rel="icon" href="assets/logo.webp">
+  <link rel="apple-touch-icon" href="assets/logo.webp">
+  <title>WA Finanças</title>
 
   <!-- Se alguém tentar embutir o site num iframe para roubar a sessão, quebra pra fora. -->
   <script>if (window.top !== window.self) { try { window.top.location = window.self.location; } catch (e) { document.documentElement.style.display = "none"; } }</script>
 
-  <link rel="stylesheet" href="style.css?v=1">
+  <link rel="stylesheet" href="style.css?v=2">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
@@ -40,9 +42,9 @@
           <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
         </button>
         <div class="topo-marca">
-          <span>💰</span>
+          <img src="assets/logo.webp" alt="WA Finanças">
           <div>
-            <h1>MINHAS FINANÇAS</h1>
+            <h1>WA FINANÇAS</h1>
             <p>Seu dinheiro sob controle</p>
           </div>
         </div>
@@ -101,6 +103,6 @@
     const SUPABASE_URL = "https://efewoxdgfcgkodtqbqsz.supabase.co";
     const SUPABASE_KEY = "sb_publishable_qN3WztbmNH1Fzx4fyEqwYw_grooabFt";
   </script>
-  <script src="script.js?v=1"></script>
+  <script src="script.js?v=2"></script>
 </body>
 </html>

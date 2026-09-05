@@ -1,5 +1,5 @@
 /*!
- * MINHAS FINANÇAS — Copyright © 2026 Matheus. Todos os direitos reservados.
+ * WA FINANÇAS — Copyright © 2026 Matheus. Todos os direitos reservados.
  *
  * Site de uma página só: nada aqui navega para outro arquivo. Cada tela é
  * desenhada dentro de #area, e o "Voltar" desmonta e volta ao menu.
@@ -111,6 +111,23 @@ function travar(botao, texto) {
 
 /* ═══ ENTRADA (login) ═════════════════════════════════════════════════ */
 
+const ICO_EMAIL = `<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>`;
+const ICO_CADEADO = `<svg viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>`;
+const ICO_PESSOA = `<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a7 7 0 0 1 14 0v1"/></svg>`;
+const ICO_OLHO_ABERTO = `<svg viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>`;
+const ICO_OLHO_FECHADO = `<svg viewBox="0 0 24 24"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 19c-7 0-11-7-11-7a20.4 20.4 0 0 1 4.22-5.06M9.9 4.24A10.94 10.94 0 0 1 12 5c7 0 11 7 11 7a20.4 20.4 0 0 1-2.16 2.94M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`;
+const ICO_ENTRAR = `<svg viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>`;
+const ICO_PESSOA_MAIS = `<svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="16" y1="11" x2="22" y2="11"/></svg>`;
+
+function alternarSenha(id, botao) {
+  const input = document.getElementById(id);
+  if (!input) return;
+  const vaiMostrar = input.type === "password";
+  input.type = vaiMostrar ? "text" : "password";
+  botao.innerHTML = vaiMostrar ? ICO_OLHO_FECHADO : ICO_OLHO_ABERTO;
+  botao.setAttribute("aria-label", vaiMostrar ? "Esconder senha" : "Mostrar senha");
+}
+
 function telaLogin(modo) {
   document.getElementById("topo").style.display = "none";
   document.getElementById("menu").style.display = "none";
@@ -129,7 +146,20 @@ function telaLogin(modo) {
   const campoSenha = (id, rotulo) => `
     <div class="campo">
       <label>${rotulo}</label>
-      <input type="password" id="${id}" placeholder="Mínimo de 6 caracteres" autocomplete="current-password">
+      <div class="campo-icone">
+        ${ICO_CADEADO}
+        <input type="password" id="${id}" class="tem-olho" placeholder="Mínimo de 6 caracteres" autocomplete="current-password">
+        <button type="button" class="olho-senha" onclick="alternarSenha('${id}', this)" aria-label="Mostrar senha">${ICO_OLHO_ABERTO}</button>
+      </div>
+    </div>`;
+
+  const campoEmail = () => `
+    <div class="campo">
+      <label>E-mail</label>
+      <div class="campo-icone">
+        ${ICO_EMAIL}
+        <input type="email" id="email" placeholder="voce@email.com" autocomplete="email">
+      </div>
     </div>`;
 
   let corpo = "";
@@ -137,47 +167,43 @@ function telaLogin(modo) {
     corpo = `
       ${campoSenha("senha1", "Nova senha")}
       ${campoSenha("senha2", "Repita a nova senha")}
-      <button class="botao" onclick="salvarNovaSenha(this)">Salvar senha</button>`;
+      <button class="botao" onclick="salvarNovaSenha(this)">${ICO_ENTRAR}Salvar senha</button>`;
   } else if (modo === "esqueci") {
     corpo = `
-      <div class="campo">
-        <label>E-mail</label>
-        <input type="email" id="email" placeholder="voce@email.com" autocomplete="email">
-      </div>
-      <button class="botao" onclick="recuperar(this)">Enviar link</button>
+      ${campoEmail()}
+      <button class="botao" onclick="recuperar(this)">${ICO_ENTRAR}Enviar link</button>
       <div class="login-troca">Lembrou? <button onclick="telaLogin('entrar')">Entrar</button></div>`;
   } else {
     corpo = `
       ${modo === "criar" ? `
       <div class="campo">
         <label>Seu nome</label>
-        <input type="text" id="nome" placeholder="Como quer ser chamado" autocomplete="name">
+        <div class="campo-icone">
+          ${ICO_PESSOA}
+          <input type="text" id="nome" placeholder="Como quer ser chamado" autocomplete="name">
+        </div>
       </div>` : ""}
-      <div class="campo">
-        <label>E-mail</label>
-        <input type="email" id="email" placeholder="voce@email.com" autocomplete="email">
-      </div>
+      ${campoEmail()}
       ${campoSenha("senha", "Senha")}
       <button class="botao" onclick="${modo === "criar" ? "criarConta(this)" : "entrar(this)"}">
-        ${modo === "criar" ? "Criar minha conta" : "Entrar"}
+        ${ICO_ENTRAR}${modo === "criar" ? "Criar minha conta" : "Entrar"}
       </button>
-      ${modo === "entrar" ? `<button class="botao-fraco" onclick="telaLogin('esqueci')">Esqueci minha senha</button>` : ""}
-      <div class="login-troca">
-        ${modo === "criar"
-          ? `Já tem conta? <button onclick="telaLogin('entrar')">Entrar</button>`
-          : `Não tem conta? <button onclick="telaLogin('criar')">Criar agora</button>`}
-      </div>`;
+      ${modo === "entrar" ? `<button class="link-esqueci" onclick="telaLogin('esqueci')">Esqueci minha senha</button>` : ""}
+      ${modo === "criar"
+        ? `<div class="login-troca">Já tem conta? <button onclick="telaLogin('entrar')">Entrar</button></div>`
+        : `<div class="login-divisor">Não tem uma conta?</div>
+           <button class="botao-fraco" onclick="telaLogin('criar')">${ICO_PESSOA_MAIS}Criar conta</button>`}`;
   }
 
   area.innerHTML = `
-    <div class="login">
-      <div class="login-topo">
-        <div class="moeda">💰</div>
-        <h2>${titulos[modo]}</h2>
-        <p>${subtitulos[modo]}</p>
+    <div class="login-tela">
+      <div class="login-logo"><img src="assets/logo.webp" alt="WA Finanças"></div>
+      <h2 class="login-titulo">${titulos[modo]}</h2>
+      <p class="login-subtitulo">${subtitulos[modo]}</p>
+      <div class="login">
+        <div class="login-msg" id="login-msg"></div>
+        ${corpo}
       </div>
-      <div class="login-msg" id="login-msg"></div>
-      ${corpo}
     </div>`;
 
   // Enter envia o formulário — no celular é o botão "ir" do teclado.
@@ -461,9 +487,9 @@ function desenharGraficoCategorias(ranking) {
   const cv = document.getElementById("canvas-cat");
   if (!cv || typeof Chart === "undefined") return;
   destruirGrafico();
-  // A primeira fatia é a maior, então ela ganha o índigo da marca. As
+  // A primeira fatia é a maior, então ela ganha o verde-petróleo da marca. As
   // seguintes se afastam no tom para não virar um borrão só.
-  const cores = ["#4f46e5", "#0ea5e9", "#f59e0b", "#db2777", "#14b8a6", "#8b5cf6", "#64748b"];
+  const cores = ["#0e6f5c", "#c9992e", "#0ea5e9", "#db2777", "#8b5cf6", "#14b8a6", "#64748b"];
   const top = ranking.slice(0, 6);
   const resto = ranking.slice(6).reduce((s, r) => s + r[1], 0);
   const nomes = top.map(r => r[0]).concat(resto > 0 ? ["Outros"] : []);
@@ -922,7 +948,7 @@ function aplicarTema() {
   const doSistema = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
   const escuro = temaEscolhido === "escuro" || (temaEscolhido === "auto" && doSistema);
   document.body.classList.toggle("escuro", escuro);
-  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", escuro ? "#312e81" : "#4f46e5");
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", escuro ? "#12352c" : "#0e6f5c");
 }
 
 function lembrarTema() {
