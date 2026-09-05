@@ -106,14 +106,15 @@ body {
 
 .topo-marca { display: flex; align-items: center; gap: 12px; min-width: 0; }
 
-/* Quadrado da logo, do WA Aqua. A logo já vem com o fundo dela, então
-   preenche o quadrado inteiro — o branco atrás é só reserva. */
+/* Quadrado da logo, do WA Aqua. A logo já vem com o fundo azul dela e
+   preenche o quadrado inteiro; a cor atrás é só pro instante em que a
+   imagem ainda não carregou — se fosse branca, daria um flash. */
 .logo-circulo {
   width: 65px;
   height: 65px;
   border-radius: 10%;
   overflow: hidden;
-  background: #fff;
+  background: var(--marca);
   flex-shrink: 0;
 }
 .logo-circulo img { width: 100%; height: 100%; object-fit: cover; display: block; }
