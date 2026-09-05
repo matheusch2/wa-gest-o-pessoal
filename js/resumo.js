@@ -177,7 +177,7 @@ function iconeDoLancamento(l) {
 
   if (l.tipo === "entrada") {
     if (texto.includes("venda")) return "🛍️";
-    if (texto.includes("extra")) return "✨";
+    if (texto.includes("extra")) return "💵";
     if (texto.includes("pix") || texto.includes("transferencia")) return "💵";
     return "💰";
   }
