@@ -1,20 +1,22 @@
 /* WA Finanças — Copyright © 2026 Matheus.
 
-   Marca alinhada ao WA Aqua: verde-petróleo como cor principal, dourado
-   como detalhe (vem direto da logo). Dentro do app o verde-esmeralda de
-   "entrada" e o vermelho de "saída" continuam sendo tons DIFERENTES do
-   verde da marca — se fossem iguais, o olho perderia a pista que mais
-   importa aqui dentro: pra onde o dinheiro foi.
+   POR QUE AZUL-PETRÓLEO, E NÃO O VERDE DO WA AQUA:
+   aqui dentro o verde JÁ TEM emprego — quer dizer "entrou dinheiro", e o
+   vermelho "saiu". Se a marca também fosse verde, o topo, os botões e os
+   valores de entrada ficariam todos no mesmo tom e o olho perderia a
+   única pista que importa num app de dinheiro. O azul deixa o verde livre
+   pra esse trabalho, e ainda combina com o dourado da logo.
 
    Trocar a identidade toda é trocar as primeiras linhas de cada bloco
    abaixo. O resto do arquivo usa só os nomes. */
 
 :root {
-  --marca: #066b63;        /* verde-petróleo — o mesmo do WA Aqua */
-  --marca-esc: #044b46;
-  --marca-cla: #077d73;    /* ponta clara do gradiente do topo */
-  --marca-toque: #04554f;  /* botão verde apertado */
-  --marca-cl: #e6f4f1;
+  --marca: #0f3b5c;        /* azul-petróleo: fundo de topo, botões e blocos */
+  --marca-esc: #0a2942;    /* ponta escura do gradiente do topo */
+  --marca-cla: #16507a;    /* ponta clara do gradiente do topo */
+  --marca-toque: #0c3049;  /* botão apertado */
+  --marca-txt: #0f3b5c;    /* a marca quando vira TEXTO/borda, não fundo */
+  --marca-cl: #e7eef5;
   --dourado: #c9992e;      /* detalhe dourado, da logo do WA Finanças */
   --entrada: #059669;      /* verde-esmeralda = entrou (tom distinto da marca) */
   --saida: #dc2626;        /* vermelho = saiu */
@@ -26,12 +28,15 @@
   --fraco: #6b7280;
 }
 
+/* No escuro, o bloco continua escuro (o texto em cima dele é branco); só a
+   marca-TEXTO clareia, porque aí ela aparece sobre fundo escuro. */
 body.escuro {
-  --marca: #3fa295;
-  --marca-esc: #0a2f2b;
-  --marca-cla: #4fb0a3;
-  --marca-toque: #0d3d38;
-  --marca-cl: #143430;
+  --marca: #14496f;
+  --marca-esc: #0a2740;
+  --marca-cla: #1c5c8c;
+  --marca-toque: #0f3a58;
+  --marca-txt: #6fb2e3;
+  --marca-cl: #16283a;
   --dourado: #e0b74f;
   --fundo: #0e0e1a;
   --papel: #191a2b;
@@ -101,8 +106,8 @@ body {
 
 .topo-marca { display: flex; align-items: center; gap: 12px; min-width: 0; }
 
-/* Quadrado da logo, do WA Aqua. A logo do WA Finanças já vem com o fundo
-   verde dela, então preenche o quadrado inteiro — o branco é só reserva. */
+/* Quadrado da logo, do WA Aqua. A logo já vem com o fundo dela, então
+   preenche o quadrado inteiro — o branco atrás é só reserva. */
 .logo-circulo {
   width: 65px;
   height: 65px;
@@ -117,7 +122,7 @@ body {
 .topo-divisor { width: 1px; height: 42px; background: rgba(255,255,255,.28); flex-shrink: 0; }
 
 .topo-marca h1 { margin: 0; font-size: 17px; font-weight: 800; letter-spacing: .4px; text-align: left; }
-.topo-marca p { margin: 3px 0 0; font-size: 11px; color: rgba(185,235,228,.9); font-weight: 400; }
+.topo-marca p { margin: 3px 0 0; font-size: 11px; color: rgba(188,214,239,.9); font-weight: 400; }
 
 .topo-perfil {
   width: 40px;
@@ -201,7 +206,7 @@ body {
 
 .titulo {
   text-align: center;
-  color: var(--marca);
+  color: var(--marca-txt);
   text-transform: uppercase;
   font-size: 18px;
   font-weight: 900;
@@ -328,7 +333,7 @@ body.escuro .item.vencendo { border-color: #574a24; background: #322c17; }
 
 .campo input:focus,
 .campo select:focus,
-.campo textarea:focus { border-color: var(--marca); }
+.campo textarea:focus { border-color: var(--marca-txt); }
 
 .campo textarea { min-height: 74px; resize: vertical; }
 
@@ -384,8 +389,8 @@ button:active:not(:disabled) { transform: scale(.98); }
 .botao-fraco {
   width: 100%;
   background: transparent;
-  color: var(--marca);
-  border: 2px solid var(--marca);
+  color: var(--marca-txt);
+  border: 2px solid var(--marca-txt);
   border-radius: 12px;
   padding: 12px;
   font-size: 14px;
@@ -429,10 +434,9 @@ button:active:not(:disabled) { transform: scale(.98); }
      a ponta da tela, como no WA Aqua. */
   margin-inline: -16px;
   min-height: 100dvh;
-  background: linear-gradient(180deg, var(--marca-cl) 0%, var(--fundo) 65%), url('assets/fundo.jpg');
-  background-size: cover;
-  background-position: top center;
-  background-blend-mode: normal;
+  /* Gradiente sozinho por enquanto: a imagem de fundo que temos é verde-menta
+     e brigaria com o azul. Volta a entrar quando houver uma versão azul. */
+  background: linear-gradient(180deg, var(--marca-cl) 0%, var(--fundo) 60%);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -450,7 +454,7 @@ body.escuro .login-tela { background: linear-gradient(180deg, var(--marca-cl) 0%
 }
 
 .login-titulo { margin: 0 0 3px; font-size: 24px; font-weight: 900; letter-spacing: .4px; color: var(--marca-esc); text-transform: uppercase; text-align: center; }
-body.escuro .login-titulo { color: var(--marca); }
+body.escuro .login-titulo { color: var(--marca-txt); }
 .login-subtitulo { margin: 0 0 22px; font-size: 13.5px; color: var(--fraco); text-align: center; }
 
 .login {
@@ -469,11 +473,11 @@ body.escuro .login-titulo { color: var(--marca); }
 .login-divisor::before, .login-divisor::after { content: ""; flex: 1; height: 1px; background: var(--borda); }
 
 .login-troca { text-align: center; margin-top: 14px; font-size: 13.5px; color: var(--fraco); }
-.login-troca button { background: none; border: none; color: var(--marca); font-weight: 800; cursor: pointer; font-size: 13.5px; width: auto; padding: 0; }
+.login-troca button { background: none; border: none; color: var(--marca-txt); font-weight: 800; cursor: pointer; font-size: 13.5px; width: auto; padding: 0; }
 
 .link-esqueci {
   display: block; width: 100%; margin-top: 12px; background: none; border: none;
-  color: var(--marca); font-weight: 700; font-size: 13.5px; text-decoration: underline;
+  color: var(--marca-txt); font-weight: 700; font-size: 13.5px; text-decoration: underline;
   text-underline-offset: 2px; cursor: pointer; padding: 4px; text-align: center;
 }
 

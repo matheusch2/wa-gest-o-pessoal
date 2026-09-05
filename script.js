@@ -489,7 +489,7 @@ function desenharGraficoCategorias(ranking) {
   destruirGrafico();
   // A primeira fatia é a maior, então ela ganha o verde-petróleo da marca. As
   // seguintes se afastam no tom para não virar um borrão só.
-  const cores = ["#066b63", "#c9992e", "#0ea5e9", "#db2777", "#8b5cf6", "#14b8a6", "#64748b"];
+  const cores = ["#0f3b5c", "#c9992e", "#0ea5e9", "#db2777", "#8b5cf6", "#14b8a6", "#64748b"];
   const top = ranking.slice(0, 6);
   const resto = ranking.slice(6).reduce((s, r) => s + r[1], 0);
   const nomes = top.map(r => r[0]).concat(resto > 0 ? ["Outros"] : []);
@@ -948,7 +948,7 @@ function aplicarTema() {
   const doSistema = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
   const escuro = temaEscolhido === "escuro" || (temaEscolhido === "auto" && doSistema);
   document.body.classList.toggle("escuro", escuro);
-  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", escuro ? "#0a2f2b" : "#066b63");
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", escuro ? "#0a2740" : "#0f3b5c");
 }
 
 function lembrarTema() {
