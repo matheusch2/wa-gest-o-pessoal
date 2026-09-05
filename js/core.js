@@ -11,6 +11,8 @@ let usuario = null;
 let lancamentos = [];
 let contas = [];
 let categorias = [];
+let cartoes = [];
+let comprasCartao = [];
 let mesAtual = "";   // "2026-08" — mês que o Resumo e o Histórico estão mostrando
 let grafico = null;
 
@@ -117,14 +119,16 @@ const CATEGORIAS_INICIAIS = {
 };
 
 async function carregarTudo() {
-  const [rL, rC, rG] = await Promise.all([
+  const [rL, rC, rG, rCa, rCo] = await Promise.all([
     sb.from("lancamentos").select("*").order("data", { ascending: false }),
     sb.from("contas").select("*").order("vencimento", { ascending: true }),
     sb.from("categorias").select("*").order("nome", { ascending: true }),
+    sb.from("cartoes").select("*").order("nome", { ascending: true }),
+    sb.from("compras_cartao").select("*").order("data", { ascending: false }),
   ]);
 
-  if (rL.error || rC.error || rG.error) {
-    const e = rL.error || rC.error || rG.error;
+  if (rL.error || rC.error || rG.error || rCa.error || rCo.error) {
+    const e = rL.error || rC.error || rG.error || rCa.error || rCo.error;
     // Erro típico de quem ainda não rodou o banco.sql.
     if (/relation .* does not exist/i.test(e.message)) {
       erro("As tabelas ainda não existem. Rode o banco.sql no Supabase.");
@@ -137,6 +141,8 @@ async function carregarTudo() {
   lancamentos = rL.data || [];
   contas = rC.data || [];
   categorias = rG.data || [];
+  cartoes = rCa.data || [];
+  comprasCartao = rCo.data || [];
 
   // Primeira vez: semeia as categorias para a pessoa não começar do zero.
   if (!categorias.length) await semearCategorias();
