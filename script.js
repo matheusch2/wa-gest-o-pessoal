@@ -148,7 +148,7 @@ function telaLogin(modo) {
       <label>${rotulo}</label>
       <div class="campo-icone">
         ${ICO_CADEADO}
-        <input type="password" id="${id}" class="tem-olho" placeholder="Mínimo de 6 caracteres" autocomplete="current-password">
+        <input type="password" id="${id}" class="tem-olho" placeholder="sua senha" autocomplete="current-password">
         <button type="button" class="olho-senha" onclick="alternarSenha('${id}', this)" aria-label="Mostrar senha">${ICO_OLHO_ABERTO}</button>
       </div>
     </div>`;
