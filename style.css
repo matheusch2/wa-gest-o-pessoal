@@ -19,11 +19,11 @@
   --entrada: #059669;      /* verde-esmeralda = entrou (tom distinto da marca) */
   --saida: #dc2626;        /* vermelho = saiu */
   --aviso: #b45309;        /* âmbar = vencendo */
-  --fundo: #f3f4f8;
+  --fundo: #f5f5f5;
   --papel: #ffffff;
-  --borda: #e2e2ee;
-  --texto: #171734;
-  --fraco: #6b6b85;
+  --borda: #e8e8e8;
+  --texto: #1f2937;
+  --fraco: #6b7280;
 }
 
 body.escuro {
@@ -45,11 +45,21 @@ body.escuro {
 
 * { box-sizing: border-box; }
 
+/* Trava o deslize lateral: a tela só rola na vertical, sem "escorregar"
+   pros lados (mesmo ajuste do WA Aqua). */
+html, body {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
+}
+
 body {
   margin: 0;
+  padding: 0;
   background: var(--fundo);
   color: var(--texto);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: Arial, sans-serif;
   line-height: 1.5;
   -webkit-tap-highlight-color: transparent;
 }
@@ -59,16 +69,14 @@ body {
 .topo {
   background: linear-gradient(135deg, var(--marca-esc) 0%, var(--marca) 60%, var(--marca-cla) 100%);
   color: #fff;
-  position: sticky;
-  top: 0;
-  z-index: 20;
+  width: 100%;
+  padding: 14px 18px 18px;
+  position: relative;
 }
 
 .topo-dentro {
-  max-width: 1100px;
+  max-width: 380px;
   margin-inline: auto;
-  min-height: 64px;
-  padding: 10px 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -91,43 +99,74 @@ body {
 
 .topo-voltar svg { width: 18px; height: 18px; fill: none; stroke: #fff; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
 
-.topo-marca { display: flex; align-items: center; gap: 11px; min-width: 0; }
-.topo-marca img { width: 44px; height: 44px; border-radius: 11px; flex-shrink: 0; }
+.topo-marca { display: flex; align-items: center; gap: 12px; min-width: 0; }
+
+/* Quadrado da logo, do WA Aqua. A logo do WA Finanças já vem com o fundo
+   verde dela, então preenche o quadrado inteiro — o branco é só reserva. */
+.logo-circulo {
+  width: 65px;
+  height: 65px;
+  border-radius: 10%;
+  overflow: hidden;
+  background: #fff;
+  flex-shrink: 0;
+}
+.logo-circulo img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
 /* Risquinho entre a logo e o nome, igual ao WA Aqua. */
-.topo-divisor { width: 1px; height: 38px; background: rgba(255,255,255,.28); flex-shrink: 0; }
+.topo-divisor { width: 1px; height: 42px; background: rgba(255,255,255,.28); flex-shrink: 0; }
 
-.topo-marca h1 { margin: 0; font-size: 16px; font-weight: 800; letter-spacing: .4px; }
-.topo-marca p { margin: 2px 0 0; font-size: 11px; color: rgba(185,235,228,.9); font-weight: 400; }
+.topo-marca h1 { margin: 0; font-size: 17px; font-weight: 800; letter-spacing: .4px; text-align: left; }
+.topo-marca p { margin: 3px 0 0; font-size: 11px; color: rgba(185,235,228,.9); font-weight: 400; }
 
 .topo-perfil {
-  width: 38px;
-  height: 38px;
-  min-width: 38px;
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
   border-radius: 50%;
-  border: 2px solid rgba(255,255,255,.35);
-  background: rgba(255,255,255,.16);
+  border: none;
+  background: rgba(255,255,255,.18);
   color: #fff;
-  font-size: 13px;
-  font-weight: 800;
+  font-size: 14px;
+  font-weight: 700;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
 }
 
 /* ─── ESTRUTURA ─────────────────────────────────────────────────────── */
 
 .cartao {
-  max-width: 1100px;
+  max-width: 412px;
   margin: 0 auto;
-  padding: 16px;
+  padding: 0 16px;
 }
 
-/* Menu igual ao do WA Aqua: grade de blocos verdes, ícone em cima do nome.
-   Duas colunas já no celular — a mão alcança os dois lados sem rolar. */
-.menu { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: stretch; }
+/* Só respira quando tem tela desenhada dentro; vazio não vira espaço morto. */
+.area:not(:empty) { padding: 20px 0 24px; }
+
+/* O menu É o card branco do WA Aqua: ele mesmo é o cartão e a grade.
+   Assim, quando o script esconde o menu, o cartão some junto — não fica
+   um retângulo branco vazio na tela. */
+.menu {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  align-items: stretch;
+  background: var(--papel);
+  width: 100%;
+  max-width: 380px;
+  margin: 30px auto;
+  padding: 20px;
+  border-radius: 14px;
+  box-shadow: 0 2px 6px rgba(33,32,32,.15);
+}
 
 .menu-botao {
   width: 100%;
-  min-height: 84px;
+  min-height: 80px;
   background: var(--marca);
   border: none;
   border-radius: 14px;
@@ -386,6 +425,9 @@ button:active:not(:disabled) { transform: scale(.98); }
 /* ─── ENTRADA (login) ───────────────────────────────────────────────── */
 
 .login-tela {
+  /* Cancela o respiro lateral do .cartao: o fundo da entrada vai de ponta
+     a ponta da tela, como no WA Aqua. */
+  margin-inline: -16px;
   min-height: 100dvh;
   background: linear-gradient(180deg, var(--marca-cl) 0%, var(--fundo) 65%), url('assets/fundo.jpg');
   background-size: cover;
@@ -482,11 +524,10 @@ body.escuro .login-titulo { color: var(--marca); }
 
 /* ─── TELA GRANDE ───────────────────────────────────────────────────── */
 
+/* No computador o app continua sendo um app: coluna estreita e centrada,
+   igual ao WA Aqua — esticar listas de dinheiro na largura toda só afasta
+   o valor do nome dele. */
 @media (min-width: 860px) {
-  .cartao { padding: 22px; }
-  .menu { grid-template-columns: repeat(3, 1fr); gap: 12px; }
-  .numeros { grid-template-columns: repeat(4, 1fr); }
-  .saldo strong { font-size: 38px; }
-  .grafico { height: 280px; }
-  .topo-marca h1 { font-size: 17px; }
+  .saldo strong { font-size: 34px; }
+  .grafico { height: 260px; }
 }
