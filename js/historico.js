@@ -48,7 +48,7 @@ function desenharHistorico() {
                 <small>${esc(l.categoria)} · ${dataBR(l.data)}</small>
               </div>
               <span class="item-valor ${l.tipo}">${l.tipo === "entrada" ? "+" : "−"} ${moeda(l.valor)}</span>
-              <button class="item-x" onclick="pedirExcluirLancamento('${l.id}')" aria-label="Excluir">×</button>
+              <button class="item-x" onclick="pedirExcluirLancamento('${l.id}', 'historico')" aria-label="Excluir">×</button>
             </div>`).join("")}
         </div>`
       : `<p class="vazio">Nada lançado neste mês${filtroTipo !== "todos" ? " com esse filtro" : ""}.</p>`}
@@ -61,25 +61,4 @@ function desenharHistorico() {
 function filtrar(t) { filtroTipo = t; desenharHistorico(); }
 function trocarMesHistorico(p) { mesAtual = mesVizinho(mesAtual, p); desenharHistorico(); }
 
-function pedirExcluirLancamento(id) {
-  const linha = document.getElementById("lanc-" + id);
-  if (!linha) return;
-  linha.innerHTML = `
-    <div class="confirmar" style="width:100%">
-      <p>Excluir este lançamento?</p>
-      <div class="confirmar-acoes">
-        <button onclick="desenharHistorico()">Cancelar</button>
-        <button class="sim" onclick="excluirLancamento(this, '${id}')">Excluir</button>
-      </div>
-    </div>`;
-}
-
-async function excluirLancamento(botao, id) {
-  if (botao?.disabled) return;
-  const solta = travar(botao, "...");
-  const { error } = await sb.from("lancamentos").delete().eq("id", id);
-  if (error) { solta(); erro("Erro: " + error.message); return; }
-  lancamentos = lancamentos.filter(l => l.id !== id);
-  ok("Lançamento excluído.");
-  desenharHistorico();
-}
+/* O editar e o excluir vivem em lancamentos.js — o Resumo também usa. */

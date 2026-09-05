@@ -313,6 +313,42 @@ body.escuro .item.vencendo { border-color: #574a24; background: #322c17; }
 .item.paga { opacity: .55; }
 .item.paga .item-txt strong { text-decoration: line-through; }
 
+/* ─── LINHA DE LANÇAMENTO COM EDITAR/EXCLUIR ────────────────────────────
+   Com os dois botões, cinco coisas disputam a largura numa tela de 390px.
+   Em uma linha só, a descrição virava três letras e reticências. Então a
+   linha vira grade: texto à esquerda ocupando as duas fileiras, valor em
+   cima à direita e os botões embaixo dele. */
+.lanc-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    "ico txt valor"
+    "ico txt acoes";
+  align-items: center;
+  gap: 2px 10px;
+  padding: 9px 11px;
+}
+.lanc-item .item-icone { grid-area: ico; }
+.lanc-item .item-txt { grid-area: txt; }
+.lanc-item .item-valor { grid-area: valor; align-self: end; }
+
+.lanc-acoes { grid-area: acoes; display: flex; gap: 5px; align-self: start; justify-content: flex-end; }
+
+.botao-editar {
+  width: 29px;
+  height: 29px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: var(--marca-cl);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.botao-editar.botao-excluir { background: color-mix(in srgb, var(--saida) 12%, transparent); }
+
 /* ─── CONTAS A PAGAR ────────────────────────────────────────────────────
    A linha vira uma grade de duas fileiras porque numa tela de 390px não
    cabem nome, prazo, categoria, valor e botão lado a lado — antes o texto

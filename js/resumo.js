@@ -113,7 +113,7 @@ function desenharResumo() {
           <h2>Últimos lançamentos</h2>
           ${doMes.length ? `<button class="resumo-link" onclick="abrirHistorico()">Ver todos</button>` : ""}
         </div>
-        ${doMes.length ? `<div class="lista">${doMes.slice(0, 5).map(linhaLancamento).join("")}</div>`
+        ${doMes.length ? `<div class="lista">${doMes.slice().sort((a, b) => b.data.localeCompare(a.data)).slice(0, 5).map(linhaLancamento).join("")}</div>`
           : `<p class="vazio">Nada lançado neste mês ainda.</p>`}
       </div>
 
@@ -156,16 +156,23 @@ function desenharGraficoCategorias(ranking) {
   });
 }
 
+// O id vai no elemento e nos botões: a lista aparece ordenada por data, e
+// guardar a posição da lista ordenada faria os botões mexerem no lançamento
+// errado. Com id, não tem como errar de linha.
 function linhaLancamento(l) {
   const entrada = l.tipo === "entrada";
   return `
-    <div class="item">
+    <div class="item lanc-item" id="lanc-${l.id}">
       <div class="item-icone ${entrada ? "entrada" : "saida"}">${iconeDoLancamento(l)}</div>
       <div class="item-txt">
         <strong>${esc(l.descricao || l.categoria)}</strong>
         <small>${esc(l.categoria)} · ${dataBR(l.data)}</small>
       </div>
       <span class="item-valor ${entrada ? "entrada" : "saida"}">${entrada ? "+" : "−"} ${moeda(l.valor)}</span>
+      <div class="lanc-acoes">
+        <button class="botao-editar" onclick="abrirEdicaoLancamento('${l.id}', 'resumo')" aria-label="Editar">✏️</button>
+        <button class="botao-editar botao-excluir" onclick="pedirExcluirLancamento('${l.id}', 'resumo')" aria-label="Excluir">🗑️</button>
+      </div>
     </div>`;
 }
 
