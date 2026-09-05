@@ -10,9 +10,11 @@
    abaixo. O resto do arquivo usa só os nomes. */
 
 :root {
-  --marca: #0e6f5c;        /* verde-petróleo, do WA Aqua */
-  --marca-esc: #0a4a3d;
-  --marca-cl: #e3f4ef;
+  --marca: #066b63;        /* verde-petróleo — o mesmo do WA Aqua */
+  --marca-esc: #044b46;
+  --marca-cla: #077d73;    /* ponta clara do gradiente do topo */
+  --marca-toque: #04554f;  /* botão verde apertado */
+  --marca-cl: #e6f4f1;
   --dourado: #c9992e;      /* detalhe dourado, da logo do WA Finanças */
   --entrada: #059669;      /* verde-esmeralda = entrou (tom distinto da marca) */
   --saida: #dc2626;        /* vermelho = saiu */
@@ -25,9 +27,11 @@
 }
 
 body.escuro {
-  --marca: #4fb59d;
-  --marca-esc: #12352c;
-  --marca-cl: #16332b;
+  --marca: #3fa295;
+  --marca-esc: #0a2f2b;
+  --marca-cla: #4fb0a3;
+  --marca-toque: #0d3d38;
+  --marca-cl: #143430;
   --dourado: #e0b74f;
   --fundo: #0e0e1a;
   --papel: #191a2b;
@@ -53,7 +57,7 @@ body {
 /* ─── TOPO ──────────────────────────────────────────────────────────── */
 
 .topo {
-  background: linear-gradient(100deg, var(--marca-esc), var(--marca));
+  background: linear-gradient(135deg, var(--marca-esc) 0%, var(--marca) 60%, var(--marca-cla) 100%);
   color: #fff;
   position: sticky;
   top: 0;
@@ -87,10 +91,14 @@ body {
 
 .topo-voltar svg { width: 18px; height: 18px; fill: none; stroke: #fff; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
 
-.topo-marca { display: flex; align-items: center; gap: 10px; min-width: 0; }
-.topo-marca img { width: 34px; height: 34px; border-radius: 9px; flex-shrink: 0; }
-.topo-marca h1 { margin: 0; font-size: 15px; font-weight: 800; letter-spacing: .3px; }
-.topo-marca p { margin: 1px 0 0; font-size: 11px; opacity: .85; }
+.topo-marca { display: flex; align-items: center; gap: 11px; min-width: 0; }
+.topo-marca img { width: 44px; height: 44px; border-radius: 11px; flex-shrink: 0; }
+
+/* Risquinho entre a logo e o nome, igual ao WA Aqua. */
+.topo-divisor { width: 1px; height: 38px; background: rgba(255,255,255,.28); flex-shrink: 0; }
+
+.topo-marca h1 { margin: 0; font-size: 16px; font-weight: 800; letter-spacing: .4px; }
+.topo-marca p { margin: 2px 0 0; font-size: 11px; color: rgba(185,235,228,.9); font-weight: 400; }
 
 .topo-perfil {
   width: 38px;
@@ -113,36 +121,42 @@ body {
   padding: 16px;
 }
 
-.menu { display: grid; grid-template-columns: 1fr; gap: 9px; }
+/* Menu igual ao do WA Aqua: grade de blocos verdes, ícone em cima do nome.
+   Duas colunas já no celular — a mão alcança os dois lados sem rolar. */
+.menu { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: stretch; }
 
 .menu-botao {
   width: 100%;
-  background: var(--papel);
-  border: 1px solid var(--borda);
+  min-height: 84px;
+  background: var(--marca);
+  border: none;
   border-radius: 14px;
-  padding: 16px 17px;
+  padding: 18px 10px;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 13px;
-  font-size: 15.5px;
-  font-weight: 700;
-  color: var(--texto);
+  justify-content: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
   cursor: pointer;
-  text-align: left;
+  text-align: center;
+  line-height: 1.25;
 }
 
+.menu-botao:active { background: var(--marca-toque); }
+
 .menu-botao svg {
-  width: 22px;
-  height: 22px;
+  width: 30px;
+  height: 30px;
   flex-shrink: 0;
   fill: none;
-  stroke: var(--marca);
-  stroke-width: 2;
+  stroke: #fff;
+  stroke-width: 1.8;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
-
-body.escuro .menu-botao svg { stroke: var(--marca); }
 
 /* ─── TÍTULOS E BLOCOS ──────────────────────────────────────────────── */
 
@@ -150,10 +164,11 @@ body.escuro .menu-botao svg { stroke: var(--marca); }
   text-align: center;
   color: var(--marca);
   text-transform: uppercase;
-  font-size: 17px;
+  font-size: 18px;
   font-weight: 900;
   letter-spacing: .3px;
-  margin: 0 0 16px;
+  margin: 0 0 20px;
+  text-wrap: balance;
 }
 
 
@@ -317,17 +332,24 @@ body.escuro .item.vencendo { border-color: #574a24; background: #322c17; }
 .botao svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
 
 .botao:disabled { opacity: .6; cursor: default; }
+.botao:active:not(:disabled) { background: var(--marca-toque); }
 .botao.saida { background: var(--saida); }
 .botao.entrada { background: var(--entrada); }
+
+/* Feedback de toque: o botão afunda um tico ao ser apertado (igual ao WA Aqua).
+   No celular não existe "hover", então sem isso o toque não dá sinal nenhum. */
+button { transition: transform .12s ease, filter .12s ease; }
+button:active:not(:disabled) { transform: scale(.98); }
+@media (prefers-reduced-motion: reduce) { button { transition: none; } button:active:not(:disabled) { transform: none; } }
 
 .botao-fraco {
   width: 100%;
   background: transparent;
   color: var(--marca);
-  border: 1.5px solid var(--borda);
-  border-radius: 14px;
-  padding: 13px;
-  font-size: 14.5px;
+  border: 2px solid var(--marca);
+  border-radius: 12px;
+  padding: 12px;
+  font-size: 14px;
   font-weight: 700;
   cursor: pointer;
   margin-top: 10px;
