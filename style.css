@@ -697,6 +697,11 @@ body.escuro .login-titulo { color: var(--marca-txt); }
   color: var(--marca-txt);
 }
 
+.resumo-secao .item-icone.saida { background: #fee2e2; }
+.resumo-secao .item-icone.entrada { background: #f3ead8; }
+body.escuro .resumo-secao .item-icone.saida { background: #4a2026; }
+body.escuro .resumo-secao .item-icone.entrada { background: #3b3224; }
+
 .resumo-link {
   width: auto;
   padding: 4px 0;
