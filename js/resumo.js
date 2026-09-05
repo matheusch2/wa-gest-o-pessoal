@@ -160,11 +160,41 @@ function linhaLancamento(l) {
   const entrada = l.tipo === "entrada";
   return `
     <div class="item">
-      <div class="item-icone">${entrada ? "↑" : "↓"}</div>
+      <div class="item-icone">${iconeDoLancamento(l)}</div>
       <div class="item-txt">
         <strong>${esc(l.descricao || l.categoria)}</strong>
         <small>${esc(l.categoria)} · ${dataBR(l.data)}</small>
       </div>
       <span class="item-valor ${entrada ? "entrada" : "saida"}">${entrada ? "+" : "−"} ${moeda(l.valor)}</span>
     </div>`;
+}
+
+function iconeDoLancamento(l) {
+  const texto = `${l.categoria || ""} ${l.descricao || ""}`
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+
+  if (l.tipo === "entrada") {
+    if (texto.includes("venda")) return "🛍️";
+    if (texto.includes("extra")) return "✨";
+    if (texto.includes("pix") || texto.includes("transferencia")) return "💵";
+    return "💰";
+  }
+
+  const regras = [
+    [["mercado", "supermercado"], "🛒"],
+    [["almoco", "jantar", "restaurante", "comida", "lanche", "alimentacao"], "🍽️"],
+    [["casa", "aluguel", "moradia"], "🏠"],
+    [["transporte", "combustivel", "gasolina", "moto", "carro"], "🚗"],
+    [["saude", "farmacia", "remedio"], "💊"],
+    [["educacao", "escola", "curso", "livro"], "📚"],
+    [["lazer", "passeio", "cinema"], "🎉"],
+    [["internet", "telefone", "celular"], "🌐"],
+    [["energia", "luz"], "⚡"],
+    [["agua"], "💧"],
+    [["cartao", "fatura"], "💳"],
+  ];
+  const encontrada = regras.find(([palavras]) => palavras.some(palavra => texto.includes(palavra)));
+  return encontrada ? encontrada[1] : "💸";
 }
