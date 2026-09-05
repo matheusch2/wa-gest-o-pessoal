@@ -14,39 +14,63 @@ function desenharContas() {
   const pagas = contas.filter(c => c.pago).sort((a, b) => b.vencimento.localeCompare(a.vencimento)).slice(0, 10);
   const total = abertas.reduce((s, c) => s + Number(c.valor), 0);
 
+  const vencidas = abertas.filter(c => c.vencimento < hoje);
+
   const linha = (c) => {
     const dias = Math.round((_parseDataLocal(c.vencimento) - _parseDataLocal(hoje)) / 86400000);
     const estado = c.pago ? "paga" : dias < 0 ? "vencida" : dias <= 5 ? "vencendo" : "";
-    const quando = c.pago ? "paga em " + dataBR(c.pago_em || c.vencimento)
-                 : dias < 0 ? `venceu há ${Math.abs(dias)} dia${Math.abs(dias) > 1 ? "s" : ""}`
-                 : dias === 0 ? "vence hoje"
-                 : `vence em ${dias} dia${dias > 1 ? "s" : ""}`;
+    const quando = c.pago ? "Paga em " + dataBR(c.pago_em || c.vencimento)
+                 : dias < 0 ? `Venceu há ${Math.abs(dias)} dia${Math.abs(dias) > 1 ? "s" : ""}`
+                 : dias === 0 ? "Vence hoje"
+                 : `Vence em ${dias} dia${dias > 1 ? "s" : ""}`;
     return `
-      <div class="item ${estado}" id="conta-${c.id}">
-        <div class="item-icone">${c.pago ? "✓" : c.recorrente ? "🔁" : "📄"}</div>
-        <div class="item-txt">
-          <strong>${esc(c.nome)}</strong>
-          <small>${quando}${c.categoria ? " · " + esc(c.categoria) : ""}</small>
+      <div class="conta-item ${estado}" id="conta-${c.id}">
+        <div class="conta-ico">${c.pago ? "✓" : c.recorrente ? "🔁" : "📄"}</div>
+        <div class="conta-nome">${esc(c.nome)}</div>
+        <div class="conta-valor">${moeda(c.valor)}</div>
+        <div class="conta-prazo">
+          <span class="conta-chip ${estado}">${quando}</span>
+          ${c.categoria ? `<span class="conta-cat">${esc(c.categoria)}</span>` : ""}
         </div>
-        <span class="item-valor ${c.pago ? "" : "saida"}">${moeda(c.valor)}</span>
-        ${c.pago
-          ? `<button class="item-x" onclick="pedirExcluirConta('${c.id}')" aria-label="Excluir">×</button>`
-          : `<button class="pilula" onclick="pagarConta(this, '${c.id}')">Pagar</button>`}
+        <div class="conta-acao">
+          ${c.pago
+            ? `<button class="item-x" onclick="pedirExcluirConta('${c.id}')" aria-label="Excluir">×</button>`
+            : `<button class="botao-pagar" onclick="pagarConta(this, '${c.id}')">Pagar</button>`}
+        </div>
       </div>`;
   };
 
-  document.getElementById("area").innerHTML = `
-    <h2 class="titulo">Contas a pagar</h2>
+  const icoCalendario = `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`;
 
-    <div class="bloco">
-      <div class="bloco-topo">
-        <h2>Em aberto</h2>
-        <strong style="color:var(--saida)">${moeda(total)}</strong>
+  document.getElementById("area").innerHTML = `
+    <section class="lancamento-tela" style="--cor-tipo:var(--marca-txt)">
+      <div class="lancamento-cabecalho">
+        <span class="lancamento-cabecalho-icone">${icoCalendario}</span>
+        <span class="lancamento-caption">A pagar</span>
+        <h2>Contas</h2>
       </div>
-      ${abertas.length ? `<div class="lista">${abertas.map(linha).join("")}</div>`
-                       : `<p class="vazio">Nenhuma conta em aberto. 🎉</p>`}
-      <button class="botao-fraco" onclick="abrirNovaConta()">+ Nova conta</button>
+    </section>
+
+    <div class="contas-total">
+      <span>Total em aberto</span>
+      <strong>${moeda(total)}</strong>
+      <small>${abertas.length
+        ? `${abertas.length} conta${abertas.length > 1 ? "s" : ""} em aberto`
+        : "Nada em aberto"}${vencidas.length
+        ? ` · <span class="alerta">${vencidas.length} vencida${vencidas.length > 1 ? "s" : ""}</span>` : ""}</small>
     </div>
+
+    <button class="botao" onclick="abrirNovaConta()">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Nova conta
+    </button>
+
+    ${abertas.length ? `
+      <div class="bloco" style="margin-top:14px">
+        <div class="bloco-topo"><h2>Em aberto</h2></div>
+        <div class="lista">${abertas.map(linha).join("")}</div>
+      </div>`
+    : `<div class="bloco" style="margin-top:14px"><p class="vazio">Nenhuma conta em aberto. 🎉</p></div>`}
 
     ${pagas.length ? `
       <div class="bloco">
@@ -63,39 +87,59 @@ function abrirNovaConta() {
     destruirGrafico();
     const chave = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random());
     const cats = categorias.filter(c => c.tipo === "saida");
+    const icoConta = `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`;
+    const icoTexto = `<svg viewBox="0 0 24 24" aria-hidden="true"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="16" y2="12"/><line x1="4" y1="17" x2="12" y2="17"/></svg>`;
+    const icoData = icoConta;
+    const icoEtiqueta = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.6 13.4 12 22l-9-9V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>`;
+
     document.getElementById("area").innerHTML = `
-      <h2 class="titulo">Nova conta</h2>
-      <div class="bloco">
+      <section class="lancamento-tela" style="--cor-tipo:var(--marca-txt)">
+      <div class="lancamento-cabecalho">
+        <span class="lancamento-cabecalho-icone">${icoConta}</span>
+        <span class="lancamento-caption">Contas a pagar</span>
+        <h2>Nova conta</h2>
+      </div>
+
+      <div class="lancamento-form">
         <div class="campo">
-          <label>Nome da conta</label>
+          <div class="campo-label">${icoTexto}<label for="ct-nome">Nome da conta</label></div>
           <input type="text" id="ct-nome" placeholder="Ex: Energia" autocomplete="off">
         </div>
-        <div class="dois">
-          <div class="campo">
-            <label>Valor</label>
+
+        <div class="campo lancamento-campo-valor">
+          <label for="ct-valor">Valor</label>
+          <div class="lancamento-valor">
+            <span>R$</span>
             <input type="text" inputmode="decimal" id="ct-valor" placeholder="0,00" autocomplete="off">
           </div>
-          <div class="campo">
-            <label>Vencimento</label>
+        </div>
+
+        <div class="dois">
+          <div class="campo lancamento-campo-data">
+            <div class="campo-label">${icoData}<label for="ct-venc">Vencimento</label></div>
             <input type="date" id="ct-venc" value="${_hojeLocal()}">
           </div>
+          <div class="campo">
+            <div class="campo-label">${icoEtiqueta}<label for="ct-cat">Categoria</label></div>
+            <select id="ct-cat">
+              ${cats.map(c => `<option value="${esc(c.nome)}">${esc(c.nome)}</option>`).join("")}
+              ${cats.length ? "" : `<option value="Outros">Outros</option>`}
+            </select>
+          </div>
         </div>
-        <div class="campo">
-          <label>Categoria</label>
-          <select id="ct-cat">
-            ${cats.map(c => `<option value="${esc(c.nome)}">${esc(c.nome)}</option>`).join("")}
-            ${cats.length ? "" : `<option value="Outros">Outros</option>`}
-          </select>
-        </div>
-        <div class="campo">
-          <label style="display:flex;align-items:center;gap:9px;font-size:14px;color:var(--texto)">
-            <input type="checkbox" id="ct-rec" style="width:auto;margin:0">
-            Repete todo mês
-          </label>
-        </div>
-        <button class="botao" onclick="salvarConta(this, '${chave}')">Salvar conta</button>
+
+        <label class="conta-repete">
+          <input type="checkbox" id="ct-rec">
+          <span>🔁 Repete todo mês</span>
+        </label>
       </div>
-      <button class="botao-fraco" onclick="voltarTela()">Voltar</button>`;
+
+      <button class="botao" onclick="salvarConta(this, '${chave}')">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+        Salvar conta
+      </button>
+      <button class="botao-fraco lancamento-voltar" onclick="voltarTela()">Voltar</button>
+      </section>`;
     document.getElementById("ct-nome").focus();
   });
 }

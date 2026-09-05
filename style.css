@@ -313,6 +313,101 @@ body.escuro .item.vencendo { border-color: #574a24; background: #322c17; }
 .item.paga { opacity: .55; }
 .item.paga .item-txt strong { text-decoration: line-through; }
 
+/* ─── CONTAS A PAGAR ────────────────────────────────────────────────────
+   A linha vira uma grade de duas fileiras porque numa tela de 390px não
+   cabem nome, prazo, categoria, valor e botão lado a lado — antes o texto
+   quebrava no meio. Agora: em cima o nome e o valor, embaixo o prazo e a
+   ação. O ícone ocupa as duas fileiras, à esquerda. */
+
+.conta-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    "ico nome  valor"
+    "ico prazo acao";
+  align-items: center;
+  gap: 5px 12px;
+  border: 1px solid var(--borda);
+  border-radius: 12px;
+  padding: 12px 13px;
+  background: var(--papel);
+}
+
+.conta-ico { grid-area: ico; width: 40px; height: 40px; border-radius: 11px; display: grid; place-items: center; font-size: 18px; background: var(--marca-cl); }
+.conta-nome { grid-area: nome; font-size: 14.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.conta-valor { grid-area: valor; font-size: 15px; font-weight: 800; white-space: nowrap; font-variant-numeric: tabular-nums; color: var(--saida); }
+.conta-prazo { grid-area: prazo; display: flex; align-items: center; gap: 6px; min-width: 0; }
+.conta-acao { grid-area: acao; }
+
+/* O prazo vira etiqueta colorida: o estado da conta se lê pela forma e
+   pela cor, não só pelo texto miúdo. */
+.conta-chip {
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+  background: color-mix(in srgb, var(--fraco) 14%, transparent);
+  color: var(--fraco);
+}
+.conta-chip.vencida { background: color-mix(in srgb, var(--saida) 14%, transparent); color: var(--saida); }
+.conta-chip.vencendo { background: color-mix(in srgb, var(--aviso) 16%, transparent); color: var(--aviso); }
+.conta-chip.paga { background: color-mix(in srgb, var(--entrada) 14%, transparent); color: var(--entrada); }
+
+.conta-cat { font-size: 11.5px; color: var(--fraco); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* "Pagar" é a ação principal da tela: botão cheio, não pílula apagada. */
+.botao-pagar {
+  background: var(--marca);
+  color: #fff;
+  border: none;
+  border-radius: 9px;
+  padding: 7px 15px;
+  font-size: 12.5px;
+  font-weight: 800;
+  cursor: pointer;
+  width: auto;
+}
+.botao-pagar:active { background: var(--marca-toque); }
+
+.conta-item.vencida { border-color: color-mix(in srgb, var(--saida) 38%, transparent); }
+.conta-item.vencendo { border-color: color-mix(in srgb, var(--aviso) 40%, transparent); }
+.conta-item.paga .conta-nome { text-decoration: line-through; color: var(--fraco); }
+.conta-item.paga .conta-valor { color: var(--fraco); }
+.conta-item.paga .conta-ico { background: color-mix(in srgb, var(--entrada) 12%, transparent); }
+
+/* "Repete todo mês": a caixa de marcar inteira é área de toque, senão o
+   alvo vira um quadradinho de 16px no meio do formulário. */
+.conta-repete {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 12px 13px;
+  background: var(--papel);
+  border: 1.5px solid var(--borda);
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--texto);
+  cursor: pointer;
+}
+.conta-repete input { width: 20px !important; height: 20px !important; min-width: 20px; margin: 0; accent-color: var(--marca); }
+
+/* Quanto eu devo é O número desta tela — sai do cantinho e vira o topo. */
+.contas-total {
+  background: linear-gradient(115deg, var(--marca-esc), var(--marca));
+  color: #fff;
+  border-radius: 16px;
+  padding: 18px 20px;
+  margin-bottom: 14px;
+  text-align: center;
+}
+.contas-total span { display: block; font-size: 11.5px; font-weight: 700; letter-spacing: .06em; opacity: .85; text-transform: uppercase; }
+.contas-total strong { display: block; font-size: 29px; font-weight: 800; margin-top: 6px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.contas-total small { display: block; font-size: 12px; opacity: .85; margin-top: 6px; }
+.contas-total .alerta { color: #ffd0d0; font-weight: 700; }
+
 /* ─── FORMULÁRIOS ───────────────────────────────────────────────────── */
 
 .campo { margin-bottom: 13px; }
