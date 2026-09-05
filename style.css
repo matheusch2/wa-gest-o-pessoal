@@ -333,18 +333,18 @@ body.escuro .item.vencendo { border-color: #574a24; background: #322c17; }
   background: var(--papel);
 }
 
-.conta-ico { grid-area: ico; width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center; font-size: 15px; background: var(--marca-cl); }
-.conta-nome { grid-area: nome; font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.conta-valor { grid-area: valor; font-size: 14px; font-weight: 800; white-space: nowrap; font-variant-numeric: tabular-nums; color: var(--saida); }
+.conta-ico { grid-area: ico; width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; font-size: 13px; background: var(--marca-cl); }
+.conta-nome { grid-area: nome; font-size: 14px; font-weight: 700; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.conta-valor { grid-area: valor; font-size: 14px; font-weight: 800; line-height: 1.25; white-space: nowrap; font-variant-numeric: tabular-nums; color: var(--saida); }
 .conta-prazo { grid-area: prazo; display: flex; align-items: center; gap: 5px; min-width: 0; }
-.conta-acao { grid-area: acao; }
+.conta-acao { grid-area: acao; display: flex; align-items: center; }
 
 /* O prazo vira etiqueta colorida: o estado da conta se lê pela forma e
    pela cor, não só pelo texto miúdo. */
 .conta-chip {
-  font-size: 10.5px;
+  font-size: 10px;
   font-weight: 800;
-  padding: 2px 7px;
+  padding: 1px 7px;
   border-radius: 999px;
   white-space: nowrap;
   background: color-mix(in srgb, var(--fraco) 14%, transparent);
@@ -362,8 +362,8 @@ body.escuro .item.vencendo { border-color: #574a24; background: #322c17; }
   color: #fff;
   border: none;
   border-radius: 8px;
-  padding: 5px 13px;
-  font-size: 12px;
+  padding: 4px 12px;
+  font-size: 11.5px;
   font-weight: 800;
   cursor: pointer;
   width: auto;
