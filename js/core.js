@@ -14,6 +14,7 @@ let categorias = [];
 let cartoes = [];
 let comprasCartao = [];
 let pagamentosFatura = [];
+let metas = [];
 let mesAtual = "";   // "2026-08" — mês que o Resumo e o Histórico estão mostrando
 let grafico = null;
 
@@ -120,17 +121,19 @@ const CATEGORIAS_INICIAIS = {
 };
 
 async function carregarTudo() {
-  const [rL, rC, rG, rCa, rCo, rFp] = await Promise.all([
+  const [rL, rC, rG, rCa, rCo, rFp, rMe] = await Promise.all([
     sb.from("lancamentos").select("*").order("data", { ascending: false }),
     sb.from("contas").select("*").order("vencimento", { ascending: true }),
     sb.from("categorias").select("*").order("nome", { ascending: true }),
     sb.from("cartoes").select("*").order("nome", { ascending: true }),
     sb.from("compras_cartao").select("*").order("data", { ascending: false }),
     sb.from("pagamentos_fatura").select("*").order("pago_em", { ascending: true }),
+    sb.from("metas").select("*").order("categoria", { ascending: true }),
   ]);
 
-  if (rL.error || rC.error || rG.error || rCa.error || rCo.error || rFp.error) {
-    const e = rL.error || rC.error || rG.error || rCa.error || rCo.error || rFp.error;
+  const respostas = [rL, rC, rG, rCa, rCo, rFp, rMe];
+  if (respostas.some(r => r.error)) {
+    const e = respostas.find(r => r.error).error;
     // Erro típico de quem ainda não rodou o banco.sql.
     if (/relation .* does not exist/i.test(e.message)) {
       erro("As tabelas ainda não existem. Rode o banco.sql no Supabase.");
@@ -146,6 +149,7 @@ async function carregarTudo() {
   cartoes = rCa.data || [];
   comprasCartao = rCo.data || [];
   pagamentosFatura = rFp.data || [];
+  metas = rMe.data || [];
 
   // Primeira vez: semeia as categorias para a pessoa não começar do zero.
   if (!categorias.length) await semearCategorias();

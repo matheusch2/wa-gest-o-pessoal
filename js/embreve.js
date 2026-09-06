@@ -26,16 +26,9 @@ function _telaEmBreve(caption, titulo, icone, texto) {
     </section>`;
 }
 
-const _ICO_CARTAO_ANTIGO = `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="4" width="22" height="16" rx="3"/><line x1="1" y1="10" x2="23" y2="10"/><line x1="5" y1="15" x2="9" y2="15"/></svg>`;
-const _ICO_ALVO = `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg>`;
 const _ICO_ESTRELA = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l3 6 6 .9-4.5 4.3 1 6.3-5.5-3-5.5 3 1-6.3L3 8.9 9 8z"/></svg>`;
 
-/* Cartão agora tem tela de verdade: js/cartoes.js */
-
-function abrirMetas() {
-  abrirTela(() => _telaEmBreve("Controle", "Metas de gastos", _ICO_ALVO,
-    "Aqui você vai definir um teto de gasto por categoria — mercado, lazer, transporte — e acompanhar quanto já foi usado no mês."));
-}
+/* Cartão e Metas agora têm tela de verdade: js/cartoes.js e js/metas.js */
 
 function abrirMeuPlano() {
   abrirTela(() => _telaEmBreve("Assinatura", "Meu plano", _ICO_ESTRELA,

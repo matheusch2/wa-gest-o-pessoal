@@ -199,3 +199,31 @@ create policy "cada um paga só as próprias faturas"
   on pagamentos_fatura for insert with check (auth.uid() = user_id);
 create policy "cada um desfaz só os próprios pagamentos"
   on pagamentos_fatura for delete using (auth.uid() = user_id);
+
+-- ═══ METAS DE GASTO ═══════════════════════════════════════════════════
+-- Um teto por categoria, que vale todo mês. Guardar uma meta por mês daria
+-- flexibilidade (dezembro é diferente de fevereiro) ao preço de a pessoa
+-- ter que recadastrar tudo em janeiro — e meta que dá trabalho de manter
+-- ninguém mantém.
+
+create table if not exists metas (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid not null references auth.users(id) on delete cascade,
+  categoria  text not null,
+  valor      numeric(12,2) not null check (valor > 0),
+  created_at timestamptz not null default now()
+);
+
+-- Uma meta por categoria: duas metas de mercado não querem dizer nada.
+create unique index if not exists metas_user_categoria_key on metas (user_id, categoria);
+
+alter table metas enable row level security;
+
+create policy "cada um vê só as próprias metas"
+  on metas for select using (auth.uid() = user_id);
+create policy "cada um cria só as próprias metas"
+  on metas for insert with check (auth.uid() = user_id);
+create policy "cada um muda só as próprias metas"
+  on metas for update using (auth.uid() = user_id);
+create policy "cada um apaga só as próprias metas"
+  on metas for delete using (auth.uid() = user_id);

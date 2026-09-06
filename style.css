@@ -1288,3 +1288,56 @@ body.escuro .resumo-secao .item-icone.entrada { background: #17372d; }
   text-transform: uppercase;
 }
 .cartao-card-selo svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ─── METAS DE GASTO ─────────────────────────────────────────────────────
+   Cada meta é uma barra. O número exato importa menos que a resposta
+   imediata: estou dentro, estou perto, ou já passou. */
+
+.meta-lista { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+
+.meta-item {
+  position: relative;
+  padding: 13px 14px;
+  border: 1.5px solid var(--borda);
+  border-left-width: 4px;
+  border-radius: 12px;
+  background: var(--papel);
+}
+.meta-item.dentro  { border-left-color: var(--entrada); }
+.meta-item.perto   { border-left-color: var(--aviso); }
+.meta-item.estourou{ border-left-color: var(--saida); }
+
+.meta-topo { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.meta-nome { font-size: 14px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.meta-pct { font-size: 13px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.meta-item.dentro  .meta-pct { color: var(--entrada); }
+.meta-item.perto   .meta-pct { color: var(--aviso); }
+.meta-item.estourou .meta-pct { color: var(--saida); }
+
+.meta-barra {
+  height: 8px;
+  margin: 9px 0 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--texto) 10%, transparent);
+  overflow: hidden;
+}
+.meta-barra span { display: block; height: 100%; border-radius: 999px; }
+.meta-item.dentro   .meta-barra span { background: var(--entrada); }
+.meta-item.perto    .meta-barra span { background: var(--aviso); }
+.meta-item.estourou .meta-barra span { background: var(--saida); }
+
+.meta-baixo { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; font-size: 12px; color: var(--fraco); }
+.meta-baixo strong { font-size: 13.5px; font-weight: 800; color: var(--texto); font-variant-numeric: tabular-nums; }
+.meta-falta { white-space: nowrap; font-weight: 700; }
+.meta-item.estourou .meta-falta { color: var(--saida); }
+
+/* Editar e excluir ficam no alto à direita, fora do caminho dos números —
+   é o mesmo lugar dos outros cards do app. */
+.meta-acoes { position: absolute; top: 9px; right: 10px; display: flex; gap: 5px; }
+.meta-item .meta-topo { padding-right: 74px; }
+
+/* As categorias onde o dinheiro está indo sem teto nenhum. */
+.meta-sem { display: flex; align-items: center; gap: 10px; padding: 8px 0; }
+.meta-sem + .meta-sem { border-top: 1px solid var(--borda); }
+.meta-sem-nome { flex: 1; min-width: 0; font-size: 13.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.meta-sem strong { font-size: 13.5px; font-weight: 800; color: var(--saida); font-variant-numeric: tabular-nums; white-space: nowrap; }
