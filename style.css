@@ -1414,26 +1414,59 @@ body.escuro .resumo-secao .item-icone.entrada { background: #17372d; }
 /* ─── O QUE AINDA VAI SAIR ─────────────────────────────────────────── */
 .reserva-item .item-valor { font-variant-numeric: tabular-nums; }
 
-/* A meta que mexe no saldo se identifica na lista — as outras são só
-   aviso, esta tira dinheiro da sobra. */
-.meta-reserva {
-  margin: 7px 0 0;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--marca-txt);
+/* Obrigatório e opcional são dois assuntos na mesma lista. O cabeçalho do
+   grupo carrega o subtotal porque é ele que responde "quanto do meu mês já
+   está comprometido antes de eu escolher qualquer coisa?". */
+.meta-grupo {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 18px 2px 0;
 }
-
-/* O texto de apoio dentro da caixa de marcar. */
-.conta-repete span small {
-  display: block;
-  margin-top: 3px;
-  font-size: 11.5px;
-  font-weight: 400;
+.meta-grupo:first-child { margin-top: 14px; }
+.meta-grupo h3 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
   color: var(--fraco);
-  line-height: 1.45;
 }
-.conta-repete { align-items: flex-start; }
-.conta-repete input { margin-top: 2px !important; }
+.meta-grupo span { font-size: 12px; font-weight: 800; color: var(--texto); font-variant-numeric: tabular-nums; }
+.meta-grupo-nota { margin: 3px 2px 9px; font-size: 11.5px; color: var(--fraco); line-height: 1.45; }
+
+/* Escolha entre dois caminhos, empilhada: cada opção precisa da frase que
+   diz o que ela faz, e lado a lado no celular essa frase não cabe. */
+.escolha { display: flex; flex-direction: column; gap: 8px; }
+
+.escolha .escolha-op {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0;
+  padding: 12px 13px;
+  border: 1.5px solid var(--borda);
+  border-radius: 12px;
+  background: var(--papel);
+  font-size: 13.5px;
+  font-weight: 400;
+  color: var(--texto);
+  cursor: pointer;
+}
+.escolha .escolha-op input {
+  width: 19px !important;
+  height: 19px !important;
+  min-width: 19px;
+  margin: 1px 0 0 !important;
+  accent-color: var(--marca);
+}
+.escolha .escolha-op strong { display: block; font-size: 13.5px; font-weight: 800; color: var(--texto); }
+.escolha .escolha-op small { display: block; margin-top: 2px; font-size: 11.5px; font-weight: 400; color: var(--fraco); line-height: 1.45; }
+.escolha .escolha-op:has(input:checked) {
+  border-color: var(--marca-txt);
+  background: var(--marca-cl);
+}
 
 /* Sobra negativa: o que entrou não cobre o que ainda tem que sair. Sobre o
    azul do bloco, o vermelho puro fica ilegível — é o rosa claro que

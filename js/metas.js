@@ -81,7 +81,7 @@ function desenharMetas() {
   const sobra = totalMetas - totalGasto;
   const usadoGeral = totalMetas > 0 ? totalGasto / totalMetas : 0;
 
-  const linhas = comMeta.map(m => {
+  const umaMeta = m => {
     const gasto = gastos[m.categoria] || 0;
     const teto = Number(m.valor);
     const usado = teto > 0 ? gasto / teto : 0;
@@ -98,13 +98,33 @@ function desenharMetas() {
           <span><strong>${moeda(gasto)}</strong> de ${moeda(teto)}</span>
           <span class="meta-falta">${falta >= 0 ? "Sobram " + moeda(falta) : "Passou " + moeda(-falta)}</span>
         </div>
-        ${m.reservar ? `<p class="meta-reserva">Descontada do saldo do Resumo</p>` : ""}
         <div class="meta-acoes">
           <button class="botao-editar" onclick="abrirEdicaoMeta('${m.id}')" aria-label="Editar">✏️</button>
           <button class="botao-editar botao-excluir" onclick="pedirExcluirMeta('${m.id}')" aria-label="Excluir">🗑️</button>
         </div>
       </div>`;
-  }).join("");
+  };
+
+  // Aluguel, mercado, energia, internet, água vão sair de todo jeito. Azeite
+  // e lazer, não. São dois assuntos diferentes na mesma tela, e separá-los
+  // responde de relance a pergunta que importa: quanto do mês já está
+  // comprometido antes de qualquer escolha minha?
+  const obrigatorias = comMeta.filter(m => m.reservar);
+  const opcionais = comMeta.filter(m => !m.reservar);
+  const separar = obrigatorias.length && opcionais.length;
+
+  const grupo = (titulo, lista, aviso) => !lista.length ? "" : `
+    ${separar ? `
+      <div class="meta-grupo">
+        <h3>${titulo}</h3>
+        <span>${moeda(lista.reduce((s, m) => s + Number(m.valor), 0))} previstos</span>
+      </div>
+      <p class="meta-grupo-nota">${aviso}</p>` : ""}
+    ${lista.map(umaMeta).join("")}`;
+
+  const linhas =
+    grupo("Obrigatórios", obrigatorias, "Saem da sobra do Resumo antes mesmo de serem pagos.") +
+    grupo("Opcionais", opcionais, "Só avisam quando você passa. Não mexem na sobra.");
 
   // Onde o dinheiro está indo sem ninguém ter posto um teto. É a lista de
   // onde a próxima meta provavelmente deveria estar.
@@ -192,6 +212,11 @@ function _desenharFormMeta(meta, categoriaSugerida) {
 
   const alvo = editando ? meta.categoria : (categoriaSugerida || disponiveis[0]);
   const icoEtiqueta = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.6 13.4 12 22l-9-9V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>`;
+  const icoTipo = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>`;
+
+  // Meta nova nasce obrigatória: é o caso comum. Quem estipula um gasto
+  // quase sempre está falando de conta que vai chegar.
+  const obrigatorio = !meta || meta.reservar;
 
   document.getElementById("area").innerHTML = `
     <section class="lancamento-tela" style="--cor-tipo:var(--marca-txt)">
@@ -223,15 +248,27 @@ function _desenharFormMeta(meta, categoriaSugerida) {
 
       <p class="cartao-dica">Vale todo mês. Conta as saídas do extrato e as compras do cartão nessa categoria.</p>
 
-      <label class="conta-repete">
-        <input type="checkbox" id="mt-reservar" ${!meta || meta.reservar ? "checked" : ""}>
-        <span>
-          Já descontar do saldo o que ainda falta
-          <small>Pro Resumo não mostrar como livre um dinheiro que já tem dono.
-                 Ligue em gasto certo — mercado, internet, aluguel. Deixe
-                 desligado no que talvez nem aconteça, como lazer.</small>
-        </span>
-      </label>
+      <div class="campo" style="margin:16px 0 0">
+        <div class="campo-label">${icoTipo}<label>Tipo de gasto</label></div>
+        <div class="escolha">
+          <label class="escolha-op">
+            <input type="radio" name="mt-tipo" value="obrigatorio" ${obrigatorio ? "checked" : ""}>
+            <span>
+              <strong>Obrigatório</strong>
+              <small>Vai sair de todo jeito — aluguel, mercado, energia, internet.
+                     O que ainda falta sai da sobra do Resumo antes de ser pago.</small>
+            </span>
+          </label>
+          <label class="escolha-op">
+            <input type="radio" name="mt-tipo" value="opcional" ${obrigatorio ? "" : "checked"}>
+            <span>
+              <strong>Opcional</strong>
+              <small>Você escolhe se gasta — lazer, delivery. Só avisa quando
+                     passa do teto, sem mexer na sobra.</small>
+            </span>
+          </label>
+        </div>
+      </div>
     </div>
 
     ${!editando && !disponiveis.length
@@ -265,7 +302,7 @@ async function salvarMeta(botao, id) {
   const campoCat = document.getElementById("mt-cat");
   const categoria = (campoCat?.value || "").trim();
   const valor = parseMoedaBR(document.getElementById("mt-valor").value);
-  const reservar = !!document.getElementById("mt-reservar")?.checked;
+  const reservar = document.querySelector('input[name="mt-tipo"]:checked')?.value !== "opcional";
 
   if (!categoria) { erro("Escolha a categoria."); return; }
   if (valor === null || valor <= 0) { erro("Informe um teto maior que zero."); return; }
