@@ -133,7 +133,7 @@ function desenharFechamento(mesRef) {
 
     ${sobra > 0 ? `
       <div class="lancamento-form">
-        <div class="campo lancamento-campo-valor">
+        <div class="campo">
           <label for="fc-levar">Levar pra ${_soMesSeguinte(mesRef)}</label>
           <div class="lancamento-valor">
             <span>R$</span>

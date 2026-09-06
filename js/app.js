@@ -141,7 +141,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (ehChaveSecreta(SUPABASE_KEY)) {
     document.getElementById("area-login").innerHTML = `
       <div class="login">
-        <div class="login-topo"><div class="moeda">🛑</div><h2 style="color:#dc2626">Chave errada</h2></div>
+        <div><div>🛑</div><h2 style="color:#dc2626">Chave errada</h2></div>
         <p style="font-size:13.5px;color:var(--fraco)">
           A chave no <b>index.html</b> é a <b>secreta</b> (service_role). Ela ignora
           toda a proteção do banco — publicada num site, dá acesso aos seus dados
@@ -157,7 +157,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (SUPABASE_URL.includes("SEUPROJETO") || SUPABASE_KEY.includes("COLE_AQUI")) {
     document.getElementById("area-login").innerHTML = `
       <div class="login">
-        <div class="login-topo"><div class="moeda">⚙️</div><h2>Falta configurar</h2></div>
+        <div><div>⚙️</div><h2>Falta configurar</h2></div>
         <p style="font-size:13.5px;color:var(--fraco)">
           Abra o <b>index.html</b> e troque as duas linhas marcadas com
           "TROQUE AQUI" pela URL e pela chave publicável do seu projeto no

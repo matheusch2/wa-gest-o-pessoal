@@ -237,7 +237,7 @@ function _desenharFormMeta(meta, categoriaSugerida) {
         <p class="cartao-dica" id="mt-gasto" style="margin-top:7px"></p>
       </div>
 
-      <div class="campo lancamento-campo-valor" style="margin-bottom:0">
+      <div class="campo" style="margin-bottom:0">
         <label for="mt-valor">Teto por mês</label>
         <div class="lancamento-valor">
           <span>R$</span>

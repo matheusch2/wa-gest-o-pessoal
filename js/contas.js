@@ -122,7 +122,7 @@ function abrirNovaConta() {
           <input type="text" id="ct-nome" placeholder="Ex: Energia" autocomplete="off">
         </div>
 
-        <div class="campo lancamento-campo-valor">
+        <div class="campo">
           <label for="ct-valor">Valor</label>
           <div class="lancamento-valor">
             <span>R$</span>

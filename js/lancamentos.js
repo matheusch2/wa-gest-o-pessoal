@@ -43,7 +43,7 @@ function desenharLancar(tipo) {
     </div>
 
     <div class="lancamento-form">
-      <div class="campo lancamento-campo-valor">
+      <div class="campo">
         <label for="lc-valor">Valor</label>
         <div class="lancamento-valor">
           <span>R$</span>
@@ -162,7 +162,7 @@ function abrirEdicaoLancamento(id, volta) {
     </div>
 
     <div class="lancamento-form">
-      <div class="campo lancamento-campo-valor">
+      <div class="campo">
         <label for="ed-valor">Valor</label>
         <div class="lancamento-valor">
           <span>R$</span>

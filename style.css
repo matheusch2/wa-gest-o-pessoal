@@ -307,14 +307,10 @@ body {
   width: auto;
 }
 
-/* Conta vencida grita; vencendo avisa. */
+/* Conta vencida grita, e é o alerta do Resumo que usa isto. O "vencendo" e
+   o "paga" moram no .conta-item, na tela de Contas. */
 .item.vencida { border-color: #f3b5b5; background: #fdf0f0; }
-.item.vencendo { border-color: #f0dcb0; background: #fdf8ec; }
 body.escuro .item.vencida { border-color: #5c2d3d; background: #331d24; }
-body.escuro .item.vencendo { border-color: #574a24; background: #322c17; }
-
-.item.paga { opacity: .55; }
-.item.paga .item-txt strong { text-decoration: line-through; }
 
 /* ─── LINHA DE LANÇAMENTO COM EDITAR/EXCLUIR ────────────────────────────
    Com os dois botões, cinco coisas disputam a largura numa tela de 390px.
@@ -477,8 +473,7 @@ body.escuro .item.vencendo { border-color: #574a24; background: #322c17; }
 .campo label { display: block; font-size: 12.5px; font-weight: 700; color: var(--fraco); margin-bottom: 5px; }
 
 .campo input,
-.campo select,
-.campo textarea {
+.campo select {
   width: 100%;
   border: 1.5px solid var(--borda);
   border-radius: 12px;
@@ -491,10 +486,7 @@ body.escuro .item.vencendo { border-color: #574a24; background: #322c17; }
 }
 
 .campo input:focus,
-.campo select:focus,
-.campo textarea:focus { border-color: var(--marca-txt); }
-
-.campo textarea { min-height: 74px; resize: vertical; }
+.campo select:focus { border-color: var(--marca-txt); }
 
 /* Campo com ícone à esquerda (e-mail/senha, estilo do WA Aqua) */
 .campo-icone { position: relative; }
@@ -1058,7 +1050,6 @@ body.escuro .resumo-secao .item-icone.entrada { background: #17372d; }
   cursor: pointer;
 }
 
-.resumo-link-final { margin-top: 10px; }
 
 .resumo-grafico-layout {
   display: grid;

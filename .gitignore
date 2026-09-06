@@ -1,0 +1,4 @@
+# Páginas de teste geradas fora do repositório (prévias e auditoria de CSS).
+# Elas nascem aqui dentro só pra enxergar os mesmos caminhos relativos do
+# app — style.css, js/, assets/ — e não fazem parte do site.
+_*.html

@@ -368,7 +368,7 @@ function abrirNovaCompra(cartaoId) {
       </div>
 
       <div class="lancamento-form">
-        <div class="campo lancamento-campo-valor">
+        <div class="campo">
           <label for="cp-valor">Valor total da compra</label>
           <div class="lancamento-valor">
             <span>R$</span>
@@ -661,7 +661,7 @@ function desenharPagarFatura(cartaoId, mesRef) {
     </div>
 
     <div class="lancamento-form">
-      <div class="campo lancamento-campo-valor">
+      <div class="campo">
         <label for="pg-valor">Quanto você vai pagar</label>
         <div class="lancamento-valor">
           <span>R$</span>
