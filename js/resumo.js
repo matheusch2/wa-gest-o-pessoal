@@ -129,9 +129,15 @@ function trocarMes(passo) {
   desenharResumo();
 }
 
-function desenharGraficoCategorias(ranking) {
+async function desenharGraficoCategorias(ranking) {
+  if (!document.getElementById("canvas-cat")) return;
+  if (!(await carregarChart())) return;
+
+  // Buscar a biblioteca leva tempo, e nesse tempo a pessoa pode ter saído da
+  // tela. Por isso o canvas é procurado DE NOVO aqui: o de antes já pode não
+  // existir mais, e desenhar nele seria desenhar no nada.
   const cv = document.getElementById("canvas-cat");
-  if (!cv || typeof Chart === "undefined") return;
+  if (!cv) return;
   destruirGrafico();
   // A primeira fatia é a maior, então ela ganha o verde-petróleo da marca. As
   // seguintes se afastam no tom para não virar um borrão só.

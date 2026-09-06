@@ -120,8 +120,22 @@ const CATEGORIAS_INICIAIS = {
   entrada: ["Salário", "Vendas", "Extra", "Outros"],
 };
 
+// Rede de celular não avisa que caiu: ela simplesmente para de responder, e
+// a promessa fica pendurada pra sempre. Sem este prazo, "não carregou" vira
+// uma tela girando sem fim, sem nem um botão pra tentar de novo.
+const _PRAZO_CARGA = 20000;
+
+function _comPrazo(promessa) {
+  return Promise.race([
+    promessa,
+    new Promise(resolve => setTimeout(
+      () => resolve({ data: null, error: { message: "A conexão demorou demais.", _prazo: true } }),
+      _PRAZO_CARGA)),
+  ]);
+}
+
 async function carregarTudo() {
-  const [rL, rC, rG, rCa, rCo, rFp, rMe] = await Promise.all([
+  const [rL, rC, rG, rCa, rCo, rFp, rMe] = (await Promise.all([
     sb.from("lancamentos").select("*").order("data", { ascending: false }),
     sb.from("contas").select("*").order("vencimento", { ascending: true }),
     sb.from("categorias").select("*").order("nome", { ascending: true }),
@@ -129,7 +143,7 @@ async function carregarTudo() {
     sb.from("compras_cartao").select("*").order("data", { ascending: false }),
     sb.from("pagamentos_fatura").select("*").order("pago_em", { ascending: true }),
     sb.from("metas").select("*").order("categoria", { ascending: true }),
-  ]);
+  ].map(_comPrazo)));
 
   const respostas = [rL, rC, rG, rCa, rCo, rFp, rMe];
   if (respostas.some(r => r.error)) {
@@ -138,7 +152,7 @@ async function carregarTudo() {
     if (/relation .* does not exist/i.test(e.message)) {
       erro("As tabelas ainda não existem. Rode o banco.sql no Supabase.");
     } else {
-      erro("Erro ao carregar: " + e.message);
+      erro(e._prazo ? e.message : "Erro ao carregar: " + e.message);
     }
     return false;
   }
@@ -163,6 +177,29 @@ async function semearCategorias() {
   }
   const { data, error } = await sb.from("categorias").insert(novas).select();
   if (!error && data) categorias = data;
+}
+
+/* ═══ O GRÁFICO CHEGA DEPOIS ══════════════════════════════════════════
+   A biblioteca do gráfico pesa mais que o app inteiro e serve a UMA rosca,
+   numa tela só. Carregada no <head>, todo mundo esperava por ela pra ver a
+   tela de login. Agora ela só é buscada quando o Resumo abre, e a rosca
+   aparece um instante depois do resto — que é a ordem certa: o número já
+   está na tela, o desenho dele é o extra. */
+
+let _promessaChart = null;
+
+function carregarChart() {
+  if (typeof Chart !== "undefined") return Promise.resolve(true);
+  if (_promessaChart) return _promessaChart;
+  _promessaChart = new Promise(resolve => {
+    const s = document.createElement("script");
+    s.src = "https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js";
+    s.onload = () => resolve(true);
+    // Falhou o download? A tela continua inteira: só a rosca não aparece.
+    s.onerror = () => { _promessaChart = null; resolve(false); };
+    document.head.appendChild(s);
+  });
+  return _promessaChart;
 }
 
 /* ═══ NAVEGAÇÃO ═══════════════════════════════════════════════════════ */

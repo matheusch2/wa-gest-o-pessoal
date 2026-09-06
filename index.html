@@ -27,9 +27,18 @@
   <!-- Se alguém tentar embutir o site num iframe para roubar a sessão, quebra pra fora. -->
   <script>if (window.top !== window.self) { try { window.top.location = window.self.location; } catch (e) { document.documentElement.style.display = "none"; } }</script>
 
-  <link rel="stylesheet" href="style.css?v=25">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <!-- Abre a conversa com o Supabase (DNS + TLS) enquanto a página ainda
+       está sendo lida. Em 4G esse aperto de mão sozinho custa perto de meio
+       segundo, e ele acontecia só depois de tudo carregado. -->
+  <link rel="preconnect" href="https://efewoxdgfcgkodtqbqsz.supabase.co" crossorigin>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+
+  <link rel="stylesheet" href="style.css?v=26">
+
+  <!-- defer: baixa em paralelo e só executa depois da página montada, em
+       ordem. Sem ele, cada script trava a leitura do HTML no meio.
+       O Chart.js saiu daqui — quem o busca é o Resumo, quando abre. -->
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="notranslate">
 
@@ -116,16 +125,16 @@
     const SUPABASE_KEY = "sb_publishable_qN3WztbmNH1Fzx4fyEqwYw_grooabFt";
   </script>
   <!-- Módulos da aplicação. A ordem preserva as dependências compartilhadas. -->
-  <script src="js/core.js?v=6"></script>
-  <script src="js/auth.js?v=1"></script>
-  <script src="js/resumo.js?v=6"></script>
-  <script src="js/lancamentos.js?v=6"></script>
-  <script src="js/contas.js?v=2"></script>
-  <script src="js/historico.js?v=3"></script>
-  <script src="js/ajustes.js?v=1"></script>
-  <script src="js/cartoes.js?v=3"></script>
-  <script src="js/metas.js?v=1"></script>
-  <script src="js/embreve.js?v=3"></script>
-  <script src="js/app.js?v=1"></script>
+  <script defer src="js/core.js?v=7"></script>
+  <script defer src="js/auth.js?v=2"></script>
+  <script defer src="js/resumo.js?v=7"></script>
+  <script defer src="js/lancamentos.js?v=6"></script>
+  <script defer src="js/contas.js?v=2"></script>
+  <script defer src="js/historico.js?v=3"></script>
+  <script defer src="js/ajustes.js?v=1"></script>
+  <script defer src="js/cartoes.js?v=3"></script>
+  <script defer src="js/metas.js?v=1"></script>
+  <script defer src="js/embreve.js?v=3"></script>
+  <script defer src="js/app.js?v=2"></script>
 </body>
 </html>

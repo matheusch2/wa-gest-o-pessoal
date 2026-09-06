@@ -123,7 +123,7 @@ async function entrar(botao) {
   if (!email || !senha) { msgLogin("Preencha e-mail e senha."); return; }
 
   const solta = travar(botao, "Entrando...");
-  const { error } = await sb.auth.signInWithPassword({ email, password: senha });
+  const { data: dadosLogin, error } = await sb.auth.signInWithPassword({ email, password: senha });
   if (error) {
     solta();
     // A mensagem do Supabase vem em inglês; traduz as duas mais comuns.
@@ -132,7 +132,7 @@ async function entrar(botao) {
            : error.message);
     return;
   }
-  await iniciarSessao();
+  await iniciarSessao(dadosLogin?.user);
 }
 
 async function criarConta(botao) {
@@ -157,7 +157,7 @@ async function criarConta(botao) {
     msgLogin("Conta criada! Confirme pelo link que enviamos ao seu e-mail.", "ok");
     return;
   }
-  await iniciarSessao();
+  await iniciarSessao(data.session.user);
 }
 
 async function recuperar(botao) {
@@ -187,6 +187,14 @@ async function salvarNovaSenha(botao) {
 
 async function sair() {
   await sb.auth.signOut();
-  usuario = null; lancamentos = []; contas = []; categorias = [];
+  // Esvazia TUDO. Faltando um destes, quem entrasse em seguida veria por um
+  // instante os cartões e as metas de quem saiu — e num celular emprestado
+  // esse instante é o que importa.
+  usuario = null;
+  lancamentos = []; contas = []; categorias = [];
+  cartoes = []; comprasCartao = []; pagamentosFatura = []; metas = [];
+  pilha = [];
+  document.getElementById("menu").style.display = "none";
+  document.getElementById("area").innerHTML = "";
   telaLogin("entrar");
 }

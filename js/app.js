@@ -20,8 +20,13 @@ function ehChaveSecreta(chave) {
   } catch (e) { return false; }
 }
 
-async function iniciarSessao() {
-  const { data: { user } } = await sb.auth.getUser();
+// Recebe o usuário quando quem chamou já o tem em mãos — e quem chama
+// sempre tem, porque toda entrada no app passa por um getSession ou por um
+// login, e os dois já devolvem o usuário junto. Sem isso, abrir o app
+// custava uma ida e volta INTEIRA ao servidor (o getUser) antes da primeira
+// consulta sequer começar. Em 4G ruim é o dobro do tempo de espera.
+async function iniciarSessao(userConhecido) {
+  const user = userConhecido || (await sb.auth.getUser()).data.user;
   if (!user) { telaLogin("entrar"); return; }
   usuario = user;
 
@@ -34,9 +39,50 @@ async function iniciarSessao() {
     nome.split(" ").filter(Boolean).map(n => n[0]).join("").toUpperCase().slice(0, 2) || "?";
 
   mesAtual = mesDe(_hojeLocal());
-  const carregou = await carregarTudo();
+  telaCarregando();
+  if (!(await carregarTudo())) { telaSemDados(); return; }
   voltarInicio();
-  if (carregou) history.pushState({ f: 1 }, "");
+  history.pushState({ f: 1 }, "");
+}
+
+function telaCarregando() {
+  document.getElementById("menu").style.display = "none";
+  document.getElementById("area").innerHTML = `
+    <div class="carregando">
+      <div class="carregando-roda" aria-hidden="true"></div>
+      <p>Carregando seus dados...</p>
+    </div>`;
+}
+
+// Antes, falhar o carregamento só piscava um aviso de três segundos e o menu
+// abria com tudo zerado. Dava pra jurar que os lançamentos tinham sumido —
+// e nesse susto a pessoa lança tudo de novo, agora em duplicata de verdade.
+function telaSemDados() {
+  document.getElementById("menu").style.display = "none";
+  document.getElementById("area").innerHTML = `
+    <div class="bloco" style="text-align:center;margin-top:20px">
+      <div class="carregando-erro" aria-hidden="true">📡</div>
+      <h2 style="margin:0 0 8px;font-size:16px">Não deu pra carregar seus dados</h2>
+      <p style="font-size:13.5px;color:var(--fraco);margin:0 0 16px">
+        Seus lançamentos estão salvos e intactos — foi só a conexão que não
+        respondeu agora. Confira a internet e tente de novo.
+      </p>
+      <button class="botao" onclick="recarregarDados(this)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.5 15a9 9 0 1 1-2.1-9.4L23 10"/></svg>
+        Tentar de novo
+      </button>
+      <button class="botao-fraco" onclick="sair()">Sair da conta</button>
+    </div>`;
+}
+
+async function recarregarDados(botao) {
+  travar(botao, "Carregando...");
+  // Falhando de novo, redesenha a tela de falha em vez de só destravar o
+  // botão: assim a função serve tanto pra quem já está nela quanto pra quem
+  // chegou aqui da tela de carregamento.
+  if (!(await carregarTudo())) { telaSemDados(); return; }
+  voltarInicio();
+  history.pushState({ f: 1 }, "");
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -85,6 +131,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const { data: { session } } = await sb.auth.getSession();
   if ((window.location.hash || "").includes("type=recovery")) { telaLogin("nova"); return; }
-  if (session) await iniciarSessao();
+  if (session) await iniciarSessao(session.user);
   else telaLogin("entrar");
 });
