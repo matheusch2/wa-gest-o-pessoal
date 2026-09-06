@@ -130,10 +130,6 @@ function desenharResumo(filtro) {
                 <span class="item-valor saida">${moeda(r.falta)}</span>
               </div>`).join("")}
           </div>
-          <p class="reserva-nota">
-            Esse dinheiro já foi tirado da sobra lá em cima. Quando você
-            pagar, não desconta de novo — só o que passar do previsto.
-          </p>
         </div>` : ""}
 
       <div class="bloco resumo-secao">

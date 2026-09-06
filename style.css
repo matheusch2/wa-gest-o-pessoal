@@ -1411,18 +1411,7 @@ body.escuro .resumo-secao .item-icone.entrada { background: #17372d; }
 .relogio-medida { min-height: 20px; margin: 0 0 12px; font-size: 13px; color: var(--fraco); }
 .relogio-medida.forte { color: var(--saida); font-weight: 600; }
 
-/* ─── O QUE AINDA VAI SAIR ───────────────────────────────────────────────
-   A explicação fica junto do bloco, não numa ajuda escondida: o número lá
-   em cima ficou menor por causa desta lista, e quem vê precisa saber por
-   quê no mesmo lugar. */
-.reserva-nota {
-  margin: 12px 0 0;
-  padding-top: 11px;
-  border-top: 1px solid var(--borda);
-  font-size: 11.5px;
-  color: var(--fraco);
-  line-height: 1.5;
-}
+/* ─── O QUE AINDA VAI SAIR ─────────────────────────────────────────── */
 .reserva-item .item-valor { font-variant-numeric: tabular-nums; }
 
 /* A meta que mexe no saldo se identifica na lista — as outras são só
