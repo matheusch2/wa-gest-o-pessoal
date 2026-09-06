@@ -1,5 +1,55 @@
 /* WA Finanças — Copyright © 2026 Matheus.
 
+   ═══ ONDE FICA CADA COISA ═════════════════════════════════════════════
+
+   O arquivo é UM só, e é de propósito: cada folha de estilo separada é
+   mais uma ida à rede antes de a primeira tela aparecer, e num 4G ruim
+   isso se sente. Em compensação, ele precisa de ordem — a ordem é esta,
+   de cima pra baixo, e É A ORDEM QUE FAZ O CSS FUNCIONAR:
+
+     1. IDENTIDADE                         cores, modo escuro, reset
+     2. TOPO                               cabeçalho com a logo
+     3. ESTRUTURA                          .cartao, .area, o menu
+     4. TÍTULOS E BLOCOS
+     5. SALDO E CARTÕES DE NÚMERO
+     6. LISTAS                             .lista e .item, de várias telas
+     7. LINHA DE LANÇAMENTO COM EDITAR/EXCLUIR
+     8. CONTAS A PAGAR
+     9. FORMULÁRIOS                        .campo e os botões, base de tudo
+    10. NOVA ENTRADA / NOVA SAÍDA
+    11. GRÁFICO
+    12. ENTRADA (login)
+    13. AVISOS (no lugar do alert do navegador)
+    14. CONFIRMAÇÃO NO LUGAR DO confirm()
+    15. TELA GRANDE                        o @media do computador
+    16. RESUMO DO MÊS
+    17. CARTÕES
+    18. PAGAR A FATURA
+    19. METAS DE GASTO
+    20. CARREGANDO E FALHA DE CONEXÃO
+    21. O QUE AINDA VAI SAIR
+    22. FECHAMENTO DO MÊS
+
+   ═══ TRÊS REGRAS, E O PORQUÊ DE CADA UMA ══════════════════════════════
+
+   1. ESTILO NOVO VAI NA SEÇÃO DELE, não no fim do arquivo. Foi de tanto
+      acrescentar no fim que o CSS das Metas foi parar debaixo do título
+      "O que ainda vai sair", onde ninguém ia procurar.
+
+   2. COMPONENTE ESTILIZA CLASSE, NÃO ETIQUETA. Escreva
+      `.meta-sem-valor`, não `.meta-sem strong`. Regra que alcança
+      etiqueta solta pega qualquer <strong> que caia ali dentro depois —
+      foi assim que o valor verde da folga saiu vermelho.
+
+   3. NOME DE CLASSE LEVA O PREFIXO DO COMPONENTE. `.saldo` sozinho já
+      era o card do Resumo quando virou também o ícone do pagamento
+      empurrado, e o padding de um espremeu o outro até sumir.
+
+   Quem vigia as três é o auditor em ferramentas/: ele abre as 38 telas e
+   avisa quando uma regra de fora vence a regra do próprio componente.
+
+   ══════════════════════════════════════════════════════════════════════
+
    POR QUE AZUL-PETRÓLEO, E NÃO O VERDE DO WA AQUA:
    aqui dentro o verde JÁ TEM emprego — quer dizer "entrou dinheiro", e o
    vermelho "saiu". Se a marca também fosse verde, o topo, os botões e os
@@ -69,7 +119,7 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* ─── TOPO ──────────────────────────────────────────────────────────── */
+/* ─── 2. TOPO ──────────────────────────────────────────────────────────── */
 
 .topo {
   background: linear-gradient(135deg, var(--marca-esc) 0%, var(--marca) 60%, var(--marca-cla) 100%);
@@ -142,7 +192,7 @@ body {
   padding: 0;
 }
 
-/* ─── ESTRUTURA ─────────────────────────────────────────────────────── */
+/* ─── 3. ESTRUTURA ─────────────────────────────────────────────────────── */
 
 .cartao {
   max-width: 412px;
@@ -206,7 +256,7 @@ body {
   stroke-linejoin: round;
 }
 
-/* ─── TÍTULOS E BLOCOS ──────────────────────────────────────────────── */
+/* ─── 4. TÍTULOS E BLOCOS ──────────────────────────────────────────────── */
 
 .titulo {
   text-align: center;
@@ -234,7 +284,7 @@ body {
 
 .vazio { text-align: center; color: var(--fraco); font-size: 13.5px; padding: 26px 8px; margin: 0; }
 
-/* ─── SALDO E CARTÕES DE NÚMERO ─────────────────────────────────────── */
+/* ─── 5. SALDO E CARTÕES DE NÚMERO ─────────────────────────────────────── */
 
 .saldo {
   background: linear-gradient(115deg, var(--marca-esc), var(--marca));
@@ -263,7 +313,7 @@ body {
 .numero.entrada strong { color: var(--entrada); }
 .numero.saida strong { color: var(--saida); }
 
-/* ─── LISTAS ────────────────────────────────────────────────────────── */
+/* ─── 6. LISTAS ────────────────────────────────────────────────────────── */
 
 .lista { display: flex; flex-direction: column; gap: 8px; }
 
@@ -312,7 +362,7 @@ body {
 .item.vencida { border-color: #f3b5b5; background: #fdf0f0; }
 body.escuro .item.vencida { border-color: #5c2d3d; background: #331d24; }
 
-/* ─── LINHA DE LANÇAMENTO COM EDITAR/EXCLUIR ────────────────────────────
+/* ─── 7. LINHA DE LANÇAMENTO COM EDITAR/EXCLUIR ────────────────────────────
    Com os dois botões, cinco coisas disputam a largura numa tela de 390px.
    Em uma linha só, a descrição virava três letras e reticências. Então a
    linha vira grade: texto à esquerda ocupando as duas fileiras, valor em
@@ -348,7 +398,7 @@ body.escuro .item.vencida { border-color: #5c2d3d; background: #331d24; }
 }
 .botao-editar.botao-excluir { background: color-mix(in srgb, var(--saida) 12%, transparent); }
 
-/* ─── CONTAS A PAGAR ────────────────────────────────────────────────────
+/* ─── 8. CONTAS A PAGAR ────────────────────────────────────────────────────
    A linha vira uma grade de duas fileiras porque numa tela de 390px não
    cabem nome, prazo, categoria, valor e botão lado a lado — antes o texto
    quebrava no meio. Agora: em cima o nome e o valor, embaixo o prazo e a
@@ -467,7 +517,7 @@ body.escuro .item.vencida { border-color: #5c2d3d; background: #331d24; }
 .contas-total small { display: block; font-size: 12px; opacity: .85; margin-top: 6px; }
 .contas-total .alerta { color: #ffd0d0; font-weight: 700; }
 
-/* ─── FORMULÁRIOS ───────────────────────────────────────────────────── */
+/* ─── 9. FORMULÁRIOS ───────────────────────────────────────────────────── */
 
 .campo { margin-bottom: 13px; }
 .campo label { display: block; font-size: 12.5px; font-weight: 700; color: var(--fraco); margin-bottom: 5px; }
@@ -560,7 +610,7 @@ button:active:not(:disabled) { transform: scale(.98); }
 
 .botao-fraco svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
 
-/* ─── NOVA ENTRADA / NOVA SAÍDA ───────────────────────────────────── */
+/* ─── 10. NOVA ENTRADA / NOVA SAÍDA ───────────────────────────────────── */
 
 /* A cor do tipo manda na tela toda: ícone, borda do valor e botão. Quem
    bate o olho já sabe de que lado o dinheiro vai, sem precisar ler. */
@@ -714,11 +764,11 @@ button:active:not(:disabled) { transform: scale(.98); }
 
 .pilula.ativa { background: var(--marca); border-color: var(--marca); color: #fff; }
 
-/* ─── GRÁFICO ───────────────────────────────────────────────────────── */
+/* ─── 11. GRÁFICO ───────────────────────────────────────────────────────── */
 
 .grafico { position: relative; height: 230px; }
 
-/* ─── ENTRADA (login) ───────────────────────────────────────────────── */
+/* ─── 12. ENTRADA (login) ───────────────────────────────────────────────── */
 
 .login-tela {
   /* Cancela o respiro lateral do .cartao: o fundo da entrada vai de ponta
@@ -773,7 +823,7 @@ body.escuro .login-titulo { color: var(--marca-txt); }
 }
 
 
-/* ─── AVISOS (no lugar do alert do navegador) ───────────────────────── */
+/* ─── 13. AVISOS (no lugar do alert do navegador) ───────────────────────── */
 
 .avisos {
   position: fixed;
@@ -803,7 +853,7 @@ body.escuro .login-titulo { color: var(--marca-txt); }
 
 @keyframes sobe { from { transform: translateY(14px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
-/* ─── CONFIRMAÇÃO NO LUGAR DO confirm() ─────────────────────────────── */
+/* ─── 14. CONFIRMAÇÃO NO LUGAR DO confirm() ─────────────────────────────── */
 
 .confirmar {
   border: 1.5px solid var(--borda);
@@ -821,7 +871,7 @@ body.escuro .login-titulo { color: var(--marca-txt); }
    não assustar quem está fazendo o certo. */
 .confirmar-acoes .sim.neutro { background: var(--marca); border-color: var(--marca); }
 
-/* ─── TELA GRANDE ───────────────────────────────────────────────────── */
+/* ─── 15. TELA GRANDE ───────────────────────────────────────────────────── */
 
 /* No computador o app continua sendo um app: coluna estreita e centrada,
    igual ao WA Aqua — esticar listas de dinheiro na largura toda só afasta
@@ -831,7 +881,7 @@ body.escuro .login-titulo { color: var(--marca-txt); }
   .grafico { height: 260px; }
 }
 
-/* ─── RESUMO DO MÊS ────────────────────────────────────────────────── */
+/* ─── 16. RESUMO DO MÊS ────────────────────────────────────────────────── */
 
 .resumo-tela { width: 100%; }
 
@@ -1129,7 +1179,14 @@ body.escuro .resumo-secao .item-icone.entrada { background: #17372d; }
   color: var(--fraco);
 }
 
-/* ─── CARTÕES ────────────────────────────────────────────────────────────
+/* Sobra negativa: o que entrou não cobre o que ainda tem que sair. Sobre o
+   azul do bloco, o vermelho puro fica ilegível — é o rosa claro que
+   funciona, o mesmo já usado no aviso de contas vencidas. */
+.resumo-saldo strong.negativo { color: #ffc9c9; }
+.resumo-saldo-status.negativo { background: rgba(220,38,38,.28); }
+.resumo-saldo-status.negativo b { color: #ffc9c9; }
+
+/* ─── 17. CARTÕES ────────────────────────────────────────────────────────────
    O cartão na tela imita o cartão no bolso: cor do banco, nome em cima e o
    valor embaixo. É por essa cor que a pessoa acha o cartão dela na lista,
    antes mesmo de ler o nome. */
@@ -1194,7 +1251,7 @@ body.escuro .resumo-secao .item-icone.entrada { background: #17372d; }
 }
 .compra-valor { font-size: 14px; font-weight: 800; white-space: nowrap; font-variant-numeric: tabular-nums; color: var(--saida); }
 
-/* ─── PAGAR A FATURA ─────────────────────────────────────────────────────
+/* ─── 18. PAGAR A FATURA ─────────────────────────────────────────────────────
    Verde, e não azul de marca: das ações da tela do cartão, esta é a única
    que tira dinheiro do bolso de verdade. Lançar uma compra só a escreve na
    conta do cartão; pagar a fatura vira saída no extrato. */
@@ -1323,7 +1380,7 @@ body.escuro .resumo-secao .item-icone.entrada { background: #17372d; }
 }
 .cartao-card-selo svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
 
-/* ─── METAS DE GASTO ─────────────────────────────────────────────────────
+/* ─── 19. METAS DE GASTO ─────────────────────────────────────────────────────
    Cada meta é uma barra. O número exato importa menos que a resposta
    imediata: estou dentro, estou perto, ou já passou. */
 
@@ -1374,36 +1431,7 @@ body.escuro .resumo-secao .item-icone.entrada { background: #17372d; }
 .meta-sem { display: flex; align-items: center; gap: 10px; padding: 8px 0; }
 .meta-sem + .meta-sem { border-top: 1px solid var(--borda); }
 .meta-sem-nome { flex: 1; min-width: 0; font-size: 13.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.meta-sem strong { font-size: 13.5px; font-weight: 800; color: var(--saida); font-variant-numeric: tabular-nums; white-space: nowrap; }
-
-/* ─── CARREGANDO E FALHA DE CONEXÃO ──────────────────────────────────────
-   Enquanto os dados vêm, a tela dizia o quê? Nada — ficava branca, e branco
-   num app de dinheiro parece "sumiu tudo". */
-
-.carregando { text-align: center; padding: 60px 20px; }
-.carregando p { margin: 16px 0 0; font-size: 13.5px; color: var(--fraco); }
-
-.carregando-roda {
-  width: 34px;
-  height: 34px;
-  margin: 0 auto;
-  border: 3px solid var(--borda);
-  border-top-color: var(--marca-txt);
-  border-radius: 50%;
-  animation: girando .8s linear infinite;
-}
-@keyframes girando { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .carregando-roda { animation-duration: 2.4s; } }
-
-.carregando-erro { font-size: 34px; line-height: 1; margin-bottom: 10px; }
-
-/* A medição do relógio chega depois do resto da tela, então ela tem um
-   lugar reservado — sem isso o texto pularia quando o número aparecesse. */
-.relogio-medida { min-height: 20px; margin: 0 0 12px; font-size: 13px; color: var(--fraco); }
-.relogio-medida.forte { color: var(--saida); font-weight: 600; }
-
-/* ─── O QUE AINDA VAI SAIR ─────────────────────────────────────────── */
-.reserva-item .item-valor { font-variant-numeric: tabular-nums; }
+.meta-sem-valor { font-size: 13.5px; font-weight: 800; color: var(--saida); font-variant-numeric: tabular-nums; white-space: nowrap; }
 
 /* Obrigatório e opcional são dois assuntos na mesma lista. O cabeçalho do
    grupo carrega o subtotal porque é ele que responde "quanto do meu mês já
@@ -1459,14 +1487,36 @@ body.escuro .resumo-secao .item-icone.entrada { background: #17372d; }
   background: var(--marca-cl);
 }
 
-/* Sobra negativa: o que entrou não cobre o que ainda tem que sair. Sobre o
-   azul do bloco, o vermelho puro fica ilegível — é o rosa claro que
-   funciona, o mesmo já usado no aviso de contas vencidas. */
-.resumo-saldo strong.negativo { color: #ffc9c9; }
-.resumo-saldo-status.negativo { background: rgba(220,38,38,.28); }
-.resumo-saldo-status.negativo b { color: #ffc9c9; }
+/* ─── 20. CARREGANDO E FALHA DE CONEXÃO ──────────────────────────────────────
+   Enquanto os dados vêm, a tela dizia o quê? Nada — ficava branca, e branco
+   num app de dinheiro parece "sumiu tudo". */
 
-/* ─── FECHAMENTO DO MÊS ──────────────────────────────────────────────────
+.carregando { text-align: center; padding: 60px 20px; }
+.carregando p { margin: 16px 0 0; font-size: 13.5px; color: var(--fraco); }
+
+.carregando-roda {
+  width: 34px;
+  height: 34px;
+  margin: 0 auto;
+  border: 3px solid var(--borda);
+  border-top-color: var(--marca-txt);
+  border-radius: 50%;
+  animation: girando .8s linear infinite;
+}
+@keyframes girando { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .carregando-roda { animation-duration: 2.4s; } }
+
+.carregando-erro { font-size: 34px; line-height: 1; margin-bottom: 10px; }
+
+/* A medição do relógio chega depois do resto da tela, então ela tem um
+   lugar reservado — sem isso o texto pularia quando o número aparecesse. */
+.relogio-medida { min-height: 20px; margin: 0 0 12px; font-size: 13px; color: var(--fraco); }
+.relogio-medida.forte { color: var(--saida); font-weight: 600; }
+
+/* ─── 21. O QUE AINDA VAI SAIR ─────────────────────────────────────────── */
+.reserva-item .item-valor { font-variant-numeric: tabular-nums; }
+
+/* ─── 22. FECHAMENTO DO MÊS ──────────────────────────────────────────────────
    O convite só aparece em mês que já acabou, e some depois de fechado —
    dá pra ficar meses sem ver isto na tela. Por isso ele é um botão cheio
    quando aparece: não pode passar despercebido nas duas vezes por ano em
@@ -1498,7 +1548,7 @@ body.escuro .resumo-secao .item-icone.entrada { background: #17372d; }
 /* "Por que sobrou": três colunas — categoria, o quanto de quanto, e a
    folga. A do meio é a que impede a folga de virar número solto. */
 .fechar-previsto { font-size: 11px; color: var(--fraco); white-space: nowrap; }
-.meta-sem strong.fechar-folga { font-size: 13.5px; font-weight: 800; color: var(--entrada); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.fechar-folga { font-size: 13.5px; font-weight: 800; color: var(--entrada); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .fechar-nota {
   margin: 11px 0 0;
   padding-top: 10px;

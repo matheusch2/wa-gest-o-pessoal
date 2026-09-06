@@ -33,7 +33,7 @@
   <link rel="preconnect" href="https://efewoxdgfcgkodtqbqsz.supabase.co" crossorigin>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 
-  <link rel="stylesheet" href="style.css?v=35">
+  <link rel="stylesheet" href="style.css?v=36">
 
   <!-- defer: baixa em paralelo e só executa depois da página montada, em
        ordem. Sem ele, cada script trava a leitura do HTML no meio.
@@ -124,7 +124,27 @@
     const SUPABASE_URL = "https://efewoxdgfcgkodtqbqsz.supabase.co";
     const SUPABASE_KEY = "sb_publishable_qN3WztbmNH1Fzx4fyEqwYw_grooabFt";
   </script>
-  <!-- Módulos da aplicação. A ordem preserva as dependências compartilhadas. -->
+  <!-- ═══ OS MÓDULOS, E O QUE CADA UM FAZ ═══════════════════════════════
+       Um por tela, mais dois de base. Tela nova = arquivo novo, e ele
+       entra ANTES do embreve.js — que é quem tapa buraco de tela que
+       ainda não existe, e sobrescreve quem vier depois dele.
+
+         core.js       dinheiro, datas, navegação, carregamento, reservas
+         auth.js       entrar, criar conta, recuperar senha, sair
+         resumo.js     Resumo do mês e o filtro de entradas/saídas
+         lancamentos.js  lançar, editar e excluir — usado pelo Resumo e
+                         pelo Histórico, por isso mora sozinho
+         contas.js     Contas a pagar
+         historico.js  lista completa, mês a mês
+         ajustes.js    tema, conta, sair
+         cartoes.js    cartões, faturas, compras e pagamentos
+         metas.js      tetos por categoria, obrigatórios e opcionais
+         fechamento.js fecha o mês e leva a sobra pro seguinte
+         embreve.js    telas ainda por construir
+         app.js        a partida: sessão, erros de carga, relógio
+
+       O ?v=N no fim de cada um existe pra o celular não servir a versão
+       velha do cache. Mexeu no arquivo, sobe o número. -->
   <script defer src="js/core.js?v=11"></script>
   <script defer src="js/auth.js?v=2"></script>
   <script defer src="js/resumo.js?v=11"></script>
@@ -133,7 +153,7 @@
   <script defer src="js/historico.js?v=3"></script>
   <script defer src="js/ajustes.js?v=1"></script>
   <script defer src="js/cartoes.js?v=4"></script>
-  <script defer src="js/metas.js?v=4"></script>
+  <script defer src="js/metas.js?v=5"></script>
   <script defer src="js/fechamento.js?v=2"></script>
   <script defer src="js/embreve.js?v=3"></script>
   <script defer src="js/app.js?v=4"></script>

@@ -172,7 +172,7 @@ function desenharMetas() {
           ${semMeta.slice(0, 6).map(([cat, v]) => `
             <div class="meta-sem">
               <span class="meta-sem-nome">${iconeDoLancamento({ tipo: "saida", categoria: cat })} ${esc(cat)}</span>
-              <strong>${moeda(v)}</strong>
+              <strong class="meta-sem-valor">${moeda(v)}</strong>
               <button class="botao-pagar" onclick="abrirNovaMeta('${esc(cat)}')">Pôr meta</button>
             </div>`).join("")}
         </div>
