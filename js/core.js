@@ -254,6 +254,66 @@ function carregarChart() {
   return _promessaChart;
 }
 
+/* ═══ O QUE AINDA VAI SAIR ════════════════════════════════════════════
+   O saldo do mês, sozinho, mente por otimismo: dia 5 ele mostra dinheiro
+   que já tem dono — a internet que vence dia 20, o mercado que ainda
+   falta fazer. Quem olha esse número e acha que pode gastar, gasta o
+   dinheiro da conta de luz.
+
+   Então o Resumo reserva o que ainda tem que sair. Vem de dois lugares:
+
+   1. Contas a pagar não pagas com vencimento no mês. É dívida com nome,
+      data e valor — reserva o valor inteiro.
+
+   2. Metas marcadas com "reservar". Aí o que se reserva é o que FALTA
+      pro previsto, não o previsto todo: gastou R$ 640 dos R$ 800 de
+      mercado, só R$ 160 ainda vão sair. Os 640 já estão nas saídas, e
+      contar de novo seria descontar duas vezes o mesmo dinheiro.
+
+   E a mesma internet não pode ser reservada duas vezes por estar na
+   conta a pagar E dentro da meta da categoria dela — por isso a reserva
+   da meta desconta também as contas em aberto daquela categoria.
+
+   Depois de pago, nada disso sobra: pagar uma conta a marca como paga E
+   vira saída no extrato, e a saída derruba o que faltava da meta. */
+
+function reservasDoMes(mesRef) {
+  const linhas = [];
+
+  for (const c of contas) {
+    if (c.pago || mesDe(c.vencimento) !== mesRef) continue;
+    linhas.push({
+      tipo: "conta", nome: c.nome, categoria: c.categoria || "",
+      previsto: Number(c.valor), gasto: 0, falta: Number(c.valor),
+      vencimento: c.vencimento,
+    });
+  }
+
+  // Só o que JÁ SAIU DA CONTA conta aqui. Compra no cartão não entrou
+  // nesta soma de propósito: ela ainda não tocou o extrato, e o saldo que
+  // estamos corrigindo é o do extrato.
+  const jaSaiu = {};
+  for (const l of lancamentos) {
+    if (l.tipo !== "saida" || mesDe(l.data) !== mesRef) continue;
+    jaSaiu[l.categoria] = (jaSaiu[l.categoria] || 0) + Number(l.valor);
+  }
+
+  for (const m of metas) {
+    if (!m.reservar) continue;
+    const previsto = Number(m.valor);
+    const gasto = jaSaiu[m.categoria] || 0;
+    const emContas = linhas
+      .filter(x => x.tipo === "conta" && x.categoria === m.categoria)
+      .reduce((s, x) => s + x.falta, 0);
+    const falta = Math.round(Math.max(0, previsto - gasto - emContas) * 100) / 100;
+    if (falta < 0.005) continue;
+    linhas.push({ tipo: "meta", nome: m.categoria, categoria: m.categoria, previsto, gasto, falta });
+  }
+
+  linhas.sort((a, b) => b.falta - a.falta);
+  return { linhas, total: Math.round(linhas.reduce((s, x) => s + x.falta, 0) * 100) / 100 };
+}
+
 /* ═══ NAVEGAÇÃO ═══════════════════════════════════════════════════════ */
 
 let pilha = [];

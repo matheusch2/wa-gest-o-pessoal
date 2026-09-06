@@ -45,9 +45,10 @@ function desenharResumo(filtro) {
 
   if (_filtroResumo) { desenharResumoFiltrado(doMes, entradas, saidas); return; }
 
+  const reservas = reservasDoMes(mesAtual);
+  const sobra = Math.round((saldo - reservas.total) * 100) / 100;
+
   // Contas em aberto olham o mês inteiro, não só até hoje.
-  const aPagar = contas.filter(c => !c.pago && mesDe(c.vencimento) === mesAtual);
-  const totalAPagar = aPagar.reduce((s, c) => s + Number(c.valor), 0);
   const vencidas = contas.filter(c => !c.pago && c.vencimento < _hojeLocal());
 
   // Gastos por categoria, do maior para o menor — é a pergunta que a
@@ -72,14 +73,28 @@ function desenharResumo(filtro) {
         </div>
       </div>
 
-      <div class="saldo resumo-saldo">
-        <span class="resumo-saldo-rotulo">Saldo do mês</span>
-        <strong>${moeda(saldo)}</strong>
-        <small class="resumo-saldo-status">
-          <b aria-hidden="true">${saldo >= 0 ? "↗" : "↘"}</b>
-          ${saldo >= 0 ? "Resultado positivo neste mês" : "As saídas passaram as entradas"}
-        </small>
-      </div>
+      ${(() => {
+        const valor = reservas.total > 0 ? sobra : saldo;
+        // O vermelho aqui não é decoração: negativo quer dizer que o que
+        // entrou não cobre o que ainda tem que sair. Em branco, esse número
+        // passa batido no meio dos outros.
+        const status = valor < 0
+          ? reservas.total > 0
+            ? `Faltam ${moeda(-sobra)} pra cobrir o que ainda vai sair`
+            : "As saídas passaram as entradas"
+          : reservas.total > 0
+            ? `Livre, já tirando ${moeda(reservas.total)} que ainda vão sair`
+            : "Resultado positivo neste mês";
+        return `
+        <div class="saldo resumo-saldo">
+          <span class="resumo-saldo-rotulo">${reservas.total > 0 ? "Sobra do mês" : "Saldo do mês"}</span>
+          <strong${valor < 0 ? ' class="negativo"' : ""}>${moeda(valor)}</strong>
+          <small class="resumo-saldo-status${valor < 0 ? " negativo" : ""}">
+            <b aria-hidden="true">${valor >= 0 ? "↗" : "↘"}</b>
+            ${status}
+          </small>
+        </div>`;
+      })()}
 
       ${_cardsDeNumero(entradas, saidas)}
 
@@ -93,21 +108,32 @@ function desenharResumo(filtro) {
           <span class="item-x">›</span>
         </div>` : ""}
 
-      ${aPagar.length ? `
+      ${reservas.total > 0 ? `
         <div class="bloco resumo-secao">
           <div class="bloco-topo">
-            <h2>Ainda a pagar</h2>
-            <strong class="resumo-total-saida">${moeda(totalAPagar)}</strong>
+            <h2>Ainda vai sair</h2>
+            <strong class="resumo-total-saida">${moeda(reservas.total)}</strong>
           </div>
           <div class="lista">
-            ${aPagar.slice(0, 4).map(c => `
-              <div class="item" onclick="abrirContas()" style="cursor:pointer">
-                <div class="item-icone">📄</div>
-                <div class="item-txt"><strong>${esc(c.nome)}</strong><small>Vence ${dataBR(c.vencimento)}</small></div>
-                <span class="item-valor saida">${moeda(c.valor)}</span>
+            ${reservas.linhas.map(r => `
+              <div class="item reserva-item"
+                   onclick="${r.tipo === "conta" ? "abrirContas()" : "abrirMetas()"}" style="cursor:pointer">
+                <div class="item-icone">${r.tipo === "conta" ? "📄" : iconeDoLancamento({ tipo: "saida", categoria: r.categoria })}</div>
+                <div class="item-txt">
+                  <strong>${esc(r.nome)}</strong>
+                  <small>${r.tipo === "conta"
+                    ? "Vence " + dataBR(r.vencimento)
+                    : r.gasto > 0
+                      ? `${moeda(r.gasto)} de ${moeda(r.previsto)} já saíram`
+                      : `Previsto ${moeda(r.previsto)} no mês`}</small>
+                </div>
+                <span class="item-valor saida">${moeda(r.falta)}</span>
               </div>`).join("")}
           </div>
-          ${aPagar.length > 4 ? `<button class="resumo-link resumo-link-final" onclick="abrirContas()">Ver todas as ${aPagar.length}</button>` : ""}
+          <p class="reserva-nota">
+            Esse dinheiro já foi tirado da sobra lá em cima. Quando você
+            pagar, não desconta de novo — só o que passar do previsto.
+          </p>
         </div>` : ""}
 
       <div class="bloco resumo-secao">

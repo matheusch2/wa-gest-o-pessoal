@@ -1410,3 +1410,45 @@ body.escuro .resumo-secao .item-icone.entrada { background: #17372d; }
    lugar reservado — sem isso o texto pularia quando o número aparecesse. */
 .relogio-medida { min-height: 20px; margin: 0 0 12px; font-size: 13px; color: var(--fraco); }
 .relogio-medida.forte { color: var(--saida); font-weight: 600; }
+
+/* ─── O QUE AINDA VAI SAIR ───────────────────────────────────────────────
+   A explicação fica junto do bloco, não numa ajuda escondida: o número lá
+   em cima ficou menor por causa desta lista, e quem vê precisa saber por
+   quê no mesmo lugar. */
+.reserva-nota {
+  margin: 12px 0 0;
+  padding-top: 11px;
+  border-top: 1px solid var(--borda);
+  font-size: 11.5px;
+  color: var(--fraco);
+  line-height: 1.5;
+}
+.reserva-item .item-valor { font-variant-numeric: tabular-nums; }
+
+/* A meta que mexe no saldo se identifica na lista — as outras são só
+   aviso, esta tira dinheiro da sobra. */
+.meta-reserva {
+  margin: 7px 0 0;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--marca-txt);
+}
+
+/* O texto de apoio dentro da caixa de marcar. */
+.conta-repete span small {
+  display: block;
+  margin-top: 3px;
+  font-size: 11.5px;
+  font-weight: 400;
+  color: var(--fraco);
+  line-height: 1.45;
+}
+.conta-repete { align-items: flex-start; }
+.conta-repete input { margin-top: 2px !important; }
+
+/* Sobra negativa: o que entrou não cobre o que ainda tem que sair. Sobre o
+   azul do bloco, o vermelho puro fica ilegível — é o rosa claro que
+   funciona, o mesmo já usado no aviso de contas vencidas. */
+.resumo-saldo strong.negativo { color: #ffc9c9; }
+.resumo-saldo-status.negativo { background: rgba(220,38,38,.28); }
+.resumo-saldo-status.negativo b { color: #ffc9c9; }

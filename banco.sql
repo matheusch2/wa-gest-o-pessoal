@@ -227,3 +227,13 @@ create policy "cada um muda só as próprias metas"
   on metas for update using (auth.uid() = user_id);
 create policy "cada um apaga só as próprias metas"
   on metas for delete using (auth.uid() = user_id);
+
+-- A meta tem dois usos, e este campo diz qual. Desligado, ela é só um teto
+-- que avisa quando você passa. Ligado, ela também é COMPROMISSO: o que
+-- ainda falta pro previsto sai do saldo antes mesmo de ser pago, porque
+-- vai ter que ser pago de todo jeito.
+--
+-- Mercado e internet querem isso ligado. Uma meta de lazer, não: reservar
+-- dinheiro pra um gasto que talvez nem aconteça deixaria o saldo mais
+-- pobre do que ele é.
+alter table metas add column if not exists reservar boolean not null default true;

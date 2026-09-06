@@ -98,6 +98,7 @@ function desenharMetas() {
           <span><strong>${moeda(gasto)}</strong> de ${moeda(teto)}</span>
           <span class="meta-falta">${falta >= 0 ? "Sobram " + moeda(falta) : "Passou " + moeda(-falta)}</span>
         </div>
+        ${m.reservar ? `<p class="meta-reserva">Descontada do saldo do Resumo</p>` : ""}
         <div class="meta-acoes">
           <button class="botao-editar" onclick="abrirEdicaoMeta('${m.id}')" aria-label="Editar">✏️</button>
           <button class="botao-editar botao-excluir" onclick="pedirExcluirMeta('${m.id}')" aria-label="Excluir">🗑️</button>
@@ -221,6 +222,16 @@ function _desenharFormMeta(meta, categoriaSugerida) {
       </div>
 
       <p class="cartao-dica">Vale todo mês. Conta as saídas do extrato e as compras do cartão nessa categoria.</p>
+
+      <label class="conta-repete">
+        <input type="checkbox" id="mt-reservar" ${!meta || meta.reservar ? "checked" : ""}>
+        <span>
+          Já descontar do saldo o que ainda falta
+          <small>Pro Resumo não mostrar como livre um dinheiro que já tem dono.
+                 Ligue em gasto certo — mercado, internet, aluguel. Deixe
+                 desligado no que talvez nem aconteça, como lazer.</small>
+        </span>
+      </label>
     </div>
 
     ${!editando && !disponiveis.length
@@ -254,6 +265,7 @@ async function salvarMeta(botao, id) {
   const campoCat = document.getElementById("mt-cat");
   const categoria = (campoCat?.value || "").trim();
   const valor = parseMoedaBR(document.getElementById("mt-valor").value);
+  const reservar = !!document.getElementById("mt-reservar")?.checked;
 
   if (!categoria) { erro("Escolha a categoria."); return; }
   if (valor === null || valor <= 0) { erro("Informe um teto maior que zero."); return; }
@@ -262,7 +274,7 @@ async function salvarMeta(botao, id) {
 
   if (id) {
     const { data, error } = await sb.from("metas")
-      .update({ valor })
+      .update({ valor, reservar })
       .eq("id", id).eq("user_id", usuario.id)
       .select().single();
     if (error) { solta(); erro("Erro ao salvar: " + error.message); return; }
@@ -270,7 +282,7 @@ async function salvarMeta(botao, id) {
     ok("Meta alterada!");
   } else {
     const { data, error } = await sb.from("metas")
-      .insert({ user_id: usuario.id, categoria, valor })
+      .insert({ user_id: usuario.id, categoria, valor, reservar })
       .select().single();
     if (error) {
       solta();
