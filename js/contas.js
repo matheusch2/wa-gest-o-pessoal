@@ -5,6 +5,70 @@
 
 /* ═══ CONTAS A PAGAR ══════════════════════════════════════════════════ */
 
+/* ─── OS FIXOS ────────────────────────────────────────────────────────
+   Gasto fixo não é conceito novo aqui: é a conta marcada "repete todo
+   mês". Aluguel, internet, energia, água. O que faltava era ver isso
+   junto — quanto eles somam por mês, e se a do mês corrente já existe.
+
+   Cada fixo é uma SÉRIE de contas com o mesmo nome, uma por mês. Elas
+   são agrupadas pelo nome porque é o que a pessoa reconhece, e porque a
+   cópia do mês seguinte nasce com o mesmo nome. Renomear parte a série
+   em duas — é o preço de não ter uma coluna de série no banco, e não
+   vale uma migração enquanto uma renomeação por ano for o normal.
+
+   O BURACO QUE ISSO FECHA: a conta do mês seguinte só nascia quando você
+   PAGAVA a atual. Não pagou setembro, outubro nunca aparecia — e aí o
+   Resumo de outubro não sabia do aluguel e mostrava sobra que não
+   existe. Agora a aba avisa e deixa lançar a próxima com um toque. */
+
+function fixosPorSerie() {
+  const series = new Map();
+  for (const c of contas) {
+    if (!c.recorrente) continue;
+    const atual = series.get(c.nome);
+    if (!atual || c.vencimento > atual.ultima.vencimento) {
+      series.set(c.nome, { nome: c.nome, ultima: c });
+    }
+  }
+
+  const mesCorrente = mesDe(_hojeLocal());
+  return [...series.values()].map(f => {
+    // Já existe alguma em aberto deste mês em diante? Se sim, a série
+    // está em dia e não há o que lançar.
+    const emDia = contas.some(c =>
+      c.recorrente && c.nome === f.nome && !c.pago && mesDe(c.vencimento) >= mesCorrente);
+    const proxima = proximoMesMesmoDia(f.ultima.vencimento);
+    return {
+      ...f,
+      valor: Number(f.ultima.valor),
+      categoria: f.ultima.categoria || "",
+      emDia,
+      proxima,
+      // Sem nada em aberto daqui pra frente, a próxima é a que falta.
+      falta: emDia ? null : (mesDe(proxima) >= mesCorrente ? proxima : mesCorrente + "-" + f.ultima.vencimento.slice(-2)),
+    };
+  }).sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+}
+
+async function lancarProximoFixo(botao, nome) {
+  if (botao?.disabled) return;
+  const f = fixosPorSerie().find(x => x.nome === nome);
+  if (!f || !f.falta) return;
+
+  const solta = travar(botao, "Lançando...");
+  const chave = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random());
+  const { data, error } = await sb.from("contas").insert({
+    user_id: usuario.id, nome: f.nome, valor: f.valor, vencimento: f.falta,
+    categoria: f.categoria || null, recorrente: true, chave_envio: chave,
+  }).select().single();
+
+  if (error) { solta(); erro("Erro ao lançar: " + error.message); return; }
+
+  contas.push(data);
+  ok(`${f.nome} de ${mesPorExtenso(mesDe(f.falta)).toLowerCase()} lançada.`);
+  desenharContas();
+}
+
 // Qual aba está aberta. Trocar de aba não empilha tela: é a mesma tela
 // mostrando outro recorte, então o "Voltar" continua indo pro menu.
 let _contasFiltro = "todos";
@@ -27,11 +91,14 @@ function desenharContas() {
     return dias >= 0 && dias <= 5;
   });
 
+  const fixos = fixosPorSerie();
+
   const abas = [
     { id: "todos", rotulo: "A pagar", itens: abertas, vazio: "Nenhuma conta em aberto. 🎉" },
     { id: "vencendo", rotulo: "Vencendo", itens: vencendo, vazio: "Nada vencendo nos próximos dias." },
     { id: "vencidos", rotulo: "Vencidos", itens: vencidas, vazio: "Nenhuma conta vencida. 🎉" },
     { id: "pagos", rotulo: "Pagos", itens: pagas, vazio: "Nenhuma conta paga ainda." },
+    { id: "fixos", rotulo: "Fixos", itens: fixos, vazio: "Nenhum gasto fixo ainda. Marque \"Repete todo mês\" ao criar uma conta." },
   ];
   const abaAtual = abas.find(a => a.id === _contasFiltro) || abas[0];
 
@@ -58,6 +125,24 @@ function desenharContas() {
         </div>
       </div>`;
   };
+
+  const linhaFixo = (f) => `
+    <div class="fixo-item ${f.emDia ? "" : "falta"}">
+      <div class="conta-ico">🔁</div>
+      <div class="fixo-txt">
+        <strong>${esc(f.nome)}</strong>
+        <small>Todo dia ${Number(f.ultima.vencimento.slice(-2))}${f.categoria ? " · " + esc(f.categoria) : ""}</small>
+      </div>
+      <div class="fixo-valor">${moeda(f.valor)}</div>
+      <div class="fixo-acao">
+        ${f.emDia
+          ? `<span class="conta-chip">em dia</span>`
+          : `<button class="botao-pagar" onclick="lancarProximoFixo(this, '${esc(f.nome).replace(/'/g, "\\'")}')">Lançar ${soNomeDoMes(mesDe(f.falta))}</button>`}
+      </div>
+    </div>`;
+
+  const totalFixos = fixos.reduce((s, f) => s + f.valor, 0);
+  const faltando = fixos.filter(f => !f.emDia).length;
 
   const icoCalendario = `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`;
 
@@ -90,8 +175,15 @@ function desenharContas() {
                 onclick="filtrarContas('${a.id}')">${a.rotulo}</button>`).join("")}
     </div>
 
+    ${abaAtual.id === "fixos" && fixos.length ? `
+      <div class="fixos-soma">
+        <span>Seus fixos somam</span>
+        <strong>${moeda(totalFixos)} por mês</strong>
+        ${faltando ? `<small class="alerta">${faltando} ainda não ${faltando > 1 ? "foram lançados" : "foi lançado"} neste mês</small>` : ""}
+      </div>` : ""}
+
     ${abaAtual.itens.length
-      ? `<div class="lista">${abaAtual.itens.map(linha).join("")}</div>`
+      ? `<div class="lista">${abaAtual.itens.map(abaAtual.id === "fixos" ? linhaFixo : linha).join("")}</div>`
       : `<div class="bloco"><p class="vazio">${abaAtual.vazio}</p></div>`}
 
     <button class="botao-fraco" onclick="voltarInicio()">Voltar</button>

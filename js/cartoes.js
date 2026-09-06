@@ -546,13 +546,6 @@ function _situacaoFatura(cartao, mesRef) {
 const _ICO_CONFERE = `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="8 12.5 11 15.5 16.5 9"/></svg>`;
 const _ICO_EMPURRA = `<svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="14 5 21 12 14 19"/><path d="M21 12H6a3 3 0 0 1-3-3V6"/></svg>`;
 
-// Só o nome do mês, sem o ano: "Saldo da fatura de outubro" cabe na linha
-// da compra, "Saldo da fatura de Outubro de 2026" não.
-function _soNomeDoMes(ym) {
-  const [a, m] = ym.split("-").map(Number);
-  return new Date(a, m - 1, 1).toLocaleDateString("pt-BR", { month: "long" });
-}
-
 /* ─── O bloco de pagamento dentro da tela do cartão ─────────────────── */
 
 function _acaoDaFatura(cartao, mesRef, s) {
@@ -575,7 +568,7 @@ function _acaoDaFatura(cartao, mesRef, s) {
       pedacos.push(`
         <button class="botao-fraco fatura-empurrar" onclick="pedirJogarSaldo('${cartao.id}', '${mesRef}')">
           ${_ICO_EMPURRA}
-          Jogar o resto pra fatura de ${_soNomeDoMes(_somaMes(mesRef, 1))}
+          Jogar o resto pra fatura de ${soNomeDoMes(_somaMes(mesRef, 1))}
         </button>`);
     }
   }
@@ -599,7 +592,7 @@ function _blocoJaPago(cartao, mesRef, s) {
       <div class="fatura-pgto-txt">
         <strong>${moeda(p.valor)}</strong>
         <small>${dataBR(p.pago_em)} · ${p.tipo === "saldo"
-          ? "jogado pra fatura de " + _soNomeDoMes(_somaMes(mesRef, 1))
+          ? "jogado pra fatura de " + soNomeDoMes(_somaMes(mesRef, 1))
           : "saída no extrato"}</small>
       </div>
       <button class="fatura-desfazer" onclick="pedirDesfazerPagamento('${p.id}', '${cartao.id}')">Desfazer</button>
@@ -827,7 +820,7 @@ async function jogarSaldo(botao, cartaoId, mesRef) {
   // exatamente na fatura do mês seguinte, sem depender de quando é hoje.
   const { data: compra, error: erroCompra } = await sb.from("compras_cartao").insert({
     user_id: usuario.id, cartao_id: cartaoId,
-    descricao: `Saldo da fatura de ${_soNomeDoMes(mesRef)}`,
+    descricao: `Saldo da fatura de ${soNomeDoMes(mesRef)}`,
     valor: s.restante, parcelas, data: proximo + "-01",
     categoria: "Cartão", chave_envio: chave,
   }).select().single();

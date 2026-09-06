@@ -517,6 +517,39 @@ body.escuro .item.vencida { border-color: #5c2d3d; background: #331d24; }
 .contas-total small { display: block; font-size: 12px; opacity: .85; margin-top: 6px; }
 .contas-total .alerta { color: #ffd0d0; font-weight: 700; }
 
+/* Os fixos: uma linha por gasto que repete, com o que ele custa e se o
+   deste mês já foi lançado. A soma no topo é o número que responde
+   "quanto do meu mês já está comprometido antes de eu escolher nada". */
+.fixos-soma {
+  background: var(--marca-cl);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  text-align: center;
+}
+.fixos-soma span { display: block; font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--fraco); }
+.fixos-soma strong { display: block; margin-top: 3px; font-size: 18px; font-weight: 800; color: var(--marca-txt); font-variant-numeric: tabular-nums; }
+.fixos-soma small { display: block; margin-top: 4px; font-size: 11.5px; }
+.fixos-soma .alerta { color: var(--aviso); font-weight: 700; }
+
+.fixo-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--borda);
+  border-radius: 12px;
+  background: var(--papel);
+}
+/* Falta lançar o deste mês: a borda avisa antes de a pessoa ler a linha. */
+.fixo-item.falta { border-color: color-mix(in srgb, var(--aviso) 45%, transparent); }
+
+.fixo-txt { flex: 1; min-width: 0; }
+.fixo-txt strong { display: block; font-size: 14px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fixo-txt small { display: block; font-size: 11px; color: var(--fraco); }
+.fixo-valor { font-size: 14px; font-weight: 800; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.fixo-acao { flex-shrink: 0; }
+
 /* ─── 9. FORMULÁRIOS ───────────────────────────────────────────────────── */
 
 .campo { margin-bottom: 13px; }

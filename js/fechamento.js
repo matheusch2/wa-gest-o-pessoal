@@ -80,10 +80,7 @@ function faixaDeFechamento(mesRef) {
     </button>`;
 }
 
-function _soMesSeguinte(mesRef) {
-  const [a, m] = mesVizinho(mesRef, 1).split("-").map(Number);
-  return new Date(a, m - 1, 1).toLocaleDateString("pt-BR", { month: "long" });
-}
+function _soMesSeguinte(mesRef) { return soNomeDoMes(mesVizinho(mesRef, 1)); }
 
 /* ═══ A TELA DE FECHAR ════════════════════════════════════════════════ */
 
@@ -149,7 +146,7 @@ function desenharFechamento(mesRef) {
         <p style="margin:0;font-size:13.5px;line-height:1.55">
           O mês fechou no vermelho. Fechando assim, ${moeda(-sobra)} vão pra
           ${_soMesSeguinte(mesRef)} como uma saída chamada
-          <b>"Saldo de ${_soMes(mesRef)}"</b> — a dívida anda junto com você
+          <b>"Saldo de ${soNomeDoMes(mesRef)}"</b> — a dívida anda junto com você
           em vez de sumir na virada.
         </p>
       </div>` : ""}
@@ -182,17 +179,12 @@ function desenharFechamento(mesRef) {
     <button class="botao ${sobra >= 0 ? "entrada" : "saida"}"
             onclick="fecharMes(this, '${mesRef}')">
       <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-      Fechar ${_soMes(mesRef)}
+      Fechar ${soNomeDoMes(mesRef)}
     </button>
     <button class="botao-fraco lancamento-voltar" onclick="voltarTela()">Voltar</button>
     </section>`;
 
   _previaFechamento(mesRef);
-}
-
-function _soMes(ym) {
-  const [a, m] = ym.split("-").map(Number);
-  return new Date(a, m - 1, 1).toLocaleDateString("pt-BR", { month: "long" });
 }
 
 // Levar menos que a sobra quer dizer que o resto saiu da conta. Esta linha
@@ -257,12 +249,12 @@ async function fecharMes(botao, mesRef) {
         Math.abs(levar),
         mesVizinho(mesRef, 1) + "-01",
         "Saldo",
-        `Saldo de ${_soMes(mesRef)}`);
+        `Saldo de ${soNomeDoMes(mesRef)}`);
     }
     if (guardar >= 0.005) {
       lancGuardado = await nascer(
         "saida", guardar, _ultimoDiaDoMes(mesRef),
-        "Guardado", `Guardado de ${_soMes(mesRef)}`);
+        "Guardado", `Guardado de ${soNomeDoMes(mesRef)}`);
     }
   } catch (e) {
     for (const l of criados) await sb.from("lancamentos").delete().eq("id", l.id).eq("user_id", usuario.id);
@@ -304,7 +296,7 @@ function pedirReabrirMes(mesRef) {
   if (!alvo || !f) return;
   alvo.innerHTML = `
     <div class="confirmar">
-      <p>Reabrir ${_soMes(mesRef)}? O saldo que foi pra
+      <p>Reabrir ${soNomeDoMes(mesRef)}? O saldo que foi pra
          ${_soMesSeguinte(mesRef)}${Number(f.guardado) > 0 ? " e o que você guardou" : ""}
          ${Number(f.guardado) > 0 ? "somem" : "some"} do extrato.</p>
       <div class="confirmar-acoes">
@@ -333,6 +325,6 @@ async function reabrirMes(botao, mesRef) {
   }
 
   fechamentos = fechamentos.filter(x => x.id !== f.id);
-  ok(`${_soMes(mesRef).charAt(0).toUpperCase() + _soMes(mesRef).slice(1)} reaberto.`);
+  ok(`${soNomeDoMes(mesRef).charAt(0).toUpperCase() + soNomeDoMes(mesRef).slice(1)} reaberto.`);
   desenharResumo(null);
 }

@@ -79,6 +79,13 @@ function mesPorExtenso(ym) {
   return nome.charAt(0).toUpperCase() + nome.slice(1) + " de " + a;
 }
 
+// Só o nome do mês, minúsculo: "outubro". Cabe onde "Outubro de 2026"
+// não cabe — no meio de uma frase, num botão, numa linha de lista.
+function soNomeDoMes(ym) {
+  const [a, m] = String(ym).split("-").map(Number);
+  return new Date(a, m - 1, 1).toLocaleDateString("pt-BR", { month: "long" });
+}
+
 function mesVizinho(ym, passo) {
   const [a, m] = ym.split("-").map(Number);
   const d = new Date(a, m - 1 + passo, 1);
