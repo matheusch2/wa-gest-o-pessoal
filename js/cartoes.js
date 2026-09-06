@@ -107,6 +107,7 @@ function desenharCartoes() {
     const mes = _mesFaturaAberta(c);
     const total = _totalDaFatura(c, mes);
     const venc = _vencimentoDaFatura(mes, c.dia_fechamento, c.dia_vencimento);
+    const paga = _faturaPaga(c.id, mes);
     return `
       <button class="cartao-card" style="background:${b.cor};color:${b.texto}"
               onclick="abrirCartao('${c.id}')">
@@ -118,17 +119,23 @@ function desenharCartoes() {
         <div class="cartao-card-baixo">
           <div>
             <small>Fatura atual</small>
-            <strong>${moeda(total)}</strong>
+            <strong>${moeda(paga ? paga.valor : total)}</strong>
           </div>
           <div class="cartao-card-venc">
-            <small>Vence</small>
-            <strong>${dataBR(venc)}</strong>
+            ${paga
+              ? `<span class="cartao-card-selo">${_ICO_CONFERE} Paga</span>`
+              : `<small>Vence</small><strong>${dataBR(venc)}</strong>`}
           </div>
         </div>
       </button>`;
   }).join("");
 
-  const totalGeral = cartoes.reduce((s, c) => s + _totalDaFatura(c, _mesFaturaAberta(c)), 0);
+  // A fatura já paga sai da soma: ela não é mais dinheiro a sair, virou
+  // saída no extrato no dia do pagamento.
+  const totalGeral = cartoes.reduce((s, c) => {
+    const mes = _mesFaturaAberta(c);
+    return _faturaPaga(c.id, mes) ? s : s + _totalDaFatura(c, mes);
+  }, 0);
 
   document.getElementById("area").innerHTML = `
     <section class="lancamento-tela" style="--cor-tipo:var(--marca-txt)">
@@ -285,6 +292,7 @@ function desenharCartao(id) {
   const total = itens.reduce((s, i) => s + i.valor, 0);
   const venc = _vencimentoDaFatura(mes, c.dia_fechamento, c.dia_vencimento);
   const aberta = mes === _mesFaturaAberta(c);
+  const paga = _faturaPaga(c.id, mes);
 
   const linhas = itens.map(i => `
     <div class="compra-item" id="compra-${i.compra.id}">
@@ -318,10 +326,12 @@ function desenharCartao(id) {
     </div>
 
     <div class="contas-total">
-      <span>Fatura ${aberta ? "aberta" : "de " + mesPorExtenso(mes)}</span>
-      <strong>${moeda(total)}</strong>
-      <small>Vence em ${dataBR(venc)}${itens.length ? ` · ${itens.length} lançamento${itens.length > 1 ? "s" : ""}` : ""}</small>
+      <span>Fatura ${paga ? "paga" : aberta ? "aberta" : "de " + mesPorExtenso(mes)}</span>
+      <strong>${moeda(paga ? paga.valor : total)}</strong>
+      <small>${paga ? "Paga em " + dataBR(paga.pago_em) : "Vence em " + dataBR(venc)}${itens.length ? ` · ${itens.length} lançamento${itens.length > 1 ? "s" : ""}` : ""}</small>
     </div>
+
+    <div id="fatura-acao">${_acaoDaFatura(c, mes, total, paga)}</div>
 
     <button class="botao" onclick="abrirNovaCompra('${c.id}')">
       <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -489,5 +499,155 @@ async function excluirCompra(botao, id, cartaoId) {
 
   comprasCartao = comprasCartao.filter(x => x.id !== id);
   ok("Compra excluída.");
+  desenharCartao(cartaoId);
+}
+
+/* ═══ PAGAR A FATURA ══════════════════════════════════════════════════
+   É aqui que o cartão encosta no resto do app. As compras não são
+   lançamentos — elas moram só no cartão. O dinheiro só sai de verdade
+   quando a fatura é paga, e é nesse momento que nasce a saída no extrato.
+
+   Por isso o pagamento grava DUAS coisas: o lançamento de saída (pro
+   Resumo e pro saldo enxergarem) e o registro da fatura quitada (pra ela
+   não voltar a aparecer como aberta). */
+
+function _faturaPaga(cartaoId, mesRef) {
+  return faturasPagas.find(f => f.cartao_id === cartaoId && f.mes_ref === mesRef) || null;
+}
+
+const _ICO_CONFERE = `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="8 12.5 11 15.5 16.5 9"/></svg>`;
+
+// O miolo do bloco de pagamento: botão quando há o que pagar, faixa verde
+// quando já foi pago, nada quando a fatura está zerada. Fica em função à
+// parte porque o confirmar reescreve só este pedaço da tela.
+function _acaoDaFatura(cartao, mesRef, total, paga) {
+  if (paga) {
+    // O valor pago fica gravado. Se a fatura mudou depois (uma compra
+    // excluída, por exemplo), a diferença aparece aqui — o que saiu do banco
+    // continua tendo sido o valor de cima.
+    const diferenca = Math.abs(Number(paga.valor) - total) >= 0.01;
+    return `
+      <div class="fatura-paga">
+        ${_ICO_CONFERE}
+        <div class="fatura-paga-txt">
+          <strong>Saída lançada no extrato</strong>
+          <small>${diferenca
+            ? `A fatura hoje soma ${moeda(total)}`
+            : "Aparece no Resumo e no Histórico"}</small>
+        </div>
+        <button class="fatura-desfazer" onclick="pedirDesfazerPagamento('${cartao.id}', '${mesRef}')">Desfazer</button>
+      </div>`;
+  }
+
+  if (total <= 0) return "";
+
+  return `
+    <button class="botao entrada" onclick="pedirPagarFatura('${cartao.id}', '${mesRef}')">
+      ${_ICO_CONFERE}
+      Pagar fatura · ${moeda(total)}
+    </button>`;
+}
+
+function pedirPagarFatura(cartaoId, mesRef) {
+  const alvo = document.getElementById("fatura-acao");
+  const c = cartoes.find(x => x.id === cartaoId);
+  if (!alvo || !c) return;
+  const total = _totalDaFatura(c, mesRef);
+  alvo.innerHTML = `
+    <div class="confirmar">
+      <p>Pagar a fatura de ${mesPorExtenso(mesRef)}, de ${moeda(total)}?
+         Isso lança uma saída nesse valor no seu extrato.</p>
+      <div class="confirmar-acoes">
+        <button onclick="desenharCartao('${cartaoId}')">Cancelar</button>
+        <button class="sim" style="background:var(--entrada);border-color:var(--entrada)"
+                onclick="pagarFatura(this, '${cartaoId}', '${mesRef}')">Sim, paguei</button>
+      </div>
+    </div>`;
+}
+
+async function pagarFatura(botao, cartaoId, mesRef) {
+  if (botao?.disabled) return;
+  const c = cartoes.find(x => x.id === cartaoId);
+  if (!c) return;
+
+  const total = _totalDaFatura(c, mesRef);
+  if (!total || total <= 0) { erro("Esta fatura não tem valor a pagar."); return; }
+
+  const solta = travar(botao, "Pagando...");
+  const hoje = _hojeLocal();
+  const chave = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random());
+
+  // Primeiro a saída. Se ela falhar, nada foi marcado como pago e a pessoa
+  // pode tentar de novo — o contrário deixaria a fatura quitada sem o
+  // dinheiro ter saído do extrato.
+  const { data: lanc, error: erroLanc } = await sb.from("lancamentos").insert({
+    user_id: usuario.id,
+    tipo: "saida",
+    valor: total,
+    data: hoje,
+    categoria: "Cartão",
+    descricao: `Fatura ${c.nome} · ${mesPorExtenso(mesRef)}`,
+    chave_envio: chave,
+  }).select().single();
+
+  if (erroLanc) { solta(); erro("Erro ao lançar a saída: " + erroLanc.message); return; }
+
+  const { data: paga, error: erroPaga } = await sb.from("faturas_pagas").insert({
+    user_id: usuario.id, cartao_id: cartaoId, mes_ref: mesRef,
+    valor: total, pago_em: hoje, lancamento_id: lanc.id,
+  }).select().single();
+
+  if (erroPaga) {
+    // A saída entrou mas a marcação não: desfaz a saída pra não sobrar
+    // dinheiro saindo duas vezes quando a pessoa tentar pagar de novo.
+    await sb.from("lancamentos").delete().eq("id", lanc.id).eq("user_id", usuario.id);
+    solta();
+    erro(erroPaga.code === "23505"
+      ? "Esta fatura já estava paga."
+      : "Erro ao registrar o pagamento: " + erroPaga.message);
+    return;
+  }
+
+  lancamentos.unshift(lanc);
+  lancamentos.sort((a, b) => b.data.localeCompare(a.data));
+  faturasPagas.push(paga);
+
+  ok("Fatura paga e lançada como saída!");
+  desenharCartao(cartaoId);
+}
+
+function pedirDesfazerPagamento(cartaoId, mesRef) {
+  const alvo = document.getElementById("fatura-acao");
+  if (!alvo) return;
+  alvo.innerHTML = `
+    <div class="confirmar">
+      <p>Desfazer o pagamento? A saída correspondente sai do seu extrato.</p>
+      <div class="confirmar-acoes">
+        <button onclick="desenharCartao('${cartaoId}')">Cancelar</button>
+        <button class="sim" onclick="desfazerPagamento(this, '${cartaoId}', '${mesRef}')">Desfazer</button>
+      </div>
+    </div>`;
+}
+
+async function desfazerPagamento(botao, cartaoId, mesRef) {
+  if (botao?.disabled) return;
+  const paga = _faturaPaga(cartaoId, mesRef);
+  if (!paga) return;
+
+  const solta = travar(botao, "Desfazendo...");
+
+  const { error } = await sb.from("faturas_pagas")
+    .delete().eq("id", paga.id).eq("user_id", usuario.id);
+  if (error) { solta(); erro("Erro ao desfazer: " + error.message); return; }
+
+  // A saída pode já ter sido apagada pelo Histórico; nesse caso não há o que
+  // remover e o pagamento é desfeito do mesmo jeito.
+  if (paga.lancamento_id) {
+    await sb.from("lancamentos").delete().eq("id", paga.lancamento_id).eq("user_id", usuario.id);
+    lancamentos = lancamentos.filter(l => l.id !== paga.lancamento_id);
+  }
+
+  faturasPagas = faturasPagas.filter(f => f.id !== paga.id);
+  ok("Pagamento desfeito.");
   desenharCartao(cartaoId);
 }
