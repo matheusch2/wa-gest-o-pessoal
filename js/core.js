@@ -16,6 +16,7 @@ let comprasCartao = [];
 let pagamentosFatura = [];
 let metas = [];
 let fechamentos = [];
+let entradasFixas = [];
 let mesAtual = "";   // "2026-08" — mês que o Resumo e o Histórico estão mostrando
 let grafico = null;
 
@@ -187,7 +188,7 @@ async function medirRelogio() {
 }
 
 async function carregarTudo(jaPediuCrachaNovo) {
-  const [rL, rC, rG, rCa, rCo, rFp, rMe, rFe] = (await Promise.all([
+  const [rL, rC, rG, rCa, rCo, rFp, rMe, rFe, rEf] = (await Promise.all([
     sb.from("lancamentos").select("*").order("data", { ascending: false }),
     sb.from("contas").select("*").order("vencimento", { ascending: true }),
     sb.from("categorias").select("*").order("nome", { ascending: true }),
@@ -196,9 +197,10 @@ async function carregarTudo(jaPediuCrachaNovo) {
     sb.from("pagamentos_fatura").select("*").order("pago_em", { ascending: true }),
     sb.from("metas").select("*").order("categoria", { ascending: true }),
     sb.from("fechamentos").select("*").order("mes_ref", { ascending: true }),
+    sb.from("entradas_fixas").select("*").order("dia", { ascending: true }),
   ].map(_comPrazo)));
 
-  const respostas = [rL, rC, rG, rCa, rCo, rFp, rMe, rFe];
+  const respostas = [rL, rC, rG, rCa, rCo, rFp, rMe, rFe, rEf];
   if (respostas.some(r => r.error)) {
     const e = respostas.find(r => r.error).error;
     ultimoErroCarga = e;
@@ -226,6 +228,7 @@ async function carregarTudo(jaPediuCrachaNovo) {
   pagamentosFatura = rFp.data || [];
   metas = rMe.data || [];
   fechamentos = rFe.data || [];
+  entradasFixas = rEf.data || [];
 
   // Primeira vez: semeia as categorias para a pessoa não começar do zero.
   if (!categorias.length) await semearCategorias();

@@ -276,3 +276,37 @@ create policy "cada um fecha só os próprios meses"
   on fechamentos for insert with check (auth.uid() = user_id);
 create policy "cada um reabre só os próprios meses"
   on fechamentos for delete using (auth.uid() = user_id);
+
+-- ═══ ENTRADAS FIXAS ═══════════════════════════════════════════════════
+-- O salário e o que mais entra todo mês no mesmo dia. É o espelho do
+-- gasto fixo, do outro lado.
+--
+-- Guarda o COMBINADO, não o recebimento: "meu salário é R$ 3.000 e cai
+-- dia 5". O recebimento de cada mês continua sendo um lançamento de
+-- entrada normal, criado com um toque a partir daqui. Assim o extrato
+-- continua sendo a única fonte do que de fato entrou — se o salário
+-- atrasar ou vier diferente, quem manda é o lançamento, não isto aqui.
+
+create table if not exists entradas_fixas (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid not null references auth.users(id) on delete cascade,
+  nome       text not null,                -- "Salário", "Aluguel recebido"
+  valor      numeric(12,2) not null check (valor > 0),
+  dia        smallint not null check (dia between 1 and 31),
+  categoria  text,
+  created_at timestamptz not null default now()
+);
+
+-- Uma por nome: dois "Salário" com valores diferentes não querem dizer nada.
+create unique index if not exists entradas_fixas_user_nome_key on entradas_fixas (user_id, nome);
+
+alter table entradas_fixas enable row level security;
+
+create policy "cada um vê só as próprias entradas fixas"
+  on entradas_fixas for select using (auth.uid() = user_id);
+create policy "cada um cadastra só as próprias entradas fixas"
+  on entradas_fixas for insert with check (auth.uid() = user_id);
+create policy "cada um muda só as próprias entradas fixas"
+  on entradas_fixas for update using (auth.uid() = user_id);
+create policy "cada um apaga só as próprias entradas fixas"
+  on entradas_fixas for delete using (auth.uid() = user_id);

@@ -42,7 +42,10 @@ function desenharLancar(tipo) {
       <h2>${entrada ? "Entrada" : "Saída"}</h2>
     </div>
 
+    ${entrada ? blocoEntradasFixas() : ""}
+
     <div class="lancamento-form">
+      ${entrada ? `<p class="lancamento-caption-extra">Ou lance uma entrada avulsa</p>` : ""}
       <div class="campo">
         <label for="lc-valor">Valor</label>
         <div class="lancamento-valor">

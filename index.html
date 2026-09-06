@@ -33,7 +33,7 @@
   <link rel="preconnect" href="https://efewoxdgfcgkodtqbqsz.supabase.co" crossorigin>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 
-  <link rel="stylesheet" href="style.css?v=40">
+  <link rel="stylesheet" href="style.css?v=42">
 
   <!-- defer: baixa em paralelo e só executa depois da página montada, em
        ordem. Sem ele, cada script trava a leitura do HTML no meio.
@@ -135,6 +135,7 @@
          resumo.js     Resumo do mês e o filtro de entradas/saídas
          lancamentos.js  lançar, editar e excluir — usado pelo Resumo e
                          pelo Histórico, por isso mora sozinho
+         entradasfixas.js  o salário e o que mais entra todo mês
          contas.js     Contas a pagar
          historico.js  lista completa, mês a mês
          ajustes.js    tema, conta, sair
@@ -146,11 +147,12 @@
 
        O ?v=N no fim de cada um existe pra o celular não servir a versão
        velha do cache. Mexeu no arquivo, sobe o número. -->
-  <script defer src="js/core.js?v=13"></script>
+  <script defer src="js/core.js?v=14"></script>
   <script defer src="js/categorias.js?v=1"></script>
   <script defer src="js/auth.js?v=2"></script>
   <script defer src="js/resumo.js?v=12"></script>
-  <script defer src="js/lancamentos.js?v=9"></script>
+  <script defer src="js/lancamentos.js?v=10"></script>
+  <script defer src="js/entradasfixas.js?v=1"></script>
   <script defer src="js/contas.js?v=5"></script>
   <script defer src="js/historico.js?v=3"></script>
   <script defer src="js/ajustes.js?v=1"></script>

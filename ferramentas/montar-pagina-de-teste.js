@@ -49,6 +49,10 @@ document.addEventListener("DOMContentLoaded", () => {
     { id:"m3", categoria:"Lazer", valor:300, reservar:false },
   ];
   fechamentos = [];
+  entradasFixas = [
+    { id:"ef1", nome:"Salário", valor:3000, dia:5, categoria:"Salário" },
+    { id:"ef2", nome:"Aluguel recebido", valor:800, dia:10, categoria:"Extra" },
+  ];
   document.getElementById("area-login").remove();
   document.getElementById("menu").style.display = "grid";
   window.__pronto = true;
