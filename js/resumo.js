@@ -5,15 +5,45 @@
 
 /* ═══ RESUMO DO MÊS ═══════════════════════════════════════════════════ */
 
-function abrirResumo() { abrirTela(desenharResumo); }
+/* ═══ FILTRO DE ENTRADA / SAÍDA ═══════════════════════════════════════
+   Tocar em "Entradas" ou "Saídas" não abre outra tela: é a MESMA tela,
+   mostrando só um lado. E cada nível some com um "voltar" — do filtro
+   pro Resumo inteiro, do Resumo pro menu.
 
-function desenharResumo() {
+   Quem guarda essa ordem é a pilha de telas do app, não um estado à
+   parte: entrar no filtro empilha um jeito de desenhar, e voltar
+   desempilha. Por isso trocar de Saídas pra Entradas TROCA o topo da
+   pilha em vez de empilhar de novo — senão, depois de bisbilhotar os
+   dois lados, o voltar teria que ser apertado uma vez por espiada. */
+
+let _filtroResumo = null;
+
+function abrirResumo() { abrirTela(() => desenharResumo(null)); }
+
+function abrirResumoFiltrado(tipo) {
+  // Tocar de novo no card que já está ativo é o mesmo que voltar.
+  if (_filtroResumo === tipo) { voltarTela(); return; }
+
+  if (_filtroResumo) {
+    pilha[pilha.length - 1] = () => desenharResumo(tipo);
+    desenharResumo(tipo);
+    window.scrollTo(0, 0);
+    return;
+  }
+  abrirTela(() => desenharResumo(tipo));
+}
+
+function desenharResumo(filtro) {
   destruirGrafico();
+  _filtroResumo = filtro || null;
+
   const area = document.getElementById("area");
   const doMes = lancamentos.filter(l => mesDe(l.data) === mesAtual);
   const entradas = doMes.filter(l => l.tipo === "entrada").reduce((s, l) => s + Number(l.valor), 0);
   const saidas = doMes.filter(l => l.tipo === "saida").reduce((s, l) => s + Number(l.valor), 0);
   const saldo = entradas - saidas;
+
+  if (_filtroResumo) { desenharResumoFiltrado(doMes, entradas, saidas); return; }
 
   // Contas em aberto olham o mês inteiro, não só até hoje.
   const aPagar = contas.filter(c => !c.pago && mesDe(c.vencimento) === mesAtual);
@@ -51,16 +81,7 @@ function desenharResumo() {
         </small>
       </div>
 
-      <div class="numeros resumo-numeros">
-        <div class="numero entrada resumo-numero">
-          <span><b aria-hidden="true">↙</b> Entradas</span>
-          <strong>${moeda(entradas)}</strong>
-        </div>
-        <div class="numero saida resumo-numero">
-          <span><b aria-hidden="true">↗</b> Saídas</span>
-          <strong>${moeda(saidas)}</strong>
-        </div>
-      </div>
+      ${_cardsDeNumero(entradas, saidas)}
 
       ${vencidas.length ? `
         <div class="item vencida resumo-alerta" onclick="abrirContas()" style="cursor:pointer">
@@ -126,7 +147,103 @@ function desenharResumo() {
 
 function trocarMes(passo) {
   mesAtual = mesVizinho(mesAtual, passo);
-  desenharResumo();
+  desenharResumo(_filtroResumo);   // trocar de mês não desfaz o filtro
+}
+
+// Os dois cards, iguais nas duas telas: são eles o botão de entrar no
+// filtro e o de sair dele.
+function _cardsDeNumero(entradas, saidas) {
+  const card = (tipo, rotulo, seta, valor) => `
+    <button class="numero ${tipo} resumo-numero${_filtroResumo === tipo ? " ativo" : ""}"
+            onclick="abrirResumoFiltrado('${tipo}')"
+            aria-pressed="${_filtroResumo === tipo}">
+      <span><b aria-hidden="true">${seta}</b> ${rotulo}</span>
+      <strong>${moeda(valor)}</strong>
+      <i class="resumo-numero-seta" aria-hidden="true">${_filtroResumo === tipo ? "✕" : "›"}</i>
+    </button>`;
+  return `
+    <div class="numeros resumo-numeros">
+      ${card("entrada", "Entradas", "↙", entradas)}
+      ${card("saida", "Saídas", "↗", saidas)}
+    </div>`;
+}
+
+/* ─── A mesma tela, com um lado só ──────────────────────────────────── */
+
+function desenharResumoFiltrado(doMes, entradas, saidas) {
+  const ehEntrada = _filtroResumo === "entrada";
+  const lista = doMes
+    .filter(l => l.tipo === _filtroResumo)
+    .sort((a, b) => String(b.data).localeCompare(String(a.data)));
+  const total = ehEntrada ? entradas : saidas;
+
+  const porCat = {};
+  lista.forEach(l => { porCat[l.categoria] = (porCat[l.categoria] || 0) + Number(l.valor); });
+  const ranking = Object.entries(porCat).sort((a, b) => b[1] - a[1]);
+
+  document.getElementById("area").innerHTML = `
+    <section class="resumo-tela">
+      <div class="resumo-cabecalho">
+        <div>
+          <h2>${ehEntrada ? "Entradas" : "Saídas"}</h2>
+          <p>${ehEntrada ? "Só o que entrou" : "Só o que saiu"} neste mês</p>
+        </div>
+        <div class="resumo-mes" aria-label="Selecionar mês">
+          <button onclick="trocarMes(-1)" aria-label="Mês anterior">‹</button>
+          <strong>${mesPorExtenso(mesAtual)}</strong>
+          <button onclick="trocarMes(1)" aria-label="Próximo mês">›</button>
+        </div>
+      </div>
+
+      <div class="saldo resumo-saldo">
+        <span class="resumo-saldo-rotulo">Total de ${ehEntrada ? "entradas" : "saídas"}</span>
+        <strong>${moeda(total)}</strong>
+        <small class="resumo-saldo-status">
+          <b aria-hidden="true">${ehEntrada ? "↙" : "↗"}</b>
+          ${lista.length
+            ? `${lista.length} lançamento${lista.length > 1 ? "s" : ""} em ${mesPorExtenso(mesAtual).toLowerCase()}`
+            : "Nada lançado neste mês"}
+        </small>
+      </div>
+
+      ${_cardsDeNumero(entradas, saidas)}
+
+      <div class="bloco resumo-secao">
+        <div class="bloco-topo"><h2>${ehEntrada ? "De onde veio o dinheiro" : "Para onde foi o dinheiro"}</h2></div>
+        ${ranking.length ? `
+          <div class="resumo-grafico-layout">
+            <div class="grafico resumo-grafico">
+              <canvas id="canvas-cat"></canvas>
+              <div class="resumo-grafico-total"><small>Total</small><strong>${moeda(total)}</strong></div>
+            </div>
+            <div class="resumo-ranking">
+              ${ranking.slice(0, 6).map(([cat, v]) => `
+                <div class="resumo-ranking-linha">
+                  <span class="resumo-ranking-ponto"></span>
+                  <span>${esc(cat)}</span>
+                  <strong>${total > 0 ? Math.round(v / total * 100) + "%" : "--"}</strong>
+                </div>`).join("")}
+            </div>
+          </div>` : `<p class="vazio">Nenhuma ${ehEntrada ? "entrada" : "saída"} neste mês.</p>`}
+      </div>
+
+      <div class="bloco resumo-secao">
+        <div class="bloco-topo">
+          <h2>${lista.length} ${ehEntrada
+            ? (lista.length === 1 ? "entrada" : "entradas")
+            : (lista.length === 1 ? "saída" : "saídas")}</h2>
+        </div>
+        ${lista.length
+          ? `<div class="lista">${lista.map(linhaLancamento).join("")}</div>`
+          : `<p class="vazio">Nada por aqui neste mês.</p>`}
+      </div>
+
+      <button class="botao-fraco resumo-voltar" onclick="voltarTela()">
+        Ver entradas e saídas
+      </button>
+    </section>`;
+
+  if (ranking.length) setTimeout(() => desenharGraficoCategorias(ranking), 0);
 }
 
 async function desenharGraficoCategorias(ranking) {

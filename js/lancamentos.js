@@ -129,7 +129,9 @@ async function salvarLancamento(botao, tipo, chave) {
 
 function _voltarDeLancamento(volta) {
   if (volta === "historico") desenharHistorico();
-  else desenharResumo();
+  // Passa o filtro adiante: editar uma saída estando na tela "só saídas" e
+  // voltar pro Resumo inteiro seria perder o lugar sem ter pedido.
+  else desenharResumo(_filtroResumo);
 }
 
 function _acharLancamento(id) {

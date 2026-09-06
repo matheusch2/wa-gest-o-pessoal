@@ -973,6 +973,49 @@ body.escuro .login-titulo { color: var(--marca-txt); }
 .resumo-numero.entrada span b { color: var(--entrada); }
 .resumo-numero.saida span b { color: var(--saida); }
 
+/* Os dois cards viraram botão: entram no "só entradas" / "só saídas". Como
+   já eram caixas com número dentro, o que os anuncia como tocáveis é a
+   setinha da direita — e ela vira um X quando o filtro está ligado, que é o
+   mesmo toque desfazendo. */
+.resumo-numero {
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  border: 1px solid var(--borda);
+  background: var(--papel);
+  color: var(--texto);
+  cursor: pointer;
+}
+
+.resumo-numero-seta {
+  position: absolute;
+  top: 50%;
+  right: 11px;
+  transform: translateY(-50%);
+  font-style: normal;
+  font-size: 17px;
+  line-height: 1;
+  color: var(--fraco);
+}
+
+/* Ligado, o card se pinta da própria cor: é o jeito de saber qual lado está
+   na tela sem ler o título. */
+.resumo-numero.ativo { border-width: 1.5px; }
+.resumo-numero.entrada.ativo {
+  border-color: color-mix(in srgb, var(--entrada) 45%, transparent);
+  background: color-mix(in srgb, var(--entrada) 9%, transparent);
+}
+.resumo-numero.saida.ativo {
+  border-color: color-mix(in srgb, var(--saida) 45%, transparent);
+  background: color-mix(in srgb, var(--saida) 9%, transparent);
+}
+.resumo-numero.entrada.ativo .resumo-numero-seta { color: var(--entrada); }
+.resumo-numero.saida.ativo .resumo-numero-seta { color: var(--saida); }
+.resumo-numero.ativo::before { width: 5px; }
+
+/* O valor não pode passar por baixo da seta. */
+.resumo-numero strong { padding-right: 16px; }
+
 .resumo-alerta { margin-bottom: 12px; }
 
 .resumo-secao { padding: 16px; }
