@@ -98,6 +98,8 @@ function desenharResumo(filtro) {
 
       ${_cardsDeNumero(entradas, saidas)}
 
+      <div id="fechamento-acao">${faixaDeFechamento(mesAtual)}</div>
+
       ${vencidas.length ? `
         <div class="item vencida resumo-alerta" onclick="abrirContas()" style="cursor:pointer">
           <div class="item-icone">⚠️</div>

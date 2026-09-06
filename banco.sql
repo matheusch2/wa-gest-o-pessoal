@@ -237,3 +237,42 @@ create policy "cada um apaga só as próprias metas"
 -- dinheiro pra um gasto que talvez nem aconteça deixaria o saldo mais
 -- pobre do que ele é.
 alter table metas add column if not exists reservar boolean not null default true;
+
+-- ═══ FECHAMENTO DO MÊS ════════════════════════════════════════════════
+-- O que sobrou não some quando o mês vira: ou vai pro mês seguinte como
+-- uma ENTRADA chamada "Saldo", ou sai da conta porque você guardou. E vai
+-- rolando: o saldo de setembro entra em outubro, entra em novembro.
+--
+-- O que sobrou é o dinheiro que de fato ficou na conta — entradas menos
+-- saídas do mês. Não é a soma do que sobrou das metas: se você economizou
+-- R$ 200 no mercado mas estourou R$ 300 no carro, não sobrou nada, e
+-- levar os R$ 200 seria carregar dinheiro que não existe.
+--
+-- A linha aqui guarda o que foi decidido e quais lançamentos nasceram
+-- disso, pra desfazer levar as duas coisas juntas.
+
+create table if not exists fechamentos (
+  id                     uuid primary key default gen_random_uuid(),
+  user_id                uuid not null references auth.users(id) on delete cascade,
+  mes_ref                text not null,              -- "2026-09", o mês que fechou
+  sobra                  numeric(12,2) not null,     -- pode ser negativo
+  levado                 numeric(12,2) not null default 0,
+  guardado               numeric(12,2) not null default 0,
+  lancamento_levado_id   uuid references lancamentos(id) on delete set null,
+  lancamento_guardado_id uuid references lancamentos(id) on delete set null,
+  fechado_em             date not null,
+  created_at             timestamptz not null default now()
+);
+
+-- Um mês fecha uma vez só. É esta trava que impede o saldo de setembro de
+-- entrar duas vezes em outubro por causa de um toque repetido.
+create unique index if not exists fechamentos_user_mes_key on fechamentos (user_id, mes_ref);
+
+alter table fechamentos enable row level security;
+
+create policy "cada um vê só os próprios fechamentos"
+  on fechamentos for select using (auth.uid() = user_id);
+create policy "cada um fecha só os próprios meses"
+  on fechamentos for insert with check (auth.uid() = user_id);
+create policy "cada um reabre só os próprios meses"
+  on fechamentos for delete using (auth.uid() = user_id);

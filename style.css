@@ -1474,3 +1474,45 @@ body.escuro .resumo-secao .item-icone.entrada { background: #17372d; }
 .resumo-saldo strong.negativo { color: #ffc9c9; }
 .resumo-saldo-status.negativo { background: rgba(220,38,38,.28); }
 .resumo-saldo-status.negativo b { color: #ffc9c9; }
+
+/* ─── FECHAMENTO DO MÊS ──────────────────────────────────────────────────
+   O convite só aparece em mês que já acabou, e some depois de fechado —
+   dá pra ficar meses sem ver isto na tela. Por isso ele é um botão cheio
+   quando aparece: não pode passar despercebido nas duas vezes por ano em
+   que a pessoa volta pra olhar um mês antigo. */
+
+#fechamento-acao:not(:empty) { margin-bottom: 12px; }
+.fechar-mes svg { stroke-width: 2.6; }
+
+.fechado {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 13px;
+  border: 1.5px solid color-mix(in srgb, var(--entrada) 34%, transparent);
+  background: color-mix(in srgb, var(--entrada) 9%, transparent);
+  border-radius: 12px;
+}
+.fechado-txt { flex: 1; min-width: 0; }
+.fechado-txt strong { display: block; font-size: 13.5px; font-weight: 800; color: var(--entrada); }
+.fechado-txt small { display: block; font-size: 11.5px; color: var(--fraco); margin-top: 1px; }
+
+/* Mês que fechou no vermelho: o mesmo lugar, o aviso trocado de cor. */
+.fatura-resumo .destaque-ruim {
+  border-color: color-mix(in srgb, var(--saida) 40%, transparent);
+  background: color-mix(in srgb, var(--saida) 9%, transparent);
+}
+.fatura-resumo .destaque-ruim strong { color: var(--saida); }
+
+/* "Por que sobrou": três colunas — categoria, o quanto de quanto, e a
+   folga. A do meio é a que impede a folga de virar número solto. */
+.fechar-previsto { font-size: 11px; color: var(--fraco); white-space: nowrap; }
+.meta-sem strong.fechar-folga { font-size: 13.5px; font-weight: 800; color: var(--entrada); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.fechar-nota {
+  margin: 11px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--borda);
+  font-size: 11.5px;
+  color: var(--fraco);
+  line-height: 1.5;
+}

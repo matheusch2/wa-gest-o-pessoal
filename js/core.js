@@ -15,6 +15,7 @@ let cartoes = [];
 let comprasCartao = [];
 let pagamentosFatura = [];
 let metas = [];
+let fechamentos = [];
 let mesAtual = "";   // "2026-08" — mês que o Resumo e o Histórico estão mostrando
 let grafico = null;
 
@@ -179,7 +180,7 @@ async function medirRelogio() {
 }
 
 async function carregarTudo(jaPediuCrachaNovo) {
-  const [rL, rC, rG, rCa, rCo, rFp, rMe] = (await Promise.all([
+  const [rL, rC, rG, rCa, rCo, rFp, rMe, rFe] = (await Promise.all([
     sb.from("lancamentos").select("*").order("data", { ascending: false }),
     sb.from("contas").select("*").order("vencimento", { ascending: true }),
     sb.from("categorias").select("*").order("nome", { ascending: true }),
@@ -187,9 +188,10 @@ async function carregarTudo(jaPediuCrachaNovo) {
     sb.from("compras_cartao").select("*").order("data", { ascending: false }),
     sb.from("pagamentos_fatura").select("*").order("pago_em", { ascending: true }),
     sb.from("metas").select("*").order("categoria", { ascending: true }),
+    sb.from("fechamentos").select("*").order("mes_ref", { ascending: true }),
   ].map(_comPrazo)));
 
-  const respostas = [rL, rC, rG, rCa, rCo, rFp, rMe];
+  const respostas = [rL, rC, rG, rCa, rCo, rFp, rMe, rFe];
   if (respostas.some(r => r.error)) {
     const e = respostas.find(r => r.error).error;
     ultimoErroCarga = e;
@@ -216,6 +218,7 @@ async function carregarTudo(jaPediuCrachaNovo) {
   comprasCartao = rCo.data || [];
   pagamentosFatura = rFp.data || [];
   metas = rMe.data || [];
+  fechamentos = rFe.data || [];
 
   // Primeira vez: semeia as categorias para a pessoa não começar do zero.
   if (!categorias.length) await semearCategorias();
@@ -278,6 +281,14 @@ function carregarChart() {
    vira saída no extrato, e a saída derruba o que faltava da meta. */
 
 function reservasDoMes(mesRef) {
+  // Mês que já acabou não reserva nada. Reservar é dizer "isto ainda vai
+  // sair", e num mês fechado nada mais vai sair dele: as contas ou foram
+  // pagas ou estão vencidas, e vencida aparece no alerta de vencidas, não
+  // aqui. Sem esta linha, agosto mostrava "sobra −R$ 200" no topo e
+  // "sobraram R$ 257" no botão de fechar — dois números pra mesma palavra,
+  // na mesma tela.
+  if (mesRef < mesDe(_hojeLocal())) return { linhas: [], total: 0 };
+
   const linhas = [];
 
   for (const c of contas) {
