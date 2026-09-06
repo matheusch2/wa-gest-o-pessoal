@@ -150,37 +150,52 @@ create policy "cada um atualiza só as próprias compras"
 create policy "cada um exclui só as próprias compras"
   on compras_cartao for delete using (auth.uid() = user_id);
 
--- ═══ FATURAS PAGAS ════════════════════════════════════════════════════
--- Pagar a fatura é dinheiro saindo de verdade: vira um lançamento de saída
--- no extrato E um registro aqui, dizendo que aquele mês daquele cartão está
--- quitado. Sem este registro, a fatura paga voltaria a aparecer como aberta
--- toda vez que a tela recarregasse.
+-- ═══ PAGAMENTOS DA FATURA ═════════════════════════════════════════════
+-- Uma fatura recebe VÁRIOS pagamentos, não um só: paga R$ 100 hoje, mais
+-- R$ 200 na semana que vem, e o que sobrar vai pra fatura do mês seguinte.
+-- Por isso cada pagamento é uma linha, e "fatura quitada" é a soma delas
+-- alcançando o total — não um sim/não guardado no banco.
 
-create table if not exists faturas_pagas (
+-- Versão antiga, de pagamento único, que nunca chegou a ser usada.
+drop table if exists faturas_pagas cascade;
+
+create table if not exists pagamentos_fatura (
   id            uuid primary key default gen_random_uuid(),
   user_id       uuid not null references auth.users(id) on delete cascade,
   cartao_id     uuid not null references cartoes(id) on delete cascade,
   mes_ref       text not null,                 -- "2026-09", o mês da fatura
+
+  -- 'pago'  = dinheiro saiu do bolso  → vira lançamento de saída no extrato
+  -- 'saldo' = o resto foi empurrado pra fatura seguinte → vira compra lá
+  -- Os dois abatem a fatura; só o primeiro mexe no seu saldo.
+  tipo          text not null default 'pago' check (tipo in ('pago', 'saldo')),
+
   -- O valor fica GRAVADO, não é recalculado: se amanhã você corrigir uma
   -- compra daquele mês, o que você pagou no banco continua tendo sido este.
   valor         numeric(12,2) not null check (valor > 0),
   pago_em       date not null,
-  -- Guarda qual saída foi criada, pra desfazer o pagamento apagar as duas
-  -- coisas juntas. Se a saída for apagada pelo Histórico, aqui vira nulo e
-  -- a fatura segue paga.
+
+  -- Guarda o que este pagamento criou lá fora, pra desfazer apagar as duas
+  -- coisas juntas. Se o lançamento for apagado pelo Histórico, aqui vira
+  -- nulo e o pagamento continua valendo.
   lancamento_id uuid references lancamentos(id) on delete set null,
+  compra_id     uuid references compras_cartao(id) on delete set null,
+
+  chave_envio   text not null,
   created_at    timestamptz not null default now()
 );
 
--- Uma fatura só pode ser paga uma vez: é esta trava que segura o toque duplo
--- e a aba aberta em dois lugares.
-create unique index if not exists faturas_pagas_cartao_mes_key on faturas_pagas (cartao_id, mes_ref);
+-- Não dá pra travar por (cartão, mês) — agora são vários pagamentos no mesmo
+-- mês de propósito. Quem segura o toque duplo é a chave gerada quando o
+-- formulário abre, igual ao resto do app.
+create unique index if not exists pagamentos_fatura_chave_envio_key on pagamentos_fatura (chave_envio);
+create index if not exists pagamentos_fatura_cartao_mes_idx on pagamentos_fatura (cartao_id, mes_ref);
 
-alter table faturas_pagas enable row level security;
+alter table pagamentos_fatura enable row level security;
 
-create policy "cada um vê só as próprias faturas pagas"
-  on faturas_pagas for select using (auth.uid() = user_id);
-create policy "cada um paga só as próprias"
-  on faturas_pagas for insert with check (auth.uid() = user_id);
-create policy "cada um desfaz só as próprias"
-  on faturas_pagas for delete using (auth.uid() = user_id);
+create policy "cada um vê só os próprios pagamentos de fatura"
+  on pagamentos_fatura for select using (auth.uid() = user_id);
+create policy "cada um paga só as próprias faturas"
+  on pagamentos_fatura for insert with check (auth.uid() = user_id);
+create policy "cada um desfaz só os próprios pagamentos"
+  on pagamentos_fatura for delete using (auth.uid() = user_id);

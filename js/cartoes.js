@@ -105,9 +105,8 @@ function desenharCartoes() {
   const cards = cartoes.map(c => {
     const b = _banco(c.banco);
     const mes = _mesFaturaAberta(c);
-    const total = _totalDaFatura(c, mes);
     const venc = _vencimentoDaFatura(mes, c.dia_fechamento, c.dia_vencimento);
-    const paga = _faturaPaga(c.id, mes);
+    const s = _situacaoFatura(c, mes);
     return `
       <button class="cartao-card" style="background:${b.cor};color:${b.texto}"
               onclick="abrirCartao('${c.id}')">
@@ -118,11 +117,11 @@ function desenharCartoes() {
         <span class="cartao-card-nome">${esc(c.nome)}</span>
         <div class="cartao-card-baixo">
           <div>
-            <small>Fatura atual</small>
-            <strong>${moeda(paga ? paga.valor : total)}</strong>
+            <small>${s.parcial ? "Falta pagar" : "Fatura atual"}</small>
+            <strong>${moeda(s.quitada ? s.pago : s.parcial ? s.restante : s.total)}</strong>
           </div>
           <div class="cartao-card-venc">
-            ${paga
+            ${s.quitada
               ? `<span class="cartao-card-selo">${_ICO_CONFERE} Paga</span>`
               : `<small>Vence</small><strong>${dataBR(venc)}</strong>`}
           </div>
@@ -130,12 +129,11 @@ function desenharCartoes() {
       </button>`;
   }).join("");
 
-  // A fatura já paga sai da soma: ela não é mais dinheiro a sair, virou
-  // saída no extrato no dia do pagamento.
-  const totalGeral = cartoes.reduce((s, c) => {
-    const mes = _mesFaturaAberta(c);
-    return _faturaPaga(c.id, mes) ? s : s + _totalDaFatura(c, mes);
-  }, 0);
+  // O que já foi pago sai da soma: virou saída no extrato no dia do
+  // pagamento, e continuar somando aqui seria contar o mesmo dinheiro duas
+  // vezes.
+  const totalGeral = cartoes.reduce(
+    (soma, c) => soma + _situacaoFatura(c, _mesFaturaAberta(c)).restante, 0);
 
   document.getElementById("area").innerHTML = `
     <section class="lancamento-tela" style="--cor-tipo:var(--marca-txt)">
@@ -292,7 +290,7 @@ function desenharCartao(id) {
   const total = itens.reduce((s, i) => s + i.valor, 0);
   const venc = _vencimentoDaFatura(mes, c.dia_fechamento, c.dia_vencimento);
   const aberta = mes === _mesFaturaAberta(c);
-  const paga = _faturaPaga(c.id, mes);
+  const s = _situacaoFatura(c, mes);
 
   const linhas = itens.map(i => `
     <div class="compra-item" id="compra-${i.compra.id}">
@@ -326,12 +324,12 @@ function desenharCartao(id) {
     </div>
 
     <div class="contas-total">
-      <span>Fatura ${paga ? "paga" : aberta ? "aberta" : "de " + mesPorExtenso(mes)}</span>
-      <strong>${moeda(paga ? paga.valor : total)}</strong>
-      <small>${paga ? "Paga em " + dataBR(paga.pago_em) : "Vence em " + dataBR(venc)}${itens.length ? ` · ${itens.length} lançamento${itens.length > 1 ? "s" : ""}` : ""}</small>
+      <span>Fatura ${s.quitada ? "quitada" : aberta ? "aberta" : "de " + mesPorExtenso(mes)}</span>
+      <strong>${moeda(total)}</strong>
+      <small>Vence em ${dataBR(venc)}${itens.length ? ` · ${itens.length} lançamento${itens.length > 1 ? "s" : ""}` : ""}</small>
     </div>
 
-    <div id="fatura-acao">${_acaoDaFatura(c, mes, total, paga)}</div>
+    <div id="fatura-acao">${_acaoDaFatura(c, mes, s)}</div>
 
     <button class="botao" onclick="abrirNovaCompra('${c.id}')">
       <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -504,150 +502,410 @@ async function excluirCompra(botao, id, cartaoId) {
 
 /* ═══ PAGAR A FATURA ══════════════════════════════════════════════════
    É aqui que o cartão encosta no resto do app. As compras não são
-   lançamentos — elas moram só no cartão. O dinheiro só sai de verdade
-   quando a fatura é paga, e é nesse momento que nasce a saída no extrato.
+   lançamentos — elas moram só dentro do cartão. O dinheiro só sai de
+   verdade quando a fatura é paga, e é nesse momento que nasce a saída no
+   extrato.
 
-   Por isso o pagamento grava DUAS coisas: o lançamento de saída (pro
-   Resumo e pro saldo enxergarem) e o registro da fatura quitada (pra ela
-   não voltar a aparecer como aberta). */
+   A fatura aceita VÁRIOS pagamentos. Pagar o mínimo, pagar um pedaço
+   agora e outro depois, adiantar uma fatura que ainda nem fechou — tudo
+   isso é a mesma coisa vista de ângulos diferentes: soma de pagamentos
+   contra o total da fatura. Por isso "quitada" é conta, não um campo
+   guardado: um pagamento desfeito reabre a fatura sozinho.
 
-function _faturaPaga(cartaoId, mesRef) {
-  return faturasPagas.find(f => f.cartao_id === cartaoId && f.mes_ref === mesRef) || null;
+   O que sobra tem um caminho próprio: "jogar o resto pra próxima fatura"
+   grava uma compra na fatura seguinte e abate esta. É o que o banco faz
+   quando você paga só uma parte — só que aqui você vê a linha. */
+
+// 15% é o piso que os bancos brasileiros costumam cobrar. É atalho de
+// digitação, não regra: cada banco tem o seu, e o campo aceita qualquer
+// valor.
+const _MINIMO_FATURA = 0.15;
+
+function _centavos(v) { return Math.round(Number(v || 0) * 100) / 100; }
+
+function _pagamentosDaFatura(cartaoId, mesRef) {
+  return pagamentosFatura
+    .filter(p => p.cartao_id === cartaoId && p.mes_ref === mesRef)
+    .sort((a, b) => String(a.pago_em).localeCompare(String(b.pago_em)));
+}
+
+// O estado da fatura, num lugar só. Toda tela pergunta a mesma coisa:
+// quanto é, quanto já foi, quanto falta.
+function _situacaoFatura(cartao, mesRef) {
+  const pagamentos = _pagamentosDaFatura(cartao.id, mesRef);
+  const total = _centavos(_totalDaFatura(cartao, mesRef));
+  const pago = _centavos(pagamentos.reduce((s, p) => s + Number(p.valor), 0));
+  const restante = _centavos(Math.max(0, total - pago));
+  return {
+    pagamentos, total, pago, restante,
+    // Meio centavo de folga: parcela de R$ 100 em 3x não fecha exato, e sem
+    // essa folga a fatura ficaria eternamente devendo R$ 0,00.
+    quitada: pago > 0 && restante < 0.005,
+    parcial: pago > 0 && restante >= 0.005,
+  };
 }
 
 const _ICO_CONFERE = `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="8 12.5 11 15.5 16.5 9"/></svg>`;
+const _ICO_EMPURRA = `<svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="14 5 21 12 14 19"/><path d="M21 12H6a3 3 0 0 1-3-3V6"/></svg>`;
 
-// O miolo do bloco de pagamento: botão quando há o que pagar, faixa verde
-// quando já foi pago, nada quando a fatura está zerada. Fica em função à
-// parte porque o confirmar reescreve só este pedaço da tela.
-function _acaoDaFatura(cartao, mesRef, total, paga) {
-  if (paga) {
-    // O valor pago fica gravado. Se a fatura mudou depois (uma compra
-    // excluída, por exemplo), a diferença aparece aqui — o que saiu do banco
-    // continua tendo sido o valor de cima.
-    const diferenca = Math.abs(Number(paga.valor) - total) >= 0.01;
-    return `
-      <div class="fatura-paga">
-        ${_ICO_CONFERE}
-        <div class="fatura-paga-txt">
-          <strong>Saída lançada no extrato</strong>
-          <small>${diferenca
-            ? `A fatura hoje soma ${moeda(total)}`
-            : "Aparece no Resumo e no Histórico"}</small>
-        </div>
-        <button class="fatura-desfazer" onclick="pedirDesfazerPagamento('${cartao.id}', '${mesRef}')">Desfazer</button>
-      </div>`;
-  }
-
-  if (total <= 0) return "";
-
-  return `
-    <button class="botao entrada" onclick="pedirPagarFatura('${cartao.id}', '${mesRef}')">
-      ${_ICO_CONFERE}
-      Pagar fatura · ${moeda(total)}
-    </button>`;
+// Só o nome do mês, sem o ano: "Saldo da fatura de outubro" cabe na linha
+// da compra, "Saldo da fatura de Outubro de 2026" não.
+function _soNomeDoMes(ym) {
+  const [a, m] = ym.split("-").map(Number);
+  return new Date(a, m - 1, 1).toLocaleDateString("pt-BR", { month: "long" });
 }
 
-function pedirPagarFatura(cartaoId, mesRef) {
-  const alvo = document.getElementById("fatura-acao");
-  const c = cartoes.find(x => x.id === cartaoId);
-  if (!alvo || !c) return;
-  const total = _totalDaFatura(c, mesRef);
-  alvo.innerHTML = `
-    <div class="confirmar">
-      <p>Pagar a fatura de ${mesPorExtenso(mesRef)}, de ${moeda(total)}?
-         Isso lança uma saída nesse valor no seu extrato.</p>
-      <div class="confirmar-acoes">
-        <button onclick="desenharCartao('${cartaoId}')">Cancelar</button>
-        <button class="sim" style="background:var(--entrada);border-color:var(--entrada)"
-                onclick="pagarFatura(this, '${cartaoId}', '${mesRef}')">Sim, paguei</button>
+/* ─── O bloco de pagamento dentro da tela do cartão ─────────────────── */
+
+function _acaoDaFatura(cartao, mesRef, s) {
+  const pedacos = [];
+
+  if (s.pagamentos.length) pedacos.push(_blocoJaPago(cartao, mesRef, s));
+
+  if (s.restante >= 0.005) {
+    pedacos.push(`
+      <button class="botao entrada" onclick="abrirPagarFatura('${cartao.id}', '${mesRef}')">
+        ${_ICO_CONFERE}
+        ${s.parcial ? "Pagar o resto" : "Pagar fatura"} · ${moeda(s.restante)}
+      </button>`);
+
+    // Empurrar o resto só faz sentido depois de pagar alguma coisa, ou numa
+    // fatura que já fechou e ficou pra trás. Na fatura ainda aberta seria
+    // mandar pro mês que vem uma conta que nem venceu.
+    const fechada = mesRef < _mesFaturaAberta(cartao);
+    if (s.pago > 0 || fechada) {
+      pedacos.push(`
+        <button class="botao-fraco fatura-empurrar" onclick="pedirJogarSaldo('${cartao.id}', '${mesRef}')">
+          ${_ICO_EMPURRA}
+          Jogar o resto pra fatura de ${_soNomeDoMes(_somaMes(mesRef, 1))}
+        </button>`);
+    }
+  }
+
+  return pedacos.join("");
+}
+
+function _blocoJaPago(cartao, mesRef, s) {
+  const largura = s.total > 0 ? Math.min(100, (s.pago / s.total) * 100) : 100;
+
+  // O valor pago fica gravado. Se a fatura mudou depois (uma compra
+  // excluída, por exemplo), o que saiu do banco continua tendo sido aquilo
+  // — e aí pago passa do total, que é o que esta linha avisa.
+  const passou = s.pago - s.total >= 0.005;
+
+  const linhas = s.pagamentos.map(p => `
+    <div class="fatura-pgto">
+      <span class="fatura-pgto-ico ${p.tipo === "saldo" ? "empurrado" : ""}">
+        ${p.tipo === "saldo" ? _ICO_EMPURRA : _ICO_CONFERE}
+      </span>
+      <div class="fatura-pgto-txt">
+        <strong>${moeda(p.valor)}</strong>
+        <small>${dataBR(p.pago_em)} · ${p.tipo === "saldo"
+          ? "jogado pra fatura de " + _soNomeDoMes(_somaMes(mesRef, 1))
+          : "saída no extrato"}</small>
       </div>
+      <button class="fatura-desfazer" onclick="pedirDesfazerPagamento('${p.id}', '${cartao.id}')">Desfazer</button>
+    </div>`).join("");
+
+  return `
+    <div class="fatura-pago ${s.quitada ? "quitada" : ""}">
+      <div class="fatura-pago-topo">
+        <strong>${s.quitada ? "Fatura quitada" : "Pago " + moeda(s.pago)}</strong>
+        <span>${s.quitada ? moeda(s.pago) : "Faltam " + moeda(s.restante)}</span>
+      </div>
+      <div class="fatura-barra"><span style="width:${largura}%"></span></div>
+      ${passou ? `<p class="fatura-nota">Você pagou ${moeda(s.pago)} e a fatura hoje soma ${moeda(s.total)}.</p>` : ""}
+      <div class="fatura-pgtos">${linhas}</div>
     </div>`;
 }
 
-async function pagarFatura(botao, cartaoId, mesRef) {
+/* ─── A tela de pagar ───────────────────────────────────────────────── */
+
+function abrirPagarFatura(cartaoId, mesRef) {
+  abrirTela(() => desenharPagarFatura(cartaoId, mesRef));
+}
+
+function desenharPagarFatura(cartaoId, mesRef) {
+  destruirGrafico();
+  const c = cartoes.find(x => x.id === cartaoId);
+  if (!c) { voltarInicio(); return; }
+
+  const s = _situacaoFatura(c, mesRef);
+  if (s.restante < 0.005) { erro("Essa fatura já está quitada."); voltarTela(); return; }
+
+  const chave = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random());
+
+  // O mínimo é 15% da fatura INTEIRA, então o que ainda falta pra alcançá-lo
+  // desconta o que já foi pago. Quem já pagou o mínimo não tem por que ver
+  // esse atalho de novo — e quando ele bate com o total em aberto, o botão
+  // "Tudo" já diz a mesma coisa.
+  const faltaProMinimo = _centavos(Math.max(0, s.total * _MINIMO_FATURA - s.pago));
+  const mostrarMinimo = faltaProMinimo >= 0.005 && s.restante - faltaProMinimo >= 0.005;
+
+  const icoData = `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`;
+
+  const emCampo = v => Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  document.getElementById("area").innerHTML = `
+    <section class="lancamento-tela" style="--cor-tipo:var(--entrada)">
+    <div class="lancamento-cabecalho">
+      <span class="lancamento-cabecalho-icone">${_ICO_CONFERE}</span>
+      <span class="lancamento-caption">${esc(c.nome)} · ${mesPorExtenso(mesRef)}</span>
+      <h2>Pagar fatura</h2>
+    </div>
+
+    <div class="fatura-resumo">
+      <div><small>Fatura</small><strong>${moeda(s.total)}</strong></div>
+      ${s.pago > 0 ? `<div><small>Já pago</small><strong>${moeda(s.pago)}</strong></div>` : ""}
+      <div class="destaque"><small>Em aberto</small><strong>${moeda(s.restante)}</strong></div>
+    </div>
+
+    <div class="lancamento-form">
+      <div class="campo lancamento-campo-valor">
+        <label for="pg-valor">Quanto você vai pagar</label>
+        <div class="lancamento-valor">
+          <span>R$</span>
+          <input type="text" inputmode="decimal" id="pg-valor" placeholder="0,00"
+                 autocomplete="off" value="${emCampo(s.restante)}">
+        </div>
+      </div>
+
+      <div class="fatura-chips">
+        ${mostrarMinimo
+          ? `<button type="button" onclick="_porNoCampo('${emCampo(faltaProMinimo)}')">Mínimo 15% · ${moeda(faltaProMinimo)}</button>`
+          : ""}
+        <button type="button" onclick="_porNoCampo('${emCampo(s.restante)}')">Tudo · ${moeda(s.restante)}</button>
+      </div>
+
+      <div class="campo lancamento-campo-data" style="margin:14px 0 0">
+        <div class="campo-label">${icoData}<label for="pg-data">Data do pagamento</label></div>
+        <input type="date" id="pg-data" value="${_hojeLocal()}">
+      </div>
+
+      <p class="cartao-dica" id="pg-previa"></p>
+    </div>
+
+    <button class="botao entrada" onclick="salvarPagamento(this, '${c.id}', '${mesRef}', '${chave}')">
+      ${_ICO_CONFERE}
+      Confirmar pagamento
+    </button>
+    <button class="botao-fraco lancamento-voltar" onclick="voltarTela()">Voltar</button>
+    </section>`;
+
+  document.getElementById("pg-valor").addEventListener("input", () => _previaPagamento(cartaoId, mesRef));
+  _previaPagamento(cartaoId, mesRef);
+}
+
+function _porNoCampo(texto) {
+  const campo = document.getElementById("pg-valor");
+  if (!campo) return;
+  campo.value = texto;
+  campo.dispatchEvent(new Event("input"));
+}
+
+// Diz o que vai sobrar ANTES de confirmar. Pagar parcial sem ver o resto é
+// como assinar cheque sem olhar o valor.
+function _previaPagamento(cartaoId, mesRef) {
+  const alvo = document.getElementById("pg-previa");
+  const c = cartoes.find(x => x.id === cartaoId);
+  if (!alvo || !c) return;
+
+  const s = _situacaoFatura(c, mesRef);
+  const v = parseMoedaBR(document.getElementById("pg-valor")?.value);
+
+  if (v === null || v <= 0) { alvo.textContent = ""; return; }
+  if (v - s.restante >= 0.005) {
+    alvo.innerHTML = `<span class="fatura-alerta">Essa fatura tem só ${moeda(s.restante)} em aberto.</span>`;
+    return;
+  }
+  const sobra = _centavos(s.restante - v);
+  alvo.textContent = sobra < 0.005
+    ? "Quita a fatura."
+    : `Ficam ${moeda(sobra)} em aberto nesta fatura.`;
+}
+
+async function salvarPagamento(botao, cartaoId, mesRef, chave) {
   if (botao?.disabled) return;
   const c = cartoes.find(x => x.id === cartaoId);
   if (!c) return;
 
-  const total = _totalDaFatura(c, mesRef);
-  if (!total || total <= 0) { erro("Esta fatura não tem valor a pagar."); return; }
+  const s = _situacaoFatura(c, mesRef);
+  const valor = parseMoedaBR(document.getElementById("pg-valor").value);
+  const data = document.getElementById("pg-data").value;
+
+  if (valor === null || valor <= 0) { erro("Informe um valor maior que zero."); return; }
+  // Trava contra o zero a mais: R$ 6.843,00 numa fatura de R$ 684,30 passaria
+  // por qualquer validação de "número positivo" e sairia do extrato calado.
+  if (valor - s.restante >= 0.005) { erro(`Essa fatura tem só ${moeda(s.restante)} em aberto.`); return; }
+  if (!data) { erro("Escolha a data do pagamento."); return; }
 
   const solta = travar(botao, "Pagando...");
-  const hoje = _hojeLocal();
-  const chave = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random());
+  const quita = valor - s.restante > -0.005;
 
-  // Primeiro a saída. Se ela falhar, nada foi marcado como pago e a pessoa
-  // pode tentar de novo — o contrário deixaria a fatura quitada sem o
-  // dinheiro ter saído do extrato.
+  // Primeiro a saída. Se ela falhar, nada foi abatido e dá pra tentar de
+  // novo — o contrário abateria a fatura sem o dinheiro ter saído.
   const { data: lanc, error: erroLanc } = await sb.from("lancamentos").insert({
     user_id: usuario.id,
     tipo: "saida",
-    valor: total,
-    data: hoje,
+    valor,
+    data,
     categoria: "Cartão",
-    descricao: `Fatura ${c.nome} · ${mesPorExtenso(mesRef)}`,
+    descricao: `Fatura ${c.nome} · ${mesPorExtenso(mesRef)}${quita ? "" : " (parcial)"}`,
     chave_envio: chave,
   }).select().single();
 
-  if (erroLanc) { solta(); erro("Erro ao lançar a saída: " + erroLanc.message); return; }
+  if (erroLanc) {
+    solta();
+    if (erroLanc.code === "23505") { ok("Pagamento já registrado."); voltarTela(); return; }
+    erro("Erro ao lançar a saída: " + erroLanc.message);
+    return;
+  }
 
-  const { data: paga, error: erroPaga } = await sb.from("faturas_pagas").insert({
+  const { data: pgto, error: erroPgto } = await sb.from("pagamentos_fatura").insert({
     user_id: usuario.id, cartao_id: cartaoId, mes_ref: mesRef,
-    valor: total, pago_em: hoje, lancamento_id: lanc.id,
+    tipo: "pago", valor, pago_em: data, lancamento_id: lanc.id, chave_envio: chave + "-p",
   }).select().single();
 
-  if (erroPaga) {
-    // A saída entrou mas a marcação não: desfaz a saída pra não sobrar
-    // dinheiro saindo duas vezes quando a pessoa tentar pagar de novo.
+  if (erroPgto) {
+    // A saída entrou mas o abatimento não: desfaz a saída pra não sobrar
+    // dinheiro saindo duas vezes quando a pessoa tentar de novo.
     await sb.from("lancamentos").delete().eq("id", lanc.id).eq("user_id", usuario.id);
     solta();
-    erro(erroPaga.code === "23505"
-      ? "Esta fatura já estava paga."
-      : "Erro ao registrar o pagamento: " + erroPaga.message);
+    erro("Erro ao registrar o pagamento: " + erroPgto.message);
     return;
   }
 
   lancamentos.unshift(lanc);
-  lancamentos.sort((a, b) => b.data.localeCompare(a.data));
-  faturasPagas.push(paga);
+  lancamentos.sort((a, b) => String(b.data).localeCompare(String(a.data)));
+  pagamentosFatura.push(pgto);
 
-  ok("Fatura paga e lançada como saída!");
-  desenharCartao(cartaoId);
+  ok(quita ? "Fatura quitada!" : `Pagos ${moeda(valor)}. Ficam ${moeda(_centavos(s.restante - valor))} em aberto.`);
+  voltarTela();
 }
 
-function pedirDesfazerPagamento(cartaoId, mesRef) {
+/* ─── Jogar o resto pra fatura seguinte ─────────────────────────────── */
+
+function pedirJogarSaldo(cartaoId, mesRef) {
   const alvo = document.getElementById("fatura-acao");
-  if (!alvo) return;
+  const c = cartoes.find(x => x.id === cartaoId);
+  if (!alvo || !c) return;
+
+  const s = _situacaoFatura(c, mesRef);
+  if (s.restante < 0.005) return;
+  const proximo = _somaMes(mesRef, 1);
+
   alvo.innerHTML = `
     <div class="confirmar">
-      <p>Desfazer o pagamento? A saída correspondente sai do seu extrato.</p>
-      <div class="confirmar-acoes">
+      <p>Jogar os ${moeda(s.restante)} que faltam pra fatura de ${mesPorExtenso(proximo)}?
+         Vira uma compra lá, e esta fatura fica quitada.</p>
+      <div class="campo" style="margin:12px 0 0">
+        <label for="saldo-parcelas">Em quantas vezes</label>
+        <select id="saldo-parcelas">
+          ${Array.from({ length: 24 }, (_, i) => i + 1)
+            .map(n => `<option value="${n}">${n === 1 ? "1x (de uma vez)" : `${n}x de ${moeda(s.restante / n)}`}</option>`).join("")}
+        </select>
+      </div>
+      <div class="confirmar-acoes" style="margin-top:12px">
         <button onclick="desenharCartao('${cartaoId}')">Cancelar</button>
-        <button class="sim" onclick="desfazerPagamento(this, '${cartaoId}', '${mesRef}')">Desfazer</button>
+        <button class="sim neutro" onclick="jogarSaldo(this, '${cartaoId}', '${mesRef}')">Sim, jogar</button>
       </div>
     </div>`;
 }
 
-async function desfazerPagamento(botao, cartaoId, mesRef) {
+async function jogarSaldo(botao, cartaoId, mesRef) {
   if (botao?.disabled) return;
-  const paga = _faturaPaga(cartaoId, mesRef);
-  if (!paga) return;
+  const c = cartoes.find(x => x.id === cartaoId);
+  if (!c) return;
+
+  const s = _situacaoFatura(c, mesRef);
+  if (s.restante < 0.005) { erro("Não sobrou nada nesta fatura."); return; }
+
+  const parcelas = Number(document.getElementById("saldo-parcelas")?.value) || 1;
+  const proximo = _somaMes(mesRef, 1);
+  const solta = travar(botao, "Jogando...");
+  const chave = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random());
+
+  // Dia 1: o fechamento nunca é antes do dia 1, então a compra cai
+  // exatamente na fatura do mês seguinte, sem depender de quando é hoje.
+  const { data: compra, error: erroCompra } = await sb.from("compras_cartao").insert({
+    user_id: usuario.id, cartao_id: cartaoId,
+    descricao: `Saldo da fatura de ${_soNomeDoMes(mesRef)}`,
+    valor: s.restante, parcelas, data: proximo + "-01",
+    categoria: "Cartão", chave_envio: chave,
+  }).select().single();
+
+  if (erroCompra) {
+    solta();
+    if (erroCompra.code === "23505") { ok("Saldo já foi jogado."); desenharCartao(cartaoId); return; }
+    erro("Erro ao jogar o saldo: " + erroCompra.message);
+    return;
+  }
+
+  const { data: pgto, error: erroPgto } = await sb.from("pagamentos_fatura").insert({
+    user_id: usuario.id, cartao_id: cartaoId, mes_ref: mesRef,
+    tipo: "saldo", valor: s.restante, pago_em: _hojeLocal(),
+    compra_id: compra.id, chave_envio: chave + "-s",
+  }).select().single();
+
+  if (erroPgto) {
+    // Sem o abatimento, a compra do mês que vem seria uma dívida a mais em
+    // cima de uma fatura que continuaria aberta: cobrança em dobro.
+    await sb.from("compras_cartao").delete().eq("id", compra.id).eq("user_id", usuario.id);
+    solta();
+    erro("Erro ao registrar o saldo: " + erroPgto.message);
+    return;
+  }
+
+  comprasCartao.push(compra);
+  pagamentosFatura.push(pgto);
+  ok(`Saldo de ${moeda(s.restante)} foi pra fatura de ${mesPorExtenso(proximo)}.`);
+  desenharCartao(cartaoId);
+}
+
+/* ─── Desfazer ──────────────────────────────────────────────────────── */
+
+function pedirDesfazerPagamento(pagamentoId, cartaoId) {
+  const alvo = document.getElementById("fatura-acao");
+  const p = pagamentosFatura.find(x => x.id === pagamentoId);
+  if (!alvo || !p) return;
+
+  alvo.innerHTML = `
+    <div class="confirmar">
+      <p>Desfazer ${p.tipo === "saldo" ? "o saldo" : "o pagamento"} de ${moeda(p.valor)}?
+         ${p.tipo === "saldo"
+           ? "A compra que ele criou na fatura seguinte some junto."
+           : "A saída correspondente sai do seu extrato."}</p>
+      <div class="confirmar-acoes">
+        <button onclick="desenharCartao('${cartaoId}')">Cancelar</button>
+        <button class="sim" onclick="desfazerPagamento(this, '${pagamentoId}', '${cartaoId}')">Desfazer</button>
+      </div>
+    </div>`;
+}
+
+async function desfazerPagamento(botao, pagamentoId, cartaoId) {
+  if (botao?.disabled) return;
+  const p = pagamentosFatura.find(x => x.id === pagamentoId);
+  if (!p) return;
 
   const solta = travar(botao, "Desfazendo...");
 
-  const { error } = await sb.from("faturas_pagas")
-    .delete().eq("id", paga.id).eq("user_id", usuario.id);
+  const { error } = await sb.from("pagamentos_fatura")
+    .delete().eq("id", p.id).eq("user_id", usuario.id);
   if (error) { solta(); erro("Erro ao desfazer: " + error.message); return; }
 
-  // A saída pode já ter sido apagada pelo Histórico; nesse caso não há o que
-  // remover e o pagamento é desfeito do mesmo jeito.
-  if (paga.lancamento_id) {
-    await sb.from("lancamentos").delete().eq("id", paga.lancamento_id).eq("user_id", usuario.id);
-    lancamentos = lancamentos.filter(l => l.id !== paga.lancamento_id);
+  // O que o pagamento criou lá fora pode já ter sido apagado à mão (a saída
+  // pelo Histórico, a compra pela própria fatura); nesse caso não há o que
+  // remover e o desfazer vale do mesmo jeito.
+  if (p.lancamento_id) {
+    await sb.from("lancamentos").delete().eq("id", p.lancamento_id).eq("user_id", usuario.id);
+    lancamentos = lancamentos.filter(l => l.id !== p.lancamento_id);
+  }
+  if (p.compra_id) {
+    await sb.from("compras_cartao").delete().eq("id", p.compra_id).eq("user_id", usuario.id);
+    comprasCartao = comprasCartao.filter(x => x.id !== p.compra_id);
   }
 
-  faturasPagas = faturasPagas.filter(f => f.id !== paga.id);
-  ok("Pagamento desfeito.");
+  pagamentosFatura = pagamentosFatura.filter(x => x.id !== p.id);
+  ok(p.tipo === "saldo" ? "Saldo desfeito." : "Pagamento desfeito.");
   desenharCartao(cartaoId);
 }

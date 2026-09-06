@@ -13,7 +13,7 @@ let contas = [];
 let categorias = [];
 let cartoes = [];
 let comprasCartao = [];
-let faturasPagas = [];
+let pagamentosFatura = [];
 let mesAtual = "";   // "2026-08" — mês que o Resumo e o Histórico estão mostrando
 let grafico = null;
 
@@ -126,7 +126,7 @@ async function carregarTudo() {
     sb.from("categorias").select("*").order("nome", { ascending: true }),
     sb.from("cartoes").select("*").order("nome", { ascending: true }),
     sb.from("compras_cartao").select("*").order("data", { ascending: false }),
-    sb.from("faturas_pagas").select("*"),
+    sb.from("pagamentos_fatura").select("*").order("pago_em", { ascending: true }),
   ]);
 
   if (rL.error || rC.error || rG.error || rCa.error || rCo.error || rFp.error) {
@@ -145,7 +145,7 @@ async function carregarTudo() {
   categorias = rG.data || [];
   cartoes = rCa.data || [];
   comprasCartao = rCo.data || [];
-  faturasPagas = rFp.data || [];
+  pagamentosFatura = rFp.data || [];
 
   // Primeira vez: semeia as categorias para a pessoa não começar do zero.
   if (!categorias.length) await semearCategorias();
