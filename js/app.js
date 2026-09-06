@@ -58,21 +58,64 @@ function telaCarregando() {
 // abria com tudo zerado. Dava pra jurar que os lançamentos tinham sumido —
 // e nesse susto a pessoa lança tudo de novo, agora em duplicata de verdade.
 function telaSemDados() {
+  const relogio = ehErroDeCracha(ultimoErroCarga?.message);
+
   document.getElementById("menu").style.display = "none";
   document.getElementById("area").innerHTML = `
     <div class="bloco" style="text-align:center;margin-top:20px">
-      <div class="carregando-erro" aria-hidden="true">📡</div>
-      <h2 style="margin:0 0 8px;font-size:16px">Não deu pra carregar seus dados</h2>
-      <p style="font-size:13.5px;color:var(--fraco);margin:0 0 16px">
-        Seus lançamentos estão salvos e intactos — foi só a conexão que não
-        respondeu agora. Confira a internet e tente de novo.
-      </p>
+      <div class="carregando-erro" aria-hidden="true">${relogio ? "🕐" : "📡"}</div>
+      <h2 style="margin:0 0 8px;font-size:16px">${relogio
+        ? "O relógio deste aparelho está fora da hora"
+        : "Não deu pra carregar seus dados"}</h2>
+      <p style="font-size:13.5px;color:var(--fraco);margin:0 0 4px">${relogio
+        ? `O servidor recusa a sua entrada quando a hora do aparelho não bate
+           com a dele. Seus dados estão salvos e intactos.`
+        : `Seus lançamentos estão salvos e intactos — foi só a conexão que não
+           respondeu agora. Confira a internet e tente de novo.`}</p>
+
+      <p class="relogio-medida" id="relogio-medida"></p>
+
+      ${relogio ? `
+        <p style="font-size:13px;color:var(--texto);text-align:left;margin:0 0 16px;line-height:1.6">
+          <b>Como resolver:</b><br>
+          Ajustes do celular → <b>Data e hora</b> → ligue
+          <b>"Definir automaticamente"</b>. Depois volte aqui e toque em
+          Tentar de novo.
+        </p>` : ""}
+
       <button class="botao" onclick="recarregarDados(this)">
         <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.5 15a9 9 0 1 1-2.1-9.4L23 10"/></svg>
         Tentar de novo
       </button>
-      <button class="botao-fraco" onclick="sair()">Sair da conta</button>
+      <button class="botao-fraco" onclick="sair()">Sair e entrar de novo</button>
     </div>`;
+
+  // A medição vai pra tela depois, sozinha: ela custa uma ida ao servidor, e
+  // segurar a tela por causa dela seria deixar a pessoa esperando de novo.
+  if (relogio) mostrarMedidaDoRelogio();
+}
+
+async function mostrarMedidaDoRelogio() {
+  const desvio = await medirRelogio();
+  const alvo = document.getElementById("relogio-medida");
+  if (!alvo || desvio === null) return;
+
+  // O cabeçalho do servidor tem precisão de 1 segundo, e a rede acrescenta
+  // o seu tanto. Abaixo de meio minuto não é desvio, é ruído de medição.
+  if (Math.abs(desvio) < 30) {
+    alvo.textContent = "O relógio deste aparelho está certo. Toque em Sair e entrar de novo.";
+    return;
+  }
+
+  const min = Math.round(Math.abs(desvio) / 60);
+  const quanto = min >= 60
+    ? Math.floor(min / 60) + "h" + String(min % 60).padStart(2, "0")
+    : min >= 1 ? min + (min > 1 ? " minutos" : " minuto")
+    : Math.abs(desvio) + " segundos";
+
+  alvo.innerHTML = `Ele está <b>${quanto} ${desvio > 0 ? "adiantado" : "atrasado"}</b>
+    em relação ao servidor.`;
+  alvo.classList.add("forte");
 }
 
 async function recarregarDados(botao) {

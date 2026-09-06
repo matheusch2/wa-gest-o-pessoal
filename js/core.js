@@ -134,7 +134,51 @@ function _comPrazo(promessa) {
   ]);
 }
 
-async function carregarTudo() {
+/* ═══ QUANDO O SERVIDOR RECUSA O CRACHÁ ═══════════════════════════════
+   "JWT issued at future" quer dizer: o crachá da sessão diz ter sido
+   emitido num horário que, pro servidor, ainda não chegou. Ninguém
+   entende isso lendo, e a pessoa acha que o app quebrou.
+
+   Duas causas, e o app trata as duas. A primeira é o crachá velho ou
+   torto guardado no aparelho: pedir um novo resolve, e resolve calado.
+   A segunda é o relógio do próprio aparelho estar fora da hora — aí não
+   tem crachá que sirva, e o que ajuda é DIZER isso, com o tamanho do
+   atraso medido, em vez de repetir a frase em inglês. */
+
+let ultimoErroCarga = null;
+
+function ehErroDeCracha(msg) {
+  return /issued at future|bad_?jwt|invalid (jwt|claim)|token is expired|JWT expired/i.test(msg || "");
+}
+
+function mensagemDoErro(e) {
+  const m = e?.message || "";
+  if (e?._prazo) return m;
+  if (/relation .* does not exist/i.test(m)) return "As tabelas ainda não existem. Rode o banco.sql no Supabase.";
+  if (/issued at future/i.test(m)) return "O relógio deste aparelho está fora da hora.";
+  if (/expired/i.test(m)) return "Sua sessão expirou. Entre de novo.";
+  if (/failed to fetch|networkerror|load failed/i.test(m)) return "Sem conexão com o servidor.";
+  return "Erro ao carregar: " + m;
+}
+
+// Compara o relógio do aparelho com o do servidor. O horário vem no
+// cabeçalho "Date" de qualquer resposta — e metade da ida-e-volta é
+// descontada, senão uma internet lenta apareceria como relógio errado.
+// Positivo = o aparelho está ADIANTADO.
+async function medirRelogio() {
+  try {
+    const antes = Date.now();
+    const r = await fetch(SUPABASE_URL + "/auth/v1/health", {
+      headers: { apikey: SUPABASE_KEY }, cache: "no-store",
+    });
+    const cabecalho = r.headers.get("date");
+    if (!cabecalho) return null;
+    const meio = antes + (Date.now() - antes) / 2;
+    return Math.round((meio - new Date(cabecalho).getTime()) / 1000);
+  } catch (e) { return null; }
+}
+
+async function carregarTudo(jaPediuCrachaNovo) {
   const [rL, rC, rG, rCa, rCo, rFp, rMe] = (await Promise.all([
     sb.from("lancamentos").select("*").order("data", { ascending: false }),
     sb.from("contas").select("*").order("vencimento", { ascending: true }),
@@ -148,14 +192,22 @@ async function carregarTudo() {
   const respostas = [rL, rC, rG, rCa, rCo, rFp, rMe];
   if (respostas.some(r => r.error)) {
     const e = respostas.find(r => r.error).error;
-    // Erro típico de quem ainda não rodou o banco.sql.
-    if (/relation .* does not exist/i.test(e.message)) {
-      erro("As tabelas ainda não existem. Rode o banco.sql no Supabase.");
-    } else {
-      erro(e._prazo ? e.message : "Erro ao carregar: " + e.message);
+    ultimoErroCarga = e;
+
+    // Crachá recusado: pede um novo e tenta mais UMA vez. Quando o
+    // problema é o token guardado, isso conserta sem a pessoa ver nada.
+    // A trava do "jaPediu" existe pra não virar laço infinito quando o
+    // problema for o relógio — aí nenhum crachá novo vai servir.
+    if (!jaPediuCrachaNovo && ehErroDeCracha(e.message)) {
+      const { error: erroTroca } = await sb.auth.refreshSession();
+      if (!erroTroca) return carregarTudo(true);
     }
+
+    erro(mensagemDoErro(e));
     return false;
   }
+
+  ultimoErroCarga = null;
 
   lancamentos = rL.data || [];
   contas = rC.data || [];

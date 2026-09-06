@@ -1362,3 +1362,8 @@ body.escuro .resumo-secao .item-icone.entrada { background: #17372d; }
 @media (prefers-reduced-motion: reduce) { .carregando-roda { animation-duration: 2.4s; } }
 
 .carregando-erro { font-size: 34px; line-height: 1; margin-bottom: 10px; }
+
+/* A medição do relógio chega depois do resto da tela, então ela tem um
+   lugar reservado — sem isso o texto pularia quando o número aparecesse. */
+.relogio-medida { min-height: 20px; margin: 0 0 12px; font-size: 13px; color: var(--fraco); }
+.relogio-medida.forte { color: var(--saida); font-weight: 600; }
