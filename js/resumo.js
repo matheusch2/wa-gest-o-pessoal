@@ -192,6 +192,53 @@ function _cardsDeNumero(entradas, saidas) {
     </div>`;
 }
 
+/* ─── AS COMPRAS DO CARTÃO ──────────────────────────────────────────
+   Elas não são saídas, e é por isso que não estavam aqui: o dinheiro do
+   cartão só sai da conta quando a fatura é paga. Somá-las às saídas
+   estragaria o saldo — ele deixaria de bater com o extrato do banco — e
+   contaria o mesmo dinheiro duas vezes, uma na compra e outra na fatura.
+
+   Mas não mostrá-las em lugar nenhum também estava errado: quem passou o
+   cartão no mercado gastou, e vinha aqui procurar. Então elas aparecem
+   à parte, com o próprio subtotal e a frase que diz quando viram saída.
+
+   O mês é o da COMPRA, não o da fatura. É por isso que lançar uma compra
+   antiga com a data certa a coloca no mês em que ela aconteceu. */
+
+function _blocoComprasDoCartao() {
+  const compras = comprasCartao
+    .filter(c => mesDe(c.data) === mesAtual)
+    .sort((a, b) => String(b.data).localeCompare(String(a.data)));
+  if (!compras.length) return "";
+
+  const total = compras.reduce((s, c) => s + Number(c.valor), 0);
+  const nomeDoCartao = id => cartoes.find(c => c.id === id)?.nome || "Cartão";
+
+  return `
+    <div class="bloco resumo-secao">
+      <div class="bloco-topo">
+        <h2>No cartão</h2>
+        <strong class="resumo-total-saida">${moeda(total)}</strong>
+      </div>
+      <div class="lista">
+        ${compras.map(c => `
+          <div class="item" onclick="abrirCartao('${c.cartao_id}')" style="cursor:pointer">
+            <div class="item-icone saida">💳</div>
+            <div class="item-txt">
+              <strong>${esc(c.descricao)}</strong>
+              <small>${esc(nomeDoCartao(c.cartao_id))} · ${dataBR(c.data)}${
+                Number(c.parcelas) > 1 ? ` · ${c.parcelas}x` : ""}</small>
+            </div>
+            <span class="item-valor saida">${moeda(c.valor)}</span>
+          </div>`).join("")}
+      </div>
+      <p class="cartao-nota">
+        Não entram nas saídas acima: o dinheiro do cartão só sai da conta
+        quando você paga a fatura. Aqui elas aparecem no mês da compra.
+      </p>
+    </div>`;
+}
+
 /* ─── A mesma tela, com um lado só ──────────────────────────────────── */
 
 function desenharResumoFiltrado(doMes, entradas, saidas) {
@@ -261,6 +308,8 @@ function desenharResumoFiltrado(doMes, entradas, saidas) {
           ? `<div class="lista">${lista.map(linhaLancamento).join("")}</div>`
           : `<p class="vazio">Nada por aqui neste mês.</p>`}
       </div>
+
+      ${ehEntrada ? "" : _blocoComprasDoCartao()}
 
       <button class="botao-fraco resumo-voltar" onclick="voltarTela()">
         Ver entradas e saídas
