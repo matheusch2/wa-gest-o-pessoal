@@ -1557,3 +1557,35 @@ body.escuro .resumo-secao .item-icone.entrada { background: #17372d; }
   color: var(--fraco);
   line-height: 1.5;
 }
+
+/* ─── 23. CRIAR CATEGORIA DENTRO DO CAMPO ────────────────────────────────
+   Nasce escondido logo abaixo do select, e só aparece quando a pessoa
+   escolhe "+ Nova categoria". Fica na mesma linha do formulário pra não
+   parecer que abriu outra tela — abrir tela aqui é perder o que já foi
+   digitado nos campos de cima. */
+
+/* O [hidden] do navegador é regra de UA: qualquer "display" escrito aqui
+   ganha dele e o campo apareceria sempre. Por isso a linha explícita. */
+.cat-nova { display: flex; gap: 7px; margin-top: 8px; }
+.cat-nova[hidden] { display: none; }
+.cat-nova input { flex: 1; min-width: 0; }
+
+.cat-nova-criar,
+.cat-nova-fechar {
+  flex-shrink: 0;
+  width: auto;
+  border-radius: 12px;
+  border: 1.5px solid var(--marca-txt);
+  background: var(--marca-txt);
+  color: #fff;
+  font-size: 13.5px;
+  font-weight: 800;
+  padding: 0 15px;
+  cursor: pointer;
+}
+.cat-nova-fechar {
+  background: none;
+  color: var(--fraco);
+  border-color: var(--borda);
+  padding: 0 13px;
+}

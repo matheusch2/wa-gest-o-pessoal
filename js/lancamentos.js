@@ -63,10 +63,8 @@ function desenharLancar(tipo) {
         </div>
         <div class="campo">
           <div class="campo-label">${icoEtiqueta}<label for="lc-cat">Categoria</label></div>
-          <select id="lc-cat">
-            ${cats.map(c => `<option value="${esc(c.nome)}">${esc(c.nome)}</option>`).join("")}
-            ${cats.length ? "" : `<option value="Outros">Outros</option>`}
-          </select>
+          ${campoDeCategoria({ id: "lc-cat", tipo,
+                              opcoes: cats.length ? cats.map(c => c.nome) : ["Outros"] })}
         </div>
       </div>
     </div>
@@ -182,10 +180,10 @@ function abrirEdicaoLancamento(id, volta) {
         </div>
         <div class="campo">
           <div class="campo-label">${icoEtiqueta}<label for="ed-cat">Categoria</label></div>
-          <select id="ed-cat">
-            ${cats.map(c => `<option value="${esc(c.nome)}"${c.nome === l.categoria ? " selected" : ""}>${esc(c.nome)}</option>`).join("")}
-            ${cats.some(c => c.nome === l.categoria) ? "" : `<option value="${esc(l.categoria)}" selected>${esc(l.categoria)}</option>`}
-          </select>
+          ${campoDeCategoria({ id: "ed-cat", tipo: l.tipo, escolhida: l.categoria,
+                              opcoes: cats.some(c => c.nome === l.categoria)
+                                ? cats.map(c => c.nome)
+                                : cats.map(c => c.nome).concat(l.categoria) })}
         </div>
       </div>
     </div>

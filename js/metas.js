@@ -210,7 +210,7 @@ function _desenharFormMeta(meta, categoriaSugerida) {
   // cadastrada — ela continua valendo como meta.
   if (categoriaSugerida && !disponiveis.includes(categoriaSugerida)) disponiveis.unshift(categoriaSugerida);
 
-  const alvo = editando ? meta.categoria : (categoriaSugerida || disponiveis[0]);
+  const alvo = editando ? meta.categoria : (categoriaSugerida || disponiveis[0] || "");
   const icoEtiqueta = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.6 13.4 12 22l-9-9V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>`;
   const icoTipo = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>`;
 
@@ -229,11 +229,10 @@ function _desenharFormMeta(meta, categoriaSugerida) {
     <div class="lancamento-form">
       <div class="campo">
         <div class="campo-label">${icoEtiqueta}<label for="mt-cat">Categoria</label></div>
-        ${editando || !disponiveis.length
+        ${editando
           ? `<input type="text" id="mt-cat" value="${esc(alvo || "")}" disabled>`
-          : `<select id="mt-cat" onchange="_previaGastoDaMeta()">
-               ${disponiveis.map(n => `<option value="${esc(n)}"${n === alvo ? " selected" : ""}>${esc(n)}</option>`).join("")}
-             </select>`}
+          : campoDeCategoria({ id: "mt-cat", tipo: "saida", opcoes: disponiveis,
+                              escolhida: alvo, aoTrocar: "_previaGastoDaMeta" })}
         <p class="cartao-dica" id="mt-gasto" style="margin-top:7px"></p>
       </div>
 
@@ -272,10 +271,21 @@ function _desenharFormMeta(meta, categoriaSugerida) {
     </div>
 
     ${!editando && !disponiveis.length
-      ? `<p class="cartao-dica" style="margin-bottom:12px">Todas as suas categorias de saída já têm meta.</p>`
-      : `<button class="botao" onclick="salvarMeta(this, ${meta ? `'${meta.id}'` : "null"})">
+      ? `<p class="cartao-dica" style="margin-bottom:12px">
+           Todas as suas categorias de saída já têm meta. Crie uma categoria
+           nova ali em cima se quiser separar melhor — energia, internet e
+           água juntas em "Casa" fazem uma meta só pra quatro contas
+           diferentes.
+         </p>`
+      : ""}
+    ${editando || disponiveis.length
+      ? `<button class="botao" onclick="salvarMeta(this, ${meta ? `'${meta.id}'` : "null"})">
            <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
            ${editando ? "Salvar alteração" : "Criar meta"}
+         </button>`
+      : `<button class="botao" onclick="salvarMeta(this, null)">
+           <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+           Criar meta
          </button>`}
     <button class="botao-fraco lancamento-voltar" onclick="voltarTela()">Voltar</button>
     </section>`;
@@ -304,7 +314,7 @@ async function salvarMeta(botao, id) {
   const valor = parseMoedaBR(document.getElementById("mt-valor").value);
   const reservar = document.querySelector('input[name="mt-tipo"]:checked')?.value !== "opcional";
 
-  if (!categoria) { erro("Escolha a categoria."); return; }
+  if (!categoria) { erro("Escolha uma categoria, ou crie uma ali em cima."); return; }
   if (valor === null || valor <= 0) { erro("Informe um teto maior que zero."); return; }
 
   const solta = travar(botao, "Salvando...");

@@ -137,10 +137,8 @@ function abrirNovaConta() {
           </div>
           <div class="campo">
             <div class="campo-label">${icoEtiqueta}<label for="ct-cat">Categoria</label></div>
-            <select id="ct-cat">
-              ${cats.map(c => `<option value="${esc(c.nome)}">${esc(c.nome)}</option>`).join("")}
-              ${cats.length ? "" : `<option value="Outros">Outros</option>`}
-            </select>
+            ${campoDeCategoria({ id: "ct-cat", tipo: "saida",
+                                opcoes: cats.length ? cats.map(c => c.nome) : ["Outros"] })}
           </div>
         </div>
 

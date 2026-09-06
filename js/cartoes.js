@@ -389,10 +389,8 @@ function abrirNovaCompra(cartaoId) {
           </div>
           <div class="campo">
             <div class="campo-label">${icoEtiqueta}<label for="cp-cat">Categoria</label></div>
-            <select id="cp-cat">
-              ${cats.map(x => `<option value="${esc(x.nome)}">${esc(x.nome)}</option>`).join("")}
-              ${cats.length ? "" : `<option value="Outros">Outros</option>`}
-            </select>
+            ${campoDeCategoria({ id: "cp-cat", tipo: "saida",
+                                opcoes: cats.length ? cats.map(x => x.nome) : ["Outros"] })}
           </div>
         </div>
 

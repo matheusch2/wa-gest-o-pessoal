@@ -10,6 +10,10 @@ Só uma vez, e fora do repositório:
     npm install playwright
     npx playwright install chromium
 
+Se o seu Chromium estiver em outro lugar, aponte na hora de rodar:
+
+    CHROMIUM=/caminho/do/chromium node ferramentas/rodar.js
+
 ## Auditor de CSS
 
     node ferramentas/montar-pagina-de-teste.js
@@ -27,6 +31,15 @@ propriedade em disputa e os dois seletores.
 **Para confiar nele, quebre-o de propósito**: troque `.escolha .escolha-op`
 por `.escolha-op` no style.css e rode de novo. Se não acusar, o auditor é
 que está com problema, não o CSS.
+
+## Varredura visual
+
+    node ferramentas/montar-pagina-de-teste.js
+    node ferramentas/varredura-visual.js
+
+Abre as mesmas telas e procura três estragos que passam despercebidos: a
+página passando a rolar pro lado, texto que ficou pequeno demais, e
+elemento com texto que perdeu o tamanho. Rode depois de mexer no CSS.
 
 ## Classes mortas
 
