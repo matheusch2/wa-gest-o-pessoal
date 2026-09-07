@@ -1678,9 +1678,20 @@ body.escuro .resumo-secao .item-icone.entrada { background: #17372d; }
 
 /* O [hidden] do navegador é regra de UA: qualquer "display" escrito aqui
    ganha dele e o campo apareceria sempre. Por isso a linha explícita. */
-.cat-nova { display: flex; gap: 7px; margin-top: 8px; }
+.cat-nova { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 8px; }
 .cat-nova[hidden] { display: none; }
-.cat-nova input { flex: 1; min-width: 0; }
+
+/* A Categoria mora numa coluna de metade da tela (o .dois, ao lado da
+   Data). Com o campo de nome aberto ali dentro, sobravam uns 50px pro
+   nome e o resto ia pros dois botões — dava pra ver o cursor e mais nada.
+   Aberto, ele toma a linha inteira do formulário. */
+.dois .campo:has(.cat-nova:not([hidden])) { grid-column: 1 / -1; }
+
+/* E se ainda assim faltar largura, quem desce pra segunda linha são os
+   BOTÕES, nunca o nome: eles têm tamanho fixo, o nome é que precisa
+   crescer. */
+.cat-nova input { flex: 1 1 150px; }
+.cat-nova input { min-width: 0; }
 
 .cat-nova-criar,
 .cat-nova-fechar {
