@@ -32,6 +32,41 @@ function _recebidaNoMes(nome, mesRef) {
     l.tipo === "entrada" && l.descricao === nome && mesDe(l.data) === mesRef) || null;
 }
 
+/* ═══ O QUE AINDA VAI ENTRAR ══════════════════════════════════════════
+   O espelho de reservasDoMes(), e ele existe pelo mesmo motivo.
+
+   O Resumo desconta do saldo tudo que ainda TEM QUE SAIR: a conta que
+   vence dia 20, o mercado que ainda falta fazer. Mas o salário que ainda
+   não caiu não estava sendo somado de volta. O mês começava com todas as
+   despesas descontadas e nenhuma receita contada — quem tem R$ 6.700 de
+   salário cadastrado via "faltam R$ 6.700 pra cobrir o que vai sair" no
+   dia 1º, e o número não queria dizer nada.
+
+   A régua tem que ser a mesma dos dois lados: se conta o que vai sair,
+   conta o que vai entrar.
+
+   E, como do outro lado, isso não é lançamento nenhum — é previsão. No
+   instante em que a pessoa toca "Recebi", a entrada vira lançamento de
+   verdade e sai daqui. O número no alto não se mexe: o que era previsto
+   virou realizado. Se ele pulasse nessa hora, uma das duas contas estaria
+   errada. */
+
+function aReceberDoMes(mesRef) {
+  // Mês fechado não recebe mais nada. O que não caiu em agosto não vai
+  // cair — e ficar prometendo aumentaria a sobra de um mês que já acabou.
+  if (mesRef < mesDe(_hojeLocal())) return { linhas: [], total: 0 };
+
+  const linhas = entradasFixas
+    .filter(f => !_recebidaNoMes(f.nome, mesRef))
+    .map(f => ({
+      nome: f.nome, categoria: f.categoria || "",
+      valor: Number(f.valor), dia: f.dia, data: _diaDoMes(f.dia, mesRef),
+    }))
+    .sort((a, b) => a.data.localeCompare(b.data));
+
+  return { linhas, total: Math.round(linhas.reduce((s, x) => s + x.valor, 0) * 100) / 100 };
+}
+
 function _diaDoMes(dia, mesRef) {
   const [a, m] = mesRef.split("-").map(Number);
   // Dia 31 num mês de 30 vira o último dia do mês, não o dia 1 do seguinte.
@@ -85,6 +120,7 @@ function blocoEntradasFixas() {
         <small>${faltam
           ? `${faltam} ainda não ${faltam > 1 ? "foram lançadas" : "foi lançada"} em ${soNomeDoMes(mes)}`
           : `Tudo lançado em ${soNomeDoMes(mes)}`}</small>
+        ${faltam > 1 ? `<button class="fixas-todas" onclick="receberTodasAsFixas(this)">Recebi todas</button>` : ""}
         <button class="fixas-mais" onclick="abrirNovaEntradaFixa()">+ Nova</button>
       </div>
     </div>`;
@@ -113,6 +149,33 @@ async function receberEntradaFixa(botao, id) {
   lancamentos.unshift(data);
   lancamentos.sort((a, b) => String(b.data).localeCompare(String(a.data)));
   ok(`${f.nome} de ${soNomeDoMes(mes)} lançado!`);
+  desenharLancar("entrada");
+}
+
+// Quatro salários na casa viravam quatro toques todo mês, e bastava
+// esquecer um pra conta do mês inteiro sair errada. Vai tudo num insert
+// só: uma ida ao banco, e ou entram todas ou não entra nenhuma.
+async function receberTodasAsFixas(botao) {
+  if (botao?.disabled) return;
+  const mes = mesDe(_hojeLocal());
+  const faltam = entradasFixas.filter(f => !_recebidaNoMes(f.nome, mes));
+  if (!faltam.length) { erro("Todas já foram lançadas neste mês."); return; }
+
+  const solta = travar(botao, "Lançando...");
+  const { data, error } = await sb.from("lancamentos").insert(
+    faltam.map(f => ({
+      user_id: usuario.id, tipo: "entrada", valor: Number(f.valor),
+      data: _diaDoMes(f.dia, mes), categoria: f.categoria || "Outros",
+      descricao: f.nome,
+      chave_envio: (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random()),
+    }))
+  ).select();
+
+  if (error) { solta(); erro("Erro ao lançar: " + error.message); return; }
+
+  lancamentos.push(...(data || []));
+  lancamentos.sort((a, b) => String(b.data).localeCompare(String(a.data)));
+  ok(`${faltam.length} entradas lançadas em ${soNomeDoMes(mes)}!`);
   desenharLancar("entrada");
 }
 

@@ -45,8 +45,13 @@ function desenharResumo(filtro) {
 
   if (_filtroResumo) { desenharResumoFiltrado(doMes, entradas, saidas); return; }
 
+  // As duas pontas da previsão: o que ainda tem que sair e o que ainda
+  // tem que entrar. Contar só uma delas era o que deixava o mês começar
+  // no vermelho mesmo com o salário inteiro cadastrado.
   const reservas = reservasDoMes(mesAtual);
-  const sobra = Math.round((saldo - reservas.total) * 100) / 100;
+  const aReceber = aReceberDoMes(mesAtual);
+  const previsto = reservas.total > 0 || aReceber.total > 0;
+  const sobra = Math.round((saldo + aReceber.total - reservas.total) * 100) / 100;
 
   // Contas em aberto olham o mês inteiro, não só até hoje.
   const vencidas = contas.filter(c => !c.pago && c.vencimento < _hojeLocal());
@@ -74,20 +79,31 @@ function desenharResumo(filtro) {
       </div>
 
       ${(() => {
-        const valor = reservas.total > 0 ? sobra : saldo;
-        // O vermelho aqui não é decoração: negativo quer dizer que o que
-        // entrou não cobre o que ainda tem que sair. Em branco, esse número
-        // passa batido no meio dos outros.
+        const valor = previsto ? sobra : saldo;
+
+        // A frase muda com o que o número já leva em conta. São seis casos
+        // e valem seis frases: "faltam R$ 203 pra cobrir o que ainda vai
+        // sair" e "faltam R$ 203, já contando o salário que ainda não caiu"
+        // são situações diferentes, e a segunda é bem mais grave.
+        const dois = aReceber.total > 0 && reservas.total > 0;
         const status = valor < 0
-          ? reservas.total > 0
-            ? `Faltam ${moeda(-sobra)} pra cobrir o que ainda vai sair`
-            : "As saídas passaram as entradas"
-          : reservas.total > 0
-            ? `Livre, já tirando ${moeda(reservas.total)} que ainda vão sair`
-            : "Resultado positivo neste mês";
+          ? dois
+            ? `Faltam ${moeda(-sobra)}, já contando ${moeda(aReceber.total)} a receber`
+            : aReceber.total > 0
+              ? `Faltam ${moeda(-sobra)} mesmo contando ${moeda(aReceber.total)} que ainda vão entrar`
+              : reservas.total > 0
+                ? `Faltam ${moeda(-sobra)} pra cobrir o que ainda vai sair`
+                : "As saídas passaram as entradas"
+          : dois
+            ? `Livre, contando ${moeda(aReceber.total)} a receber e ${moeda(reservas.total)} a pagar`
+            : aReceber.total > 0
+              ? `Livre, já contando ${moeda(aReceber.total)} que ainda vão entrar`
+              : reservas.total > 0
+                ? `Livre, já tirando ${moeda(reservas.total)} que ainda vão sair`
+                : "Resultado positivo neste mês";
         return `
         <div class="saldo resumo-saldo">
-          <span class="resumo-saldo-rotulo">${reservas.total > 0 ? "Sobra do mês" : "Saldo do mês"}</span>
+          <span class="resumo-saldo-rotulo">${previsto ? "Sobra do mês" : "Saldo do mês"}</span>
           <strong${valor < 0 ? ' class="negativo"' : ""}>${moeda(valor)}</strong>
           <small class="resumo-saldo-status${valor < 0 ? " negativo" : ""}">
             <b aria-hidden="true">${valor >= 0 ? "↗" : "↘"}</b>
@@ -108,6 +124,27 @@ function desenharResumo(filtro) {
             <small>${esc(vencidas.map(c => c.nome).join(", "))}</small>
           </div>
           <span class="item-x">›</span>
+        </div>` : ""}
+
+      ${aReceber.total > 0 ? `
+        <div class="bloco resumo-secao">
+          <div class="bloco-topo">
+            <h2>Ainda vai entrar</h2>
+            <strong class="resumo-total-entrada">${moeda(aReceber.total)}</strong>
+          </div>
+          <div class="lista">
+            ${aReceber.linhas.map(r => `
+              <div class="item reserva-item" onclick="abrirLancar('entrada')" style="cursor:pointer">
+                <div class="item-icone">${iconeDoLancamento({ tipo: "entrada", categoria: r.categoria })}</div>
+                <div class="item-txt">
+                  <strong>${esc(r.nome)}</strong>
+                  <small>${r.data < _hojeLocal()
+                    ? "Era dia " + dataBR(r.data)
+                    : "Cai dia " + dataBR(r.data)}</small>
+                </div>
+                <span class="item-valor entrada">${moeda(r.valor)}</span>
+              </div>`).join("")}
+          </div>
         </div>` : ""}
 
       ${reservas.total > 0 ? `

@@ -845,7 +845,7 @@ button:active:not(:disabled) { transform: scale(.98); }
   padding-top: 10px;
   border-top: 1px solid var(--borda);
 }
-.fixas-pe small { font-size: 11.5px; color: var(--fraco); }
+.fixas-pe small { flex: 1; min-width: 0; font-size: 11.5px; color: var(--fraco); }
 .fixas-mais {
   width: auto;
   background: none;
@@ -855,6 +855,21 @@ button:active:not(:disabled) { transform: scale(.98); }
   font-weight: 800;
   cursor: pointer;
   padding: 0;
+}
+/* "Recebi todas" só aparece com mais de uma pendente, e fica antes do
+   "+ Nova": é o que a pessoa vai querer fazer no dia do pagamento. */
+.fixas-todas {
+  width: auto;
+  flex-shrink: 0;
+  background: var(--entrada);
+  color: #fff;
+  border: none;
+  border-radius: 9px;
+  padding: 7px 11px;
+  font-size: 12px;
+  font-weight: 800;
+  font-family: inherit;
+  cursor: pointer;
 }
 
 /* Sem nenhuma cadastrada, o convite ocupa o lugar da lista. */
@@ -1178,6 +1193,7 @@ body.escuro .login-titulo { color: var(--marca-txt); }
 .resumo-secao .bloco-topo { margin-bottom: 12px; }
 .resumo-secao .bloco-topo h2 { font-size: 14px; }
 .resumo-total-saida { color: var(--saida); font-size: 13px; }
+.resumo-total-entrada { color: var(--entrada); font-size: 13px; }
 
 .resumo-secao .lista { gap: 0; }
 
