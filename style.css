@@ -29,6 +29,8 @@
     20. CARREGANDO E FALHA DE CONEXÃO
     21. O QUE AINDA VAI SAIR
     22. FECHAMENTO DO MÊS
+    23. CRIAR CATEGORIA DENTRO DO CAMPO
+    24. AJUSTES
 
    ═══ TRÊS REGRAS, E O PORQUÊ DE CADA UMA ══════════════════════════════
 
@@ -581,6 +583,17 @@ body.escuro .item.vencida { border-color: #5c2d3d; background: #331d24; }
 .campo-icone input { padding-left: 40px; }
 .campo-icone input[type="password"],
 .campo-icone input.tem-olho { padding-right: 42px; }
+
+/* A linha acima é a regra do componente. Ela basta na tela de entrada,
+   mas NÃO basta dentro de um .lancamento-form: lá a seção 10 reescreve o
+   padding de todo input com um atalho (`padding: 0 13px`), e com a mesma
+   força — dois nomes de classe e uma etiqueta dos dois lados. Empate, e
+   quem vem depois no arquivo ganha. O cadeado saía por cima da palavra
+   "nova senha" em Ajustes › Segurança. Um nome a mais aqui desempata sem
+   depender da ordem. */
+.lancamento-form .campo .campo-icone input { padding-left: 40px; }
+.lancamento-form .campo .campo-icone input[type="password"],
+.lancamento-form .campo .campo-icone input.tem-olho { padding-right: 42px; }
 
 .olho-senha {
   position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
@@ -1712,3 +1725,78 @@ body.escuro .resumo-secao .item-icone.entrada { background: #17372d; }
   border-color: var(--borda);
   padding: 0 13px;
 }
+
+/* ─── 24. AJUSTES ────────────────────────────────────────────────────────
+   Lista de linhas, no desenho do WA Aqua: cada assunto é uma linha inteira
+   e tocável, com o ícone à esquerda e a seta à direita. Antes eram blocos
+   empilhados com botões soltos dentro — funcionava, mas cada assunto novo
+   ia sendo pendurado no fim sem ninguém saber onde. */
+
+.ajuste-perfil {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 15px 16px;
+  margin-bottom: 14px;
+  border: 1px solid var(--borda);
+  border-radius: 15px;
+  background: var(--papel);
+}
+.ajuste-avatar {
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--marca);
+  color: #fff;
+  font-size: 18px;
+  font-weight: 800;
+}
+.ajuste-perfil-txt { min-width: 0; }
+.ajuste-perfil-txt strong { display: block; font-size: 15px; font-weight: 800; line-height: 1.25; }
+.ajuste-perfil-txt small { display: block; font-size: 12.5px; color: var(--fraco); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.ajuste-lista { display: flex; flex-direction: column; gap: 10px; }
+
+.ajuste-linha {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  width: 100%;
+  padding: 14px 15px;
+  border: 1px solid var(--borda);
+  border-radius: 15px;
+  background: var(--papel);
+  color: var(--texto);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.ajuste-linha:active { background: var(--marca-cl); }
+
+.ajuste-icone {
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: var(--marca-cl);
+}
+.ajuste-icone svg { width: 21px; height: 21px; fill: none; stroke: var(--marca-txt); stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+
+.ajuste-txt { flex: 1; min-width: 0; }
+.ajuste-txt strong { display: block; font-size: 15px; font-weight: 800; line-height: 1.3; }
+.ajuste-txt small { display: block; font-size: 12.5px; color: var(--fraco); }
+
+.ajuste-seta { flex-shrink: 0; font-size: 22px; line-height: 1; color: var(--fraco); }
+
+/* Sair da conta é a única linha que desfaz algo: veste vermelho e se
+   separa das outras por um respiro. */
+.ajuste-linha.perigo { margin-top: 6px; border-color: color-mix(in srgb, var(--saida) 35%, transparent); }
+.ajuste-linha.perigo .ajuste-icone { background: color-mix(in srgb, var(--saida) 12%, transparent); }
+.ajuste-linha.perigo .ajuste-icone svg { stroke: var(--saida); }
+.ajuste-linha.perigo .ajuste-txt strong { color: var(--saida); }
+.ajuste-linha.perigo:active { background: color-mix(in srgb, var(--saida) 8%, transparent); }

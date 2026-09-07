@@ -34,9 +34,9 @@ async function iniciarSessao(userConhecido) {
   document.getElementById("area-login").innerHTML = "";
   document.getElementById("topo").style.display = "block";
 
-  const nome = user.user_metadata?.nome || user.email?.split("@")[0] || "?";
-  document.getElementById("iniciais").textContent =
-    nome.split(" ").filter(Boolean).map(n => n[0]).join("").toUpperCase().slice(0, 2) || "?";
+  // Mesmo nome e mesmas iniciais que a tela de Ajustes mostra — a conta é
+  // feita lá (nomeDoUsuario/_iniciaisDe) pra não haver duas versões dela.
+  document.getElementById("iniciais").textContent = _iniciaisDe(nomeDoUsuario());
 
   mesAtual = mesDe(_hojeLocal());
   telaCarregando();
