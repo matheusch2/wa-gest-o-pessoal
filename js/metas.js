@@ -331,10 +331,10 @@ function pedirExcluirMeta(id) {
   if (!linha || !m) return;
   linha.innerHTML = `
     <div class="confirmar" style="width:100%;border:none;padding:0">
-      <p>Tirar a meta de ${esc(m.categoria)}? Os gastos continuam registrados.</p>
+      <p>Tem certeza que quer excluir a meta de ${esc(m.categoria)}? Os gastos continuam registrados.</p>
       <div class="confirmar-acoes">
         <button onclick="desenharMetas()">Cancelar</button>
-        <button class="sim" onclick="excluirMeta(this, '${id}')">Sim, tirar</button>
+        <button class="sim" onclick="excluirMeta(this, '${id}')">Sim, excluir</button>
       </div>
     </div>`;
 }

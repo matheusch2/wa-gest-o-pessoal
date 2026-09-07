@@ -245,7 +245,7 @@ function pedirExcluirLancamento(id, volta) {
   if (!linha) return;
   linha.innerHTML = `
     <div class="confirmar" style="width:100%">
-      <p>Excluir este lançamento?</p>
+      <p>Tem certeza que quer excluir este lançamento?</p>
       <div class="confirmar-acoes">
         <button onclick="_voltarDeLancamento('${volta}')">Cancelar</button>
         <button class="sim" onclick="excluirLancamento(this, '${id}', '${volta}')">Sim, excluir</button>

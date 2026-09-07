@@ -119,9 +119,11 @@ function desenharContas() {
           ${c.categoria ? `<span class="conta-cat">${esc(c.categoria)}</span>` : ""}
         </div>
         <div class="conta-acao">
-          ${c.pago
-            ? `<button class="item-x" onclick="pedirExcluirConta('${c.id}')" aria-label="Excluir">×</button>`
-            : `<button class="botao-pagar" onclick="pagarConta(this, '${c.id}')">Pagar</button>`}
+          ${c.pago ? "" : `<button class="botao-pagar" onclick="pagarConta(this, '${c.id}')">Pagar</button>`}
+          <!-- O × vale pra conta paga E pra conta em aberto. Antes só a
+               paga tinha: quem cadastrasse uma conta errada precisava
+               PAGAR a conta errada pra depois poder apagá-la. -->
+          <button class="item-x" onclick="pedirExcluirConta('${c.id}')" aria-label="Excluir">×</button>
         </div>
       </div>`;
   };
@@ -327,14 +329,16 @@ function proximoMesMesmoDia(ymd) {
 
 function pedirExcluirConta(id) {
   const linha = document.getElementById("conta-" + id);
-  if (!linha) return;
-  const antes = linha.innerHTML;
+  const c = contas.find(x => x.id === id);
+  if (!linha || !c) return;
   linha.innerHTML = `
     <div class="confirmar" style="width:100%">
-      <p>Excluir esta conta? O lançamento de saída continua no histórico.</p>
+      <p>Tem certeza que quer excluir "${esc(c.nome)}"?${c.pago
+        ? " O lançamento de saída continua no histórico."
+        : ""}</p>
       <div class="confirmar-acoes">
         <button onclick="desenharContas()">Cancelar</button>
-        <button class="sim" onclick="excluirConta(this, '${id}')">Excluir</button>
+        <button class="sim" onclick="excluirConta(this, '${id}')">Sim, excluir</button>
       </div>
     </div>`;
 }

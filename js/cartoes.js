@@ -373,7 +373,7 @@ function pedirExcluirCartao(id) {
 
   alvo.innerHTML = `
     <div class="confirmar">
-      <p>Excluir "${esc(c.nome)}"?
+      <p>Tem certeza que quer excluir o cartão "${esc(c.nome)}"?
          ${compras ? `As ${compras} compra${compras > 1 ? "s" : ""} e as faturas dele somem junto.` : "Ele não tem nenhuma compra lançada."}
          ${saidas ? `As ${saidas} saída${saidas > 1 ? "s" : ""} de pagamento de fatura ficam no seu extrato — aquele dinheiro saiu de verdade.` : ""}</p>
       <div class="confirmar-acoes">
@@ -532,7 +532,7 @@ function pedirExcluirCompra(id, cartaoId) {
   const n = Number(c.parcelas) || 1;
   linha.innerHTML = `
     <div class="confirmar" style="width:100%">
-      <p>Excluir "${esc(c.descricao)}"?${n > 1 ? ` As ${n} parcelas somem juntas.` : ""}</p>
+      <p>Tem certeza que quer excluir "${esc(c.descricao)}"?${n > 1 ? ` As ${n} parcelas somem juntas.` : ""}</p>
       <div class="confirmar-acoes">
         <button onclick="desenharCartao('${cartaoId}')">Cancelar</button>
         <button class="sim" onclick="excluirCompra(this, '${id}', '${cartaoId}')">Sim, excluir</button>
@@ -1046,7 +1046,7 @@ function pedirDesfazerPagamento(pagamentoId, cartaoId) {
 
   alvo.innerHTML = `
     <div class="confirmar">
-      <p>Desfazer ${p.tipo === "saldo" ? "o saldo" : "o pagamento"} de ${moeda(p.valor)}?
+      <p>Tem certeza que quer desfazer ${p.tipo === "saldo" ? "o saldo" : "o pagamento"} de ${moeda(p.valor)}?
          ${p.tipo === "saldo"
            ? "A compra que ele criou na fatura seguinte some junto."
            : p.lancamento_id

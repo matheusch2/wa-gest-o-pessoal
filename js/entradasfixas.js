@@ -280,11 +280,11 @@ function pedirExcluirEntradaFixa(id) {
   if (!linha || !f) return;
   linha.innerHTML = `
     <div class="confirmar" style="width:100%;border:none;padding:0">
-      <p>Tirar "${esc(f.nome)}" das entradas fixas? Os lançamentos que você
-         já fez continuam no extrato.</p>
+      <p>Tem certeza que quer excluir "${esc(f.nome)}" das entradas fixas?
+         Os lançamentos que você já fez continuam no extrato.</p>
       <div class="confirmar-acoes">
         <button onclick="desenharLancar('entrada')">Cancelar</button>
-        <button class="sim" onclick="excluirEntradaFixa(this, '${id}')">Sim, tirar</button>
+        <button class="sim" onclick="excluirEntradaFixa(this, '${id}')">Sim, excluir</button>
       </div>
     </div>`;
 }

@@ -296,7 +296,7 @@ function pedirReabrirMes(mesRef) {
   if (!alvo || !f) return;
   alvo.innerHTML = `
     <div class="confirmar">
-      <p>Reabrir ${soNomeDoMes(mesRef)}? O saldo que foi pra
+      <p>Tem certeza que quer reabrir ${soNomeDoMes(mesRef)}? O saldo que foi pra
          ${_soMesSeguinte(mesRef)}${Number(f.guardado) > 0 ? " e o que você guardou" : ""}
          ${Number(f.guardado) > 0 ? "somem" : "some"} do extrato.</p>
       <div class="confirmar-acoes">

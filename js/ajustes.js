@@ -307,10 +307,10 @@ function pedirExcluirCategoria(id) {
   const usos = contarUsos(c.nome, c.tipo);
   linha.innerHTML = `
     <div class="confirmar" style="width:100%">
-      <p>Excluir "${esc(c.nome)}"?${usos ? ` Os ${usos} lançamentos guardados continuam como estão.` : ""}</p>
+      <p>Tem certeza que quer excluir a categoria "${esc(c.nome)}"?${usos ? ` Os ${usos} lançamentos guardados continuam como estão.` : ""}</p>
       <div class="confirmar-acoes">
         <button onclick="abrirCategorias('${c.tipo}'); pilha.pop()">Cancelar</button>
-        <button class="sim" onclick="excluirCategoria(this, '${id}', '${c.tipo}')">Excluir</button>
+        <button class="sim" onclick="excluirCategoria(this, '${id}', '${c.tipo}')">Sim, excluir</button>
       </div>
     </div>`;
 }

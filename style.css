@@ -726,41 +726,52 @@ button:active:not(:disabled) { transform: scale(.98); }
 
 .lancamento-form .lancamento-campo-data { width: 100%; min-width: 0; max-width: 100%; }
 
+/* O campo de data já transbordou uma vez, e vale contar como: o iPhone
+   escreve a data por extenso ("16 de set. de 2025"), isso não coube na
+   metade da coluna, quebrou em três linhas — e cada linha valia os 48px
+   do line-height que estava aqui. Três vezes 48 dentro de uma caixa de
+   50: o texto saía por cima e por baixo do campo.
+
+   Daí as duas regras que importam agora: o texto NÃO QUEBRA (e some pela
+   borda, se precisar, em vez de empurrar a caixa), e a altura da linha é
+   a normal. Centrar é trabalho do flex, não de um line-height gigante —
+   line-height só centra o que tem uma linha só, e é justamente quando
+   tem duas que ele estraga tudo. */
 .lancamento-form input[type="date"] {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   box-sizing: border-box;
   width: 100% !important;
   min-width: 0 !important;
   max-width: 100% !important;
-  inline-size: 100%;
-  min-inline-size: 0;
-  max-inline-size: 100%;
   -webkit-appearance: none;
   appearance: none;
   text-align: center;
-  line-height: 48px;
+  line-height: normal;
+  /* Um ponto menor que os outros campos: é o que faz a data por extenso
+     do iPhone caber na meia coluna, ao lado da Categoria. */
+  font-size: 15px;
+  /* E o iPhone não aumenta a letra por conta própria neste campo. Com o
+     texto grande ligado nos ajustes do aparelho, ele inflava a data e
+     jogava tudo de volta pra fora da caixa. */
+  -webkit-text-size-adjust: 100%;
+  white-space: nowrap;
+  overflow: hidden;
 }
 
 .lancamento-form input[type="date"]::-webkit-date-and-time-value {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
   min-width: 0;
   margin: 0;
   padding: 0;
   text-align: center;
+  white-space: nowrap;
 }
 
 .lancamento-form input[type="date"]::-webkit-datetime-edit {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
   padding: 0;
   text-align: center;
+  white-space: nowrap;
 }
 
 /* O valor é o que a pessoa veio digitar: ganha o tamanho e a cor do tipo
