@@ -330,6 +330,8 @@ function desenharCartao(id) {
       <small>Vence em ${dataBR(venc)}${itens.length ? ` · ${itens.length} lançamento${itens.length > 1 ? "s" : ""}` : ""}</small>
     </div>
 
+    ${_blocoFaturasAntigas(c)}
+
     <div id="fatura-acao">${_acaoDaFatura(c, mes, s)}</div>
 
     <button class="botao" onclick="abrirNovaCompra('${c.id}')">
@@ -341,8 +343,62 @@ function desenharCartao(id) {
       ? `<div class="bloco" style="margin-top:14px"><div class="lista">${linhas}</div></div>`
       : `<div class="bloco" style="margin-top:14px"><p class="vazio">Nenhuma compra nesta fatura.</p></div>`}
 
+    <div id="cartao-excluir">
+      <button class="botao-fraco cartao-apagar" onclick="pedirExcluirCartao('${c.id}')">
+        🗑️ Excluir este cartão
+      </button>
+    </div>
+
     <button class="botao-fraco" onclick="abrirCartoes()">Voltar aos cartões</button>
   `;
+}
+
+/* ═══ EXCLUIR O CARTÃO ════════════════════════════════════════════════
+   O banco leva junto as compras e os pagamentos (on delete cascade), mas
+   NÃO as saídas que os pagamentos criaram no extrato — e é assim que tem
+   que ser. Aquele dinheiro saiu da conta de verdade, no dia em que saiu.
+   Apagar o cartão é dizer "não uso mais este cartão", não "aquele mês
+   custou menos do que custou".
+
+   Por isso a pergunta diz o que some e o que fica: é a diferença entre
+   arrumar a lista de cartões e reescrever o seu histórico. */
+
+function pedirExcluirCartao(id) {
+  const alvo = document.getElementById("cartao-excluir");
+  const c = cartoes.find(x => x.id === id);
+  if (!alvo || !c) return;
+
+  const compras = comprasCartao.filter(x => x.cartao_id === id).length;
+  const saidas = pagamentosFatura.filter(p => p.cartao_id === id && p.lancamento_id).length;
+
+  alvo.innerHTML = `
+    <div class="confirmar">
+      <p>Excluir "${esc(c.nome)}"?
+         ${compras ? `As ${compras} compra${compras > 1 ? "s" : ""} e as faturas dele somem junto.` : "Ele não tem nenhuma compra lançada."}
+         ${saidas ? `As ${saidas} saída${saidas > 1 ? "s" : ""} de pagamento de fatura ficam no seu extrato — aquele dinheiro saiu de verdade.` : ""}</p>
+      <div class="confirmar-acoes">
+        <button onclick="desenharCartao('${id}')">Cancelar</button>
+        <button class="sim" onclick="excluirCartao(this, '${id}')">Sim, excluir</button>
+      </div>
+    </div>`;
+}
+
+async function excluirCartao(botao, id) {
+  if (botao?.disabled) return;
+  const solta = travar(botao, "Excluindo...");
+
+  const { error } = await sb.from("cartoes").delete().eq("id", id).eq("user_id", usuario.id);
+  if (error) { solta(); erro("Erro ao excluir: " + error.message); return; }
+
+  // O cascade já limpou as duas tabelas no banco; aqui é a mesma limpeza
+  // na cópia que está na memória, pra tela não ficar mostrando fantasma.
+  cartoes = cartoes.filter(x => x.id !== id);
+  comprasCartao = comprasCartao.filter(x => x.cartao_id !== id);
+  pagamentosFatura = pagamentosFatura.filter(p => p.cartao_id !== id);
+
+  ok("Cartão excluído.");
+  abrirCartoes();
+  pilha.pop();   // não empilha a lista duas vezes
 }
 
 /* ═══ LANÇAR COMPRA ═══════════════════════════════════════════════════ */
@@ -545,6 +601,43 @@ function _situacaoFatura(cartao, mesRef) {
   };
 }
 
+/* ═══ AS FATURAS DE ANTES ═════════════════════════════════════════════
+   Quem começa a usar o app hoje cadastra a compra parcelada que já está
+   na quarta de dez. O app faz a conta certa e mostra as três primeiras
+   faturas em aberto — mas elas não estão em aberto, foram pagas meses
+   atrás, antes de o app existir.
+
+   Marcar essas como pagas NÃO pode lançar saída no extrato. O pagamento
+   normal lança, e tem que lançar: o dinheiro está saindo agora. Mas
+   inventar três saídas em junho, julho e agosto mudaria o resultado de
+   meses que já acabaram — e que talvez já tenham sido fechados. O que
+   aconteceu antes do app fica fora do extrato do app.
+
+   Por isso o pagamento nasce com lancamento_id nulo, que o banco já
+   aceita e o "Desfazer" já sabe tratar. Ele abate a fatura e não toca no
+   seu dinheiro — que é exatamente o que aconteceu na vida real. */
+
+// Os meses de fatura já fechados que ainda têm saldo, do mais antigo pro
+// mais novo. Os meses vêm das parcelas: não existe fatura sem compra.
+function _faturasAntigasEmAberto(cartao) {
+  const aberta = _mesFaturaAberta(cartao);
+  const meses = new Set();
+
+  for (const c of comprasCartao) {
+    if (c.cartao_id !== cartao.id) continue;
+    const inicio = _mesDaPrimeiraParcela(c.data, cartao.dia_fechamento);
+    const total = Number(c.parcelas) || 1;
+    for (let n = 0; n < total; n++) {
+      const m = _somaMes(inicio, n);
+      if (m < aberta) meses.add(m);
+    }
+  }
+
+  return [...meses].sort()
+    .map(mes => ({ mes, s: _situacaoFatura(cartao, mes) }))
+    .filter(x => x.s.restante >= 0.005);
+}
+
 const _ICO_CONFERE = `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="8 12.5 11 15.5 16.5 9"/></svg>`;
 const _ICO_EMPURRA = `<svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="14 5 21 12 14 19"/><path d="M21 12H6a3 3 0 0 1-3-3V6"/></svg>`;
 
@@ -595,7 +688,9 @@ function _blocoJaPago(cartao, mesRef, s) {
         <strong>${moeda(p.valor)}</strong>
         <small>${dataBR(p.pago_em)} · ${p.tipo === "saldo"
           ? "jogado pra fatura de " + soNomeDoMes(_somaMes(mesRef, 1))
-          : "saída no extrato"}</small>
+          : p.lancamento_id
+            ? "saída no extrato"
+            : "pago fora do app"}</small>
       </div>
       <button class="fatura-desfazer" onclick="pedirDesfazerPagamento('${p.id}', '${cartao.id}')">Desfazer</button>
     </div>`).join("");
@@ -610,6 +705,93 @@ function _blocoJaPago(cartao, mesRef, s) {
       ${passou ? `<p class="fatura-nota">Você pagou ${moeda(s.pago)} e a fatura hoje soma ${moeda(s.total)}.</p>` : ""}
       <div class="fatura-pgtos">${linhas}</div>
     </div>`;
+}
+
+/* ─── Quitar sem lançar (as faturas de antes do app) ────────────────── */
+
+// "junho, julho, agosto e setembro" — vírgula entre todos, "e" antes do
+// último. É como se fala, e a frase abaixo é pra ser lida em voz normal.
+function _listaEmPortugues(itens) {
+  if (itens.length < 2) return itens.join("");
+  return itens.slice(0, -1).join(", ") + " e " + itens[itens.length - 1];
+}
+
+// O bloco que aparece na tela do cartão quando sobrou fatura velha aberta.
+function _blocoFaturasAntigas(cartao) {
+  const antigas = _faturasAntigasEmAberto(cartao);
+  if (!antigas.length) return "";
+
+  const total = _centavos(antigas.reduce((s, x) => s + x.s.restante, 0));
+  const nomes = _listaEmPortugues(antigas.map(x => soNomeDoMes(x.mes)));
+
+  return `
+    <div class="bloco" id="fatura-antigas">
+      <div class="bloco-topo">
+        <h2>Faturas de antes</h2>
+        <strong class="resumo-total-saida">${moeda(total)}</strong>
+      </div>
+      <p class="cartao-dica">
+        ${antigas.length > 1 ? `${antigas.length} faturas` : "A fatura"} de ${esc(nomes)}
+        ${antigas.length > 1 ? "continuam" : "continua"} em aberto — normal, se você
+        cadastrou compras que já estavam correndo. Se já pagou, marque de uma vez:
+        <b>isso não entra como saída no seu extrato</b>, porque esse dinheiro saiu
+        antes de você começar a usar o app.
+      </p>
+      <button class="botao-fraco" onclick="pedirQuitarAntigas('${cartao.id}')">
+        ${_ICO_CONFERE} Marcar como ${antigas.length > 1 ? "pagas" : "paga"}
+      </button>
+    </div>`;
+}
+
+function pedirQuitarAntigas(cartaoId) {
+  const alvo = document.getElementById("fatura-antigas");
+  const c = cartoes.find(x => x.id === cartaoId);
+  if (!alvo || !c) return;
+
+  const antigas = _faturasAntigasEmAberto(c);
+  if (!antigas.length) return;
+  const total = _centavos(antigas.reduce((s, x) => s + x.s.restante, 0));
+
+  alvo.innerHTML = `
+    <div class="confirmar">
+      <p>Quitar ${antigas.length > 1 ? `as ${antigas.length} faturas` : "a fatura"}
+         de ${esc(_listaEmPortugues(antigas.map(x => soNomeDoMes(x.mes))))}, somando ${moeda(total)}?
+         Nada disso vira saída no extrato, e o seu saldo não muda. Dá pra
+         desfazer uma por uma depois.</p>
+      <div class="confirmar-acoes">
+        <button onclick="desenharCartao('${cartaoId}')">Cancelar</button>
+        <button class="sim" onclick="quitarAntigas(this, '${cartaoId}')">Sim, já paguei</button>
+      </div>
+    </div>`;
+}
+
+async function quitarAntigas(botao, cartaoId) {
+  if (botao?.disabled) return;
+  const c = cartoes.find(x => x.id === cartaoId);
+  if (!c) return;
+
+  const antigas = _faturasAntigasEmAberto(c);
+  if (!antigas.length) { erro("Nenhuma fatura anterior em aberto."); return; }
+
+  const solta = travar(botao, "Quitando...");
+  const raiz = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random());
+
+  // A data do pagamento é o vencimento da própria fatura, não hoje: é
+  // quando aquilo foi pago de verdade, e é o que a linha vai mostrar.
+  const { data, error } = await sb.from("pagamentos_fatura").insert(
+    antigas.map(x => ({
+      user_id: usuario.id, cartao_id: cartaoId, mes_ref: x.mes,
+      tipo: "pago", valor: x.s.restante,
+      pago_em: _vencimentoDaFatura(x.mes, c.dia_fechamento, c.dia_vencimento),
+      lancamento_id: null, chave_envio: raiz + "-" + x.mes,
+    }))
+  ).select();
+
+  if (error) { solta(); erro("Erro ao quitar: " + error.message); return; }
+
+  pagamentosFatura.push(...(data || []));
+  ok(antigas.length > 1 ? `${antigas.length} faturas quitadas!` : "Fatura quitada!");
+  desenharCartao(cartaoId);
 }
 
 /* ─── A tela de pagar ───────────────────────────────────────────────── */
@@ -867,7 +1049,9 @@ function pedirDesfazerPagamento(pagamentoId, cartaoId) {
       <p>Desfazer ${p.tipo === "saldo" ? "o saldo" : "o pagamento"} de ${moeda(p.valor)}?
          ${p.tipo === "saldo"
            ? "A compra que ele criou na fatura seguinte some junto."
-           : "A saída correspondente sai do seu extrato."}</p>
+           : p.lancamento_id
+             ? "A saída correspondente sai do seu extrato."
+             : "Este não criou saída nenhuma, então seu extrato não muda."}</p>
       <div class="confirmar-acoes">
         <button onclick="desenharCartao('${cartaoId}')">Cancelar</button>
         <button class="sim" onclick="desfazerPagamento(this, '${pagamentoId}', '${cartaoId}')">Desfazer</button>

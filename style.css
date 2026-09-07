@@ -1392,6 +1392,15 @@ body.escuro .resumo-secao .item-icone.entrada { background: #17372d; }
 }
 .compra-valor { font-size: 14px; font-weight: 800; white-space: nowrap; font-variant-numeric: tabular-nums; color: var(--saida); }
 
+/* Excluir o cartão é o fim da linha da tela: fica lá embaixo, discreto e
+   em vermelho — ninguém chega nele sem querer, e quem procura acha. */
+.cartao-apagar {
+  margin-top: 14px;
+  color: var(--saida);
+  border-color: color-mix(in srgb, var(--saida) 35%, transparent);
+}
+.cartao-apagar:active { background: color-mix(in srgb, var(--saida) 8%, transparent); }
+
 /* ─── 18. PAGAR A FATURA ─────────────────────────────────────────────────────
    Verde, e não azul de marca: das ações da tela do cartão, esta é a única
    que tira dinheiro do bolso de verdade. Lançar uma compra só a escreve na
