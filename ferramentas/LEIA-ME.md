@@ -41,6 +41,14 @@ Abre as mesmas telas e procura três estragos que passam despercebidos: a
 página passando a rolar pro lado, texto que ficou pequeno demais, e
 elemento com texto que perdeu o tamanho. Rode depois de mexer no CSS.
 
+## Ícones e manifesto
+
+    node ferramentas/teste-icones.js
+
+Confere que os ícones existem, têm o tamanho declarado, e que **nenhum
+deles é webp**. O iPhone ignora webp no ícone de tela inicial sem dar erro
+— sai um quadrado branco e ninguém descobre por quê.
+
 ## Classes mortas
 
     node ferramentas/classes-mortas.js
