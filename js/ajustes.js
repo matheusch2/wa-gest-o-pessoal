@@ -21,6 +21,9 @@ const _ICO_ESCUDO = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 
 const _ICO_LUA = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 13a8.5 8.5 0 0 1-10-10 8.5 8.5 0 1 0 10 10z"/></svg>`;
 const _ICO_ETIQUETAS = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.6 13.4 12 22l-9-9V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>`;
 const _ICO_SAIR = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>`;
+// A estrela do plano mora aqui, e não no embreve.js: o dia em que a tela de
+// verdade for feita, o embreve.js some — e a linha de Ajustes fica.
+const _ICO_ESTRELA_AJ = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l3 6 6 .9-4.5 4.3 1 6.3-5.5-3-5.5 3 1-6.3L3 8.9 9 8z"/></svg>`;
 
 function _linhaAjuste({ icone, titulo, apoio, acao, perigo }) {
   return `
@@ -63,6 +66,8 @@ function desenharAjustes() {
                        apoio: "Como você quer ser chamado", acao: "abrirMeusDados()" })}
       ${_linhaAjuste({ icone: _ICO_ESCUDO, titulo: "Segurança",
                        apoio: "Trocar a senha", acao: "abrirTrocarSenha()" })}
+      ${_linhaAjuste({ icone: _ICO_ESTRELA_AJ, titulo: "Meu plano",
+                       apoio: "Sua assinatura", acao: "abrirMeuPlano()" })}
       ${_linhaAjuste({ icone: _ICO_LUA, titulo: "Aparência",
                        apoio: esc(tema), acao: "abrirAparencia()" })}
       ${_linhaAjuste({ icone: _ICO_ETIQUETAS, titulo: "Categorias de saída",
