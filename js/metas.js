@@ -291,7 +291,8 @@ function _desenharFormMeta(meta, categoriaSugerida) {
     </section>`;
 
   _previaGastoDaMeta();
-  document.getElementById("mt-valor").focus();
+  // Sem foco automático: no celular ele abre o teclado sozinho e come
+  // metade da tela antes de a pessoa ter lido o formulário.
 }
 
 // Teto escolhido no escuro é teto que já nasce estourado. Mostra quanto a

@@ -246,7 +246,8 @@ function abrirNovaConta() {
       </button>
       <button class="botao-fraco lancamento-voltar" onclick="voltarTela()">Voltar</button>
       </section>`;
-    document.getElementById("ct-nome").focus();
+    // Sem foco automático: no celular ele abre o teclado sozinho e come
+    // metade da tela antes de a pessoa ter lido o formulário.
   });
 }
 
