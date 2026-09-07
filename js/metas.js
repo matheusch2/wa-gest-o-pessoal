@@ -126,12 +126,6 @@ function desenharMetas() {
     grupo("Obrigatórios", obrigatorias, "Saem da sobra do Resumo antes mesmo de serem pagos.") +
     grupo("Opcionais", opcionais, "Só avisam quando você passa. Não mexem na sobra.");
 
-  // Onde o dinheiro está indo sem ninguém ter posto um teto. É a lista de
-  // onde a próxima meta provavelmente deveria estar.
-  const semMeta = Object.entries(gastos)
-    .filter(([cat]) => !metas.some(m => m.categoria === cat))
-    .sort((a, b) => b[1] - a[1]);
-
   document.getElementById("area").innerHTML = `
     <section class="lancamento-tela" style="--cor-tipo:var(--marca-txt)">
       <div class="lancamento-cabecalho">
@@ -165,27 +159,14 @@ function desenharMetas() {
       ? `<div class="meta-lista">${linhas}</div>`
       : `<div class="bloco" style="margin-top:14px"><p class="vazio">Nenhuma meta ainda. Ponha um teto nas categorias que costumam fugir do controle.</p></div>`}
 
-    ${semMeta.length ? `
-      <div class="bloco" style="margin-top:14px">
-        <div class="bloco-topo"><h2>Sem meta neste mês</h2></div>
-        <div class="lista">
-          ${semMeta.slice(0, 6).map(([cat, v]) => `
-            <div class="meta-sem">
-              <span class="meta-sem-nome">${iconeDoLancamento({ tipo: "saida", categoria: cat })} ${esc(cat)}</span>
-              <strong class="meta-sem-valor">${moeda(v)}</strong>
-              <button class="botao-pagar" onclick="abrirNovaMeta('${esc(cat)}')">Pôr meta</button>
-            </div>`).join("")}
-        </div>
-      </div>` : ""}
-
     <button class="botao-fraco" onclick="voltarInicio()">Voltar</button>
   `;
 }
 
 /* ═══ CRIAR E EDITAR ══════════════════════════════════════════════════ */
 
-function abrirNovaMeta(categoria) {
-  abrirTela(() => _desenharFormMeta(null, categoria));
+function abrirNovaMeta() {
+  abrirTela(() => _desenharFormMeta(null));
 }
 
 function abrirEdicaoMeta(id) {
@@ -194,7 +175,7 @@ function abrirEdicaoMeta(id) {
   abrirTela(() => _desenharFormMeta(m));
 }
 
-function _desenharFormMeta(meta, categoriaSugerida) {
+function _desenharFormMeta(meta) {
   destruirGrafico();
 
   // Editando, a categoria não muda: mudar categoria é apagar uma meta e
@@ -206,11 +187,9 @@ function _desenharFormMeta(meta, categoriaSugerida) {
     .map(c => c.nome)
     .filter(nome => !escolhidas.includes(nome));
 
-  // A categoria pode ter nascido numa compra de cartão e não estar
-  // cadastrada — ela continua valendo como meta.
-  if (categoriaSugerida && !disponiveis.includes(categoriaSugerida)) disponiveis.unshift(categoriaSugerida);
-
-  const alvo = editando ? meta.categoria : (categoriaSugerida || disponiveis[0] || "");
+  // Categoria que só existe numa compra de cartão, sem cadastro: entra pelo
+  // "+ Nova categoria" do próprio campo, sem sair desta tela.
+  const alvo = editando ? meta.categoria : (disponiveis[0] || "");
   const icoEtiqueta = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.6 13.4 12 22l-9-9V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>`;
   const icoTipo = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>`;
 

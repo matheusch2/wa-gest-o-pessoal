@@ -1552,12 +1552,6 @@ body.escuro .resumo-secao .item-icone.entrada { background: #17372d; }
 .meta-acoes { position: absolute; top: 9px; right: 10px; display: flex; gap: 5px; }
 .meta-item .meta-topo { padding-right: 74px; }
 
-/* As categorias onde o dinheiro está indo sem teto nenhum. */
-.meta-sem { display: flex; align-items: center; gap: 10px; padding: 8px 0; }
-.meta-sem + .meta-sem { border-top: 1px solid var(--borda); }
-.meta-sem-nome { flex: 1; min-width: 0; font-size: 13.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.meta-sem-valor { font-size: 13.5px; font-weight: 800; color: var(--saida); font-variant-numeric: tabular-nums; white-space: nowrap; }
-
 /* Obrigatório e opcional são dois assuntos na mesma lista. O cabeçalho do
    grupo carrega o subtotal porque é ele que responde "quanto do meu mês já
    está comprometido antes de eu escolher qualquer coisa?". */
