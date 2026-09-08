@@ -5,6 +5,12 @@
  * desenhada dentro de #area, e o "Voltar" desmonta e volta ao menu.
  */
 
+/* A versão desta build, mostrada em Ajustes. Sobe junto com os ?v=N do
+   index.html. Serve pra uma pergunta que já custou tempo: "o defeito que
+   você está vendo é do código de agora, ou o celular ainda está com o
+   app velho em cache?" — sem isso, a resposta é chute. */
+const VERSAO_APP = "2026-09-08 · 11";
+
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let usuario = null;

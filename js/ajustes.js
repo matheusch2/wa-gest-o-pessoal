@@ -80,6 +80,12 @@ function desenharAjustes() {
                        apoio: "Seus dados continuam guardados", acao: "sair()", perigo: true })}
     </div>
 
+    <!-- A versão, à vista. Existe por um motivo prático: o celular guarda o
+         app em cache, e mais de uma vez a gente foi caçar um defeito que já
+         estava consertado — só não tinha chegado no aparelho. Agora dá pra
+         conferir num olhar de qual versão se está falando. -->
+    <p class="ajuste-versao">Versão ${VERSAO_APP}</p>
+
     <button class="botao-fraco" onclick="voltarInicio()">Voltar</button>
   `;
 }

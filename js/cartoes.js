@@ -104,7 +104,13 @@ function desenharCartoes() {
 
   const cards = cartoes.map(c => {
     const b = _banco(c.banco);
-    const mes = _mesFaturaAberta(c);
+    // A MESMA fatura que abre ao tocar no cartão. Aqui estava a "aberta",
+    // e o cartão mostrava outubro vencendo 10/10 enquanto a conta a pagar
+    // era a de setembro, vencendo dia 10. Lista e tela de dentro falando
+    // de meses diferentes é o tipo de coisa que faz a pessoa desconfiar do
+    // número — com razão.
+    const mes = _faturaAoAbrir(c);
+    const aberta = mes === _mesFaturaAberta(c);
     const venc = _vencimentoDaFatura(mes, c.dia_fechamento, c.dia_vencimento);
     const s = _situacaoFatura(c, mes);
     return `
@@ -117,7 +123,7 @@ function desenharCartoes() {
         <span class="cartao-card-nome">${esc(c.nome)}</span>
         <div class="cartao-card-baixo">
           <div>
-            <small>${s.parcial ? "Falta pagar" : "Fatura atual"}</small>
+            <small>${s.parcial ? "Falta pagar" : aberta ? "Fatura atual" : "Fatura de " + soNomeDoMes(mes)}</small>
             <strong>${moeda(s.quitada ? s.pago : s.parcial ? s.restante : s.total)}</strong>
           </div>
           <div class="cartao-card-venc">
@@ -131,9 +137,11 @@ function desenharCartoes() {
 
   // O que já foi pago sai da soma: virou saída no extrato no dia do
   // pagamento, e continuar somando aqui seria contar o mesmo dinheiro duas
-  // vezes.
+  // vezes. E a soma é das mesmas faturas que os cartões mostram — senão o
+  // total não bate com a conta de baixo, e não há erro pior num app de
+  // dinheiro do que dois números que não fecham na mesma tela.
   const totalGeral = cartoes.reduce(
-    (soma, c) => soma + _situacaoFatura(c, _mesFaturaAberta(c)).restante, 0);
+    (soma, c) => soma + _situacaoFatura(c, _faturaAoAbrir(c)).restante, 0);
 
   document.getElementById("area").innerHTML = `
     <section class="lancamento-tela" style="--cor-tipo:var(--marca-txt)">
@@ -145,7 +153,10 @@ function desenharCartoes() {
     </section>
 
     <div class="contas-total">
-      <span>Total das faturas abertas</span>
+      <!-- "em aberto" = não pago, que é o que o número diz. "Abertas" dava
+           a entender a fatura que ainda está juntando compras, e agora nem
+           sempre é dela que se trata. -->
+      <span>Total em aberto</span>
       <strong>${moeda(totalGeral)}</strong>
       <small>${cartoes.length
         ? `${cartoes.length} ${cartoes.length > 1 ? "cartões cadastrados" : "cartão cadastrado"}`

@@ -1830,3 +1830,12 @@ body.escuro .resumo-secao .item-icone.entrada { background: #17372d; }
 .ajuste-linha.perigo .ajuste-icone svg { stroke: var(--saida); }
 .ajuste-linha.perigo .ajuste-txt strong { color: var(--saida); }
 .ajuste-linha.perigo:active { background: color-mix(in srgb, var(--saida) 8%, transparent); }
+
+/* Discreta, no pé da lista: quem procura acha, e quem não procura não vê. */
+.ajuste-versao {
+  margin: 14px 0 0;
+  text-align: center;
+  font-size: 11.5px;
+  color: var(--fraco);
+  font-variant-numeric: tabular-nums;
+}
