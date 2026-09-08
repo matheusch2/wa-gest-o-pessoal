@@ -49,6 +49,22 @@ Confere que os ícones existem, têm o tamanho declarado, e que **nenhum
 deles é webp**. O iPhone ignora webp no ícone de tela inicial sem dar erro
 — sai um quadrado branco e ninguém descobre por quê.
 
+## Telas de abertura
+
+    node ferramentas/gerar-aberturas.js
+
+Redesenha as telas de abertura do iPhone e do iPad a partir de
+`assets/simbolo-wa.svg`. Rode sempre que mexer no símbolo.
+
+O Android monta essa tela sozinho, com a cor e o ícone do `manifest.json`.
+O Safari **exige uma imagem pronta no tamanho exato de cada aparelho** — e,
+não achando a do aparelho em questão, abre em branco sem avisar nada. Por
+isso são 15 arquivos, e por isso o `teste-icones.js` confere um por um.
+
+Aparelho novo no mercado: mais uma linha na lista do gerador, roda, e mais
+um `<link rel="apple-touch-startup-image">` no `index.html`. O teste reprova
+se sobrar imagem sem link, ou link sem imagem.
+
 ## Classes mortas
 
     node ferramentas/classes-mortas.js

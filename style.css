@@ -1646,6 +1646,40 @@ body.escuro .resumo-secao .item-icone.entrada { background: #17372d; }
    Enquanto os dados vêm, a tela dizia o quê? Nada — ficava branca, e branco
    num app de dinheiro parece "sumiu tudo". */
 
+/* A ABERTURA, continuada. O celular abre o app na tela azul com o símbolo
+   (assets/abertura-*.png). Se aqui dentro a espera fosse uma página clara
+   com uma rodinha, seriam dois apps diferentes em dois segundos. Então esta
+   tela é a mesma imagem: azul cheio, o WA no meio, e a rodinha em volta
+   dele em vez de no lugar dele. */
+.abertura {
+  position: fixed;
+  inset: 0;
+  background: var(--marca);
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 26px;
+  z-index: 40;
+}
+.abertura p { margin: 0; font-size: 13.5px; color: rgba(255,255,255,.72); }
+
+/* Do tamanho da RODINHA, não do símbolo: ela é absoluta e não empurra nada,
+   então sem esta medida o "Carregando..." subia e encostava no anel. */
+.abertura-marca { position: relative; width: 128px; height: 128px; display: grid; place-items: center; }
+.abertura-marca svg { width: 84px; height: 84px; display: block; }
+
+/* A rodinha circunda o símbolo: 84px de marca + folga dos dois lados. */
+.abertura-roda {
+  position: absolute;
+  width: 128px;
+  height: 128px;
+  border: 3px solid rgba(255,255,255,.16);
+  border-top-color: var(--dourado);
+  border-radius: 50%;
+  animation: girando 1s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) { .abertura-roda { animation-duration: 2.8s; } }
+
 .carregando { text-align: center; padding: 60px 20px; }
 .carregando p { margin: 16px 0 0; font-size: 13.5px; color: var(--fraco); }
 

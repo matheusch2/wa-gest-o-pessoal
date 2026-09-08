@@ -60,6 +60,48 @@ const R = require("path").resolve(__dirname, "..");
   ok("o start_url é relativo — funciona no github.io e num domínio próprio",
     m.start_url === "./" && m.scope === "./");
 
+  /* ── As telas de abertura do Safari ──────────────────────────────────
+     Se uma faltar, ou tiver o tamanho errado, o iPhone não avisa nada: só
+     abre em branco naquele aparelho. Ninguém descobre sem ter o modelo na
+     mão — daí a conferência aqui. */
+  const html = fs.readFileSync(R + "/index.html", "utf8");
+  const aberturas = [...html.matchAll(
+    /rel="apple-touch-startup-image"\s+href="assets\/(abertura-(\d+)x(\d+)\.png)[^"]*"\s+media="([^"]+)"/g)];
+
+  ok(`declara ${aberturas.length} telas de abertura`, aberturas.length >= 12);
+
+  const vistas = new Set();
+  let todasOk = true, mediaOk = true;
+  for (const [, arq, w, h, media] of aberturas) {
+    if (!fs.existsSync(R + "/assets/" + arq)) { todasOk = false; console.log("    falta", arq); continue; }
+    const dim = await p.evaluate(src => new Promise(r => {
+      const i = new Image();
+      i.onload = () => r(i.naturalWidth + "x" + i.naturalHeight);
+      i.onerror = () => r("erro");
+      i.src = src;
+    }), "assets/" + arq);
+    if (dim !== `${w}x${h}`) { todasOk = false; console.log(`    ${arq} é ${dim}`); }
+
+    // A media query tem que casar com o nome do arquivo: largura x dpr.
+    const lg = Number((media.match(/device-width:\s*(\d+)px/) || [])[1]);
+    const al = Number((media.match(/device-height:\s*(\d+)px/) || [])[1]);
+    const dpr = Number((media.match(/pixel-ratio:\s*(\d+)/) || [])[1]);
+    if (lg * dpr !== Number(w) || al * dpr !== Number(h)) {
+      mediaOk = false;
+      console.log(`    ${arq}: a media query pede ${lg * dpr}x${al * dpr}`);
+    }
+    vistas.add(`${lg}x${al}@${dpr}`);
+  }
+
+  ok("cada uma existe e tem o tamanho exato do nome", todasOk);
+  ok("e a media query casa com o arquivo que ela escolhe", mediaOk);
+  ok("sem dois <link> disputando o mesmo aparelho", vistas.size === aberturas.length);
+
+  const sobrando = fs.readdirSync(R + "/assets").filter(a =>
+    a.startsWith("abertura-") && !aberturas.some(l => l[1] === a));
+  ok("e nenhuma imagem de abertura sobrando sem <link>",
+    sobrando.length === 0 || (console.log("    sobrando:", sobrando.join(", ")), false));
+
   console.log(falhou ? "\n" + falhou + " problema(s)" : "\nTodos passaram");
   await b.close();
   process.exit(falhou ? 1 : 0);

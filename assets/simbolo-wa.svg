@@ -1,0 +1,28 @@
+<!--
+  WA FINANÇAS — símbolo, sem a palavra.
+
+  O W e o A dividem um traço: o último subir do W é a perna esquerda do A.
+  É o que a logo cheia já faz, e é o que transforma duas letras num desenho
+  só. Por isso o caminho branco é UM path contínuo, e não duas letras
+  desenhadas lado a lado.
+
+  Bicos vivos (miter), e não cantos arredondados: em tamanho de ícone a
+  ponta redonda engorda e o WA vira borrão.
+
+  A ORDEM IMPORTA: a seta dourada vem ANTES, e as letras por cima dela.
+  Desenhando a seta por último ela cortava o A no meio e escondia a barra —
+  de longe virava um W com um risco. Por trás, o ouro aparece dos dois lados
+  do traço e lê como o que é: um acento, não um borrão.
+
+  Este arquivo é a fonte: as imagens de abertura saem daqui.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <path d="M14 172 C70 182 128 164 158 106 C166 90 172 66 176 46"
+        fill="none" stroke="#e0b74f" stroke-width="13" stroke-linecap="round"/>
+  <path d="M180.4 24.4 L163.3 43.4 L188.7 48.6 Z" fill="#e0b74f"/>
+  <g fill="none" stroke="#ffffff" stroke-width="21" stroke-linecap="butt"
+     stroke-linejoin="miter" stroke-miterlimit="6">
+    <path d="M22 52 L53 152 L84 88 L116 152 L147 52 L178 152"/>
+    <path d="M124 110 L170 110"/>
+  </g>
+</svg>

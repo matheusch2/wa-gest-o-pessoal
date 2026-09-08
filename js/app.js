@@ -45,11 +45,30 @@ async function iniciarSessao(userConhecido) {
   history.pushState({ f: 1 }, "");
 }
 
+// O mesmo símbolo da tela de abertura do celular. Antes o app abria na tela
+// azul do sistema e caía numa página clara com uma rodinha — dois momentos
+// que não pareciam o mesmo app. Agora a abertura continua aqui dentro, e a
+// rodinha gira em volta do WA enquanto os dados chegam.
+const _SIMBOLO_WA = `
+  <svg viewBox="0 0 200 200" aria-hidden="true">
+    <path d="M14 172 C70 182 128 164 158 106 C166 90 172 66 176 46"
+          fill="none" stroke="#e0b74f" stroke-width="13" stroke-linecap="round"/>
+    <path d="M180.4 24.4 L163.3 43.4 L188.7 48.6 Z" fill="#e0b74f"/>
+    <g fill="none" stroke="#fff" stroke-width="21" stroke-linecap="butt"
+       stroke-linejoin="miter" stroke-miterlimit="6">
+      <path d="M22 52 L53 152 L84 88 L116 152 L147 52 L178 152"/>
+      <path d="M124 110 L170 110"/>
+    </g>
+  </svg>`;
+
 function telaCarregando() {
   document.getElementById("menu").style.display = "none";
   document.getElementById("area").innerHTML = `
-    <div class="carregando">
-      <div class="carregando-roda" aria-hidden="true"></div>
+    <div class="abertura">
+      <div class="abertura-marca">
+        ${_SIMBOLO_WA}
+        <div class="abertura-roda" aria-hidden="true"></div>
+      </div>
       <p>Carregando seus dados...</p>
     </div>`;
 }
