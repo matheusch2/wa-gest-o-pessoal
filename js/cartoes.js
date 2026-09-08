@@ -271,7 +271,7 @@ let _faturaMes = null;
 function abrirCartao(id) {
   const c = cartoes.find(x => x.id === id);
   if (!c) { erro("Cartão não encontrado."); return; }
-  _faturaMes = _mesFaturaAberta(c);
+  _faturaMes = _faturaAoAbrir(c);
   abrirTela(() => desenharCartao(id));
 }
 
@@ -617,25 +617,54 @@ function _situacaoFatura(cartao, mesRef) {
    aceita e o "Desfazer" já sabe tratar. Ele abate a fatura e não toca no
    seu dinheiro — que é exatamente o que aconteceu na vida real. */
 
-// Os meses de fatura já fechados que ainda têm saldo, do mais antigo pro
-// mais novo. Os meses vêm das parcelas: não existe fatura sem compra.
-function _faturasAntigasEmAberto(cartao) {
-  const aberta = _mesFaturaAberta(cartao);
+// Todo mês que tem parcela caindo nele, do mais antigo pro mais novo. Não
+// existe fatura sem compra: os meses saem das parcelas.
+function _mesesComFatura(cartao) {
   const meses = new Set();
-
   for (const c of comprasCartao) {
     if (c.cartao_id !== cartao.id) continue;
     const inicio = _mesDaPrimeiraParcela(c.data, cartao.dia_fechamento);
     const total = Number(c.parcelas) || 1;
-    for (let n = 0; n < total; n++) {
-      const m = _somaMes(inicio, n);
-      if (m < aberta) meses.add(m);
-    }
+    for (let n = 0; n < total; n++) meses.add(_somaMes(inicio, n));
   }
+  return [...meses].sort();
+}
 
-  return [...meses].sort()
+/* "De antes" é DO MÊS PASSADO PRA TRÁS — e não "toda fatura já fechada",
+   que era como estava e estava errado.
+
+   Um cartão que fecha dia 1 fecha a fatura de setembro no dia 1º de
+   setembro. No dia 8, essa fatura está fechada, vence dia 10, e ninguém
+   pagou nada: é A CONTA DO MÊS. Chamando toda fatura fechada de "de
+   antes", o app oferecia quitar setembro junto com junho e julho — e
+   quem aceitasse ficaria com a conta do mês marcada como paga sem ter
+   pago.
+
+   Fechada não quer dizer paga. O que dá pra presumir já pago é o mês que
+   passou, não o mês que está correndo. */
+function _faturasAntigasEmAberto(cartao) {
+  const limite = mesDe(_hojeLocal());
+  return _mesesComFatura(cartao)
+    .filter(mes => mes < limite)
     .map(mes => ({ mes, s: _situacaoFatura(cartao, mes) }))
     .filter(x => x.s.restante >= 0.005);
+}
+
+/* Qual fatura aparece quando o cartão abre.
+
+   A "aberta" é onde uma compra feita HOJE cairia — mas não é a que a
+   pessoa veio ver. Fechando dia 1, no dia 8 a fatura aberta já é a de
+   outubro, que ainda nem terminou de juntar compras e vence daqui a mais
+   de um mês. A que importa é a de setembro: fechada, vencendo dia 10, com
+   as compras que ela acabou de lançar.
+
+   Então: a fatura fechada mais recente que ainda deve alguma coisa. Não
+   devendo nada, aí sim a aberta. */
+function _faturaAoAbrir(cartao) {
+  const aberta = _mesFaturaAberta(cartao);
+  const devendo = _mesesComFatura(cartao)
+    .filter(mes => mes < aberta && _situacaoFatura(cartao, mes).restante >= 0.005);
+  return devendo.length ? devendo[devendo.length - 1] : aberta;
 }
 
 const _ICO_CONFERE = `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="8 12.5 11 15.5 16.5 9"/></svg>`;
