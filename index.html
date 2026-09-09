@@ -36,38 +36,42 @@
        ele exige uma IMAGEM PRONTA no tamanho exato do aparelho, e sem ela
        abre em BRANCO. Por isso a lista — uma linha por tamanho de tela.
 
-       As imagens saem de assets/simbolo-wa.svg. Aparelho novo no mercado?
-       Mais uma linha em ferramentas/gerar-aberturas.js, roda, e mais um
-       <link> aqui. Sem isso ele não quebra, só volta a abrir em branco. -->
-  <link rel="apple-touch-startup-image" href="assets/abertura-1320x2868.png?v=1"
+       Não dá pra juntar num arquivo só: o Safari não aceita sprite nem
+       SVG aqui, tem que ser um PNG por tamanho. Elas moram todas em
+       assets/abertura/, longe do resto, e saem de assets/simbolo-wa.svg.
+
+       Aparelho novo no mercado? Mais uma linha em
+       ferramentas/gerar-aberturas.js, roda, e mais um <link> aqui. Sem
+       isso ele não quebra, só volta a abrir em branco naquele modelo. -->
+  <link rel="apple-touch-startup-image" href="assets/abertura/1320x2868.png?v=1"
         media="(device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">  <!-- iPhone 16 Pro Max -->
-  <link rel="apple-touch-startup-image" href="assets/abertura-1206x2622.png?v=1"
+  <link rel="apple-touch-startup-image" href="assets/abertura/1206x2622.png?v=1"
         media="(device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">  <!-- iPhone 16 Pro -->
-  <link rel="apple-touch-startup-image" href="assets/abertura-1290x2796.png?v=1"
+  <link rel="apple-touch-startup-image" href="assets/abertura/1290x2796.png?v=1"
         media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">  <!-- iPhone 16 Plus, 15 Pro Max, 15 Plus, 14 Pro Max -->
-  <link rel="apple-touch-startup-image" href="assets/abertura-1179x2556.png?v=1"
+  <link rel="apple-touch-startup-image" href="assets/abertura/1179x2556.png?v=1"
         media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">  <!-- iPhone 16, 15 Pro, 15, 14 Pro -->
-  <link rel="apple-touch-startup-image" href="assets/abertura-1284x2778.png?v=1"
+  <link rel="apple-touch-startup-image" href="assets/abertura/1284x2778.png?v=1"
         media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">  <!-- iPhone 14 Plus, 13 Pro Max, 12 Pro Max -->
-  <link rel="apple-touch-startup-image" href="assets/abertura-1170x2532.png?v=1"
+  <link rel="apple-touch-startup-image" href="assets/abertura/1170x2532.png?v=1"
         media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">  <!-- iPhone 14, 13, 13 Pro, 12, 12 Pro -->
-  <link rel="apple-touch-startup-image" href="assets/abertura-1125x2436.png?v=1"
+  <link rel="apple-touch-startup-image" href="assets/abertura/1125x2436.png?v=1"
         media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">  <!-- iPhone 13 mini, 12 mini, 11 Pro, XS, X -->
-  <link rel="apple-touch-startup-image" href="assets/abertura-1242x2688.png?v=1"
+  <link rel="apple-touch-startup-image" href="assets/abertura/1242x2688.png?v=1"
         media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">  <!-- iPhone 11 Pro Max, XS Max -->
-  <link rel="apple-touch-startup-image" href="assets/abertura-828x1792.png?v=1"
+  <link rel="apple-touch-startup-image" href="assets/abertura/828x1792.png?v=1"
         media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">  <!-- iPhone 11, XR -->
-  <link rel="apple-touch-startup-image" href="assets/abertura-1242x2208.png?v=1"
+  <link rel="apple-touch-startup-image" href="assets/abertura/1242x2208.png?v=1"
         media="(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">  <!-- iPhone 8 Plus, 7 Plus, 6s Plus -->
-  <link rel="apple-touch-startup-image" href="assets/abertura-750x1334.png?v=1"
+  <link rel="apple-touch-startup-image" href="assets/abertura/750x1334.png?v=1"
         media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">  <!-- iPhone SE, 8, 7, 6s -->
-  <link rel="apple-touch-startup-image" href="assets/abertura-640x1136.png?v=1"
+  <link rel="apple-touch-startup-image" href="assets/abertura/640x1136.png?v=1"
         media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">  <!-- iPhone SE 1, 5s -->
-  <link rel="apple-touch-startup-image" href="assets/abertura-1536x2048.png?v=1"
+  <link rel="apple-touch-startup-image" href="assets/abertura/1536x2048.png?v=1"
         media="(device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">  <!-- iPad 9.7 e mini -->
-  <link rel="apple-touch-startup-image" href="assets/abertura-1668x2388.png?v=1"
+  <link rel="apple-touch-startup-image" href="assets/abertura/1668x2388.png?v=1"
         media="(device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">  <!-- iPad Pro 11 e Air -->
-  <link rel="apple-touch-startup-image" href="assets/abertura-2048x2732.png?v=1"
+  <link rel="apple-touch-startup-image" href="assets/abertura/2048x2732.png?v=1"
         media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">  <!-- iPad Pro 12.9 -->
   <title>WA Finanças</title>
 
@@ -197,7 +201,7 @@
 
        O ?v=N no fim de cada um existe pra o celular não servir a versão
        velha do cache. Mexeu no arquivo, sobe o número. -->
-  <script defer src="js/core.js?v=16"></script>
+  <script defer src="js/core.js?v=17"></script>
   <script defer src="js/categorias.js?v=1"></script>
   <script defer src="js/auth.js?v=2"></script>
   <script defer src="js/resumo.js?v=13"></script>

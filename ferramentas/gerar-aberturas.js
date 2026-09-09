@@ -62,7 +62,8 @@ const pagina = (w, h) => {
   const navegador = await chromium.launch({
     executablePath: process.env.CHROMIUM || undefined,
   });
-  const destino = path.join(RAIZ, "assets");
+  const destino = path.join(RAIZ, "assets", "abertura");
+  fs.mkdirSync(destino, { recursive: true });
   let total = 0;
 
   for (const [wCss, hCss, dpr, quem] of APARELHOS) {
@@ -71,7 +72,7 @@ const pagina = (w, h) => {
     // screenshot é exatamente o arquivo que o aparelho vai receber.
     const pag = await navegador.newPage({ viewport: { width: w, height: h }, deviceScaleFactor: 1 });
     await pag.setContent(pagina(w, h));
-    const arquivo = path.join(destino, `abertura-${w}x${h}.png`);
+    const arquivo = path.join(destino, `${w}x${h}.png`);
     await pag.screenshot({ path: arquivo });
     await pag.close();
     console.log(`  ${String(w).padStart(4)}x${String(h).padStart(4)}  ${quem}`);
@@ -79,5 +80,5 @@ const pagina = (w, h) => {
   }
 
   await navegador.close();
-  console.log(`\n${total} telas de abertura em assets/`);
+  console.log(`\n${total} telas de abertura em assets/abertura/`);
 })();

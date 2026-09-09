@@ -66,20 +66,20 @@ const R = require("path").resolve(__dirname, "..");
      mão — daí a conferência aqui. */
   const html = fs.readFileSync(R + "/index.html", "utf8");
   const aberturas = [...html.matchAll(
-    /rel="apple-touch-startup-image"\s+href="assets\/(abertura-(\d+)x(\d+)\.png)[^"]*"\s+media="([^"]+)"/g)];
+    /rel="apple-touch-startup-image"\s+href="assets\/abertura\/((\d+)x(\d+)\.png)[^"]*"\s+media="([^"]+)"/g)];
 
   ok(`declara ${aberturas.length} telas de abertura`, aberturas.length >= 12);
 
   const vistas = new Set();
   let todasOk = true, mediaOk = true;
   for (const [, arq, w, h, media] of aberturas) {
-    if (!fs.existsSync(R + "/assets/" + arq)) { todasOk = false; console.log("    falta", arq); continue; }
+    if (!fs.existsSync(R + "/assets/abertura/" + arq)) { todasOk = false; console.log("    falta", arq); continue; }
     const dim = await p.evaluate(src => new Promise(r => {
       const i = new Image();
       i.onload = () => r(i.naturalWidth + "x" + i.naturalHeight);
       i.onerror = () => r("erro");
       i.src = src;
-    }), "assets/" + arq);
+    }), "assets/abertura/" + arq);
     if (dim !== `${w}x${h}`) { todasOk = false; console.log(`    ${arq} é ${dim}`); }
 
     // A media query tem que casar com o nome do arquivo: largura x dpr.
@@ -97,8 +97,8 @@ const R = require("path").resolve(__dirname, "..");
   ok("e a media query casa com o arquivo que ela escolhe", mediaOk);
   ok("sem dois <link> disputando o mesmo aparelho", vistas.size === aberturas.length);
 
-  const sobrando = fs.readdirSync(R + "/assets").filter(a =>
-    a.startsWith("abertura-") && !aberturas.some(l => l[1] === a));
+  const sobrando = fs.readdirSync(R + "/assets/abertura").filter(a =>
+    a.endsWith(".png") && !aberturas.some(l => l[1] === a));
   ok("e nenhuma imagem de abertura sobrando sem <link>",
     sobrando.length === 0 || (console.log("    sobrando:", sobrando.join(", ")), false));
 
