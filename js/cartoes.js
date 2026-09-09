@@ -304,14 +304,22 @@ function desenharCartao(id) {
   const aberta = mes === _mesFaturaAberta(c);
   const s = _situacaoFatura(c, mes);
 
+  // A coluna da parcela só existe se ALGUMA compra da fatura for parcelada —
+  // e aí existe em TODAS as linhas, mesmo vazia. Antes ela aparecia só onde
+  // havia parcela, e como cada pílula tem uma largura, nenhuma ficava embaixo
+  // da outra: o "13/18" e o "3/12" saíam desencontrados na vertical.
+  const temParcela = itens.some(i => i.totalParcelas > 1);
+
   const linhas = itens.map(i => `
     <div class="compra-item" id="compra-${i.compra.id}">
       <div class="compra-txt">
         <strong>${esc(i.compra.descricao)}</strong>
         <small>${dataBR(i.compra.data)}${i.compra.categoria ? " · " + esc(i.compra.categoria) : ""}</small>
       </div>
-      ${i.totalParcelas > 1
-        ? `<span class="compra-parcela">${i.parcela}/${i.totalParcelas}</span>`
+      ${temParcela
+        ? i.totalParcelas > 1
+          ? `<span class="compra-parcela">${i.parcela}/${i.totalParcelas}</span>`
+          : `<span class="compra-parcela vazia" aria-hidden="true"></span>`
         : ""}
       <span class="compra-valor">${moeda(i.valor)}</span>
       <button class="botao-editar botao-excluir" onclick="pedirExcluirCompra('${i.compra.id}', '${c.id}')" aria-label="Excluir">🗑️</button>

@@ -1387,7 +1387,7 @@ body.escuro .resumo-secao .item-icone.entrada { background: #17372d; }
 .compra-item {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   border: 1px solid var(--borda);
   border-radius: 12px;
   padding: 9px 11px;
@@ -1395,13 +1395,38 @@ body.escuro .resumo-secao .item-icone.entrada { background: #17372d; }
 }
 .compra-txt { flex: 1; min-width: 0; }
 .compra-txt strong { display: block; font-size: 14px; font-weight: 700; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.compra-txt small { display: block; font-size: 11px; color: var(--fraco); }
+/* Uma linha só, sempre. Com as colunas da parcela e do valor travadas
+   sobra menos espaço aqui, e sem isto "18/09/2025 · Transporte" quebrava
+   em duas — cada linha da lista com uma altura, o que é pior de ler do
+   que uma categoria cortada no fim. */
+.compra-txt small { display: block; font-size: 11px; color: var(--fraco); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* LARGURA FIXA, e não "do tamanho do conteúdo". A pílula do "6/10" é mais
+   estreita que a do "13/18", e como as duas vinham empurradas pelo texto,
+   cada uma parava num lugar. Com a largura travada, todas caem na mesma
+   coluna — e "13/18", que é o caso mais largo, ainda cabe. */
 .compra-parcela {
+  flex: 0 0 40px;
+  box-sizing: border-box;
+  text-align: center;
   font-size: 10.5px; font-weight: 800; white-space: nowrap;
-  padding: 2px 7px; border-radius: 999px;
+  padding: 2px 4px; border-radius: 999px;
   background: var(--marca-cl); color: var(--marca-txt);
+  font-variant-numeric: tabular-nums;
 }
-.compra-valor { font-size: 14px; font-weight: 800; white-space: nowrap; font-variant-numeric: tabular-nums; color: var(--saida); }
+/* A linha sem parcela guarda o lugar dela, sem pintar nada: sem isso, o
+   valor da compra à vista subia pra coluna da pílula e desalinhava a
+   coluna do dinheiro. */
+.compra-parcela.vazia { background: none; }
+
+/* Mesma história do outro lado: o valor manda na posição de tudo que vem
+   antes dele. Alinhado à direita e com piso de largura, a coluna dos
+   centavos para de dançar de linha em linha. */
+.compra-valor {
+  min-width: 78px;
+  text-align: right;
+  font-size: 14px; font-weight: 800; white-space: nowrap;
+  font-variant-numeric: tabular-nums; color: var(--saida);
+}
 
 /* Excluir o cartão é o fim da linha da tela: fica lá embaixo, discreto e
    em vermelho — ninguém chega nele sem querer, e quem procura acha. */
