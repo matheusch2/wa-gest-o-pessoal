@@ -1413,10 +1413,6 @@ body.escuro .resumo-secao .item-icone.entrada { background: #17372d; }
   background: var(--marca-cl); color: var(--marca-txt);
   font-variant-numeric: tabular-nums;
 }
-/* A linha sem parcela guarda o lugar dela, sem pintar nada: sem isso, o
-   valor da compra à vista subia pra coluna da pílula e desalinhava a
-   coluna do dinheiro. */
-.compra-parcela.vazia { background: none; }
 
 /* Mesma história do outro lado: o valor manda na posição de tudo que vem
    antes dele. Alinhado à direita e com piso de largura, a coluna dos
@@ -1426,6 +1422,30 @@ body.escuro .resumo-secao .item-icone.entrada { background: #17372d; }
   text-align: right;
   font-size: 14px; font-weight: 800; white-space: nowrap;
   font-variant-numeric: tabular-nums; color: var(--saida);
+}
+
+/* Parceladas e à vista, separadas dentro da fatura. Mesmo desenho dos
+   grupos das Metas — mas classe própria: regra de lá não pode mandar
+   aqui, senão mexer num quebra o outro sem avisar. */
+.compra-grupo {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 15px 2px 8px;
+}
+.compra-grupo:first-child { margin-top: 2px; }
+.compra-grupo h3 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--fraco);
+}
+.compra-grupo span {
+  font-size: 12px; font-weight: 800; color: var(--texto);
+  font-variant-numeric: tabular-nums;
 }
 
 /* Excluir o cartão é o fim da linha da tela: fica lá embaixo, discreto e
@@ -1705,20 +1725,10 @@ body.escuro .resumo-secao .item-icone.entrada { background: #17372d; }
 }
 @media (prefers-reduced-motion: reduce) { .abertura-roda { animation-duration: 2.8s; } }
 
-.carregando { text-align: center; padding: 60px 20px; }
-.carregando p { margin: 16px 0 0; font-size: 13.5px; color: var(--fraco); }
-
-.carregando-roda {
-  width: 34px;
-  height: 34px;
-  margin: 0 auto;
-  border: 3px solid var(--borda);
-  border-top-color: var(--marca-txt);
-  border-radius: 50%;
-  animation: girando .8s linear infinite;
-}
+/* A antiga tela de espera — fundo claro, rodinha no meio — saiu quando a
+   espera virou a continuação da tela de abertura, ali em cima. Ficaram só
+   o @keyframes, que a rodinha nova usa, e o ícone do erro. */
 @keyframes girando { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .carregando-roda { animation-duration: 2.4s; } }
 
 .carregando-erro { font-size: 34px; line-height: 1; margin-bottom: 10px; }
 

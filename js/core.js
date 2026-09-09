@@ -9,7 +9,7 @@
    index.html. Serve pra uma pergunta que já custou tempo: "o defeito que
    você está vendo é do código de agora, ou o celular ainda está com o
    app velho em cache?" — sem isso, a resposta é chute. */
-const VERSAO_APP = "2026-09-09 · 14";
+const VERSAO_APP = "2026-09-09 · 15";
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
