@@ -163,7 +163,10 @@ function desenharResumo(filtro) {
                   <small>${r.tipo === "conta"
                     ? "Vence " + dataBR(r.vencimento)
                     : r.gasto > 0
-                      ? `${moeda(r.gasto)} de ${moeda(r.previsto)} já saíram`
+                      // "gastos", e não "saíram": parte pode ter ido no
+                      // cartão e ainda não ter tocado a conta. Gastado,
+                      // está — que é o que a meta mede.
+                      ? `${moeda(r.gasto)} de ${moeda(r.previsto)} já gastos`
                       : `Previsto ${moeda(r.previsto)} no mês`}</small>
                 </div>
                 <span class="item-valor saida">${moeda(r.falta)}</span>

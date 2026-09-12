@@ -25,42 +25,21 @@ function _idsDeFatura() {
   return new Set(pagamentosFatura.map(p => p.lancamento_id).filter(Boolean));
 }
 
-/* O gasto SEPARADO por onde veio: o que saiu da conta e o que foi no
-   cartão. A soma dos dois é o que a meta mede — mas a origem precisa
-   sobreviver até a tela.
-
-   Sem isso, a meta mostrava "R$ 316,39 gastos em Mercado" e pronto. Quem
-   apagasse as saídas de mercado do extrato via o número continuar igual
-   e concluía, com toda razão, que o app estava errado — quando na verdade
-   os R$ 316,39 eram duas compras no cartão, que a meta conta de
-   propósito. Número certo que não explica de onde veio é indistinguível
-   de número errado. */
-function _gastoDetalhadoPorCategoria(mesRef) {
+function _gastoDoMesPorCategoria(mesRef) {
   const daFatura = _idsDeFatura();
-  const por = {};
-  const pega = (cat) => {
-    const nome = cat || "Outros";
-    if (!por[nome]) por[nome] = { extrato: 0, cartao: 0 };
-    return por[nome];
-  };
+  const porCat = {};
+  const somar = (cat, v) => { porCat[cat || "Outros"] = (porCat[cat || "Outros"] || 0) + Number(v); };
 
   for (const l of lancamentos) {
     if (l.tipo !== "saida" || mesDe(l.data) !== mesRef) continue;
     if (daFatura.has(l.id)) continue;
-    pega(l.categoria).extrato += Number(l.valor);
+    somar(l.categoria, l.valor);
   }
   for (const c of comprasCartao) {
     if (mesDe(c.data) !== mesRef) continue;
-    pega(c.categoria).cartao += Number(c.valor);
+    somar(c.categoria, c.valor);
   }
-  return por;
-}
-
-function _gastoDoMesPorCategoria(mesRef) {
-  const por = _gastoDetalhadoPorCategoria(mesRef);
-  const total = {};
-  for (const cat of Object.keys(por)) total[cat] = por[cat].extrato + por[cat].cartao;
-  return total;
+  return porCat;
 }
 
 // Verde até 80%, âmbar de 80% a 100%, vermelho depois. O aviso vem ANTES
@@ -87,9 +66,7 @@ function trocarMesMetas(passo) {
 function desenharMetas() {
   destruirGrafico();
 
-  const detalhe = _gastoDetalhadoPorCategoria(mesAtual);
-  const gastos = {};
-  for (const cat of Object.keys(detalhe)) gastos[cat] = detalhe[cat].extrato + detalhe[cat].cartao;
+  const gastos = _gastoDoMesPorCategoria(mesAtual);
 
   // Quem está mais perto de estourar aparece primeiro. A tela existe pra
   // avisar; ordem alfabética esconderia o alerta no meio da lista.
@@ -111,14 +88,6 @@ function desenharMetas() {
     const { classe } = _corDaMeta(usado);
     const falta = teto - gasto;
 
-    // De onde veio o gasto. Só aparece quando tem cartão no meio — gasto
-    // que saiu todo da conta é o esperado e não precisa de explicação.
-    const d = detalhe[m.categoria] || { extrato: 0, cartao: 0 };
-    const origem = d.cartao < 0.005 ? ""
-      : d.extrato < 0.005
-        ? "Tudo no cartão"
-        : `${moeda(d.cartao)} no cartão · ${moeda(d.extrato)} da conta`;
-
     return `
       <div class="meta-item ${classe}" id="meta-${m.id}">
         <div class="meta-topo">
@@ -130,7 +99,6 @@ function desenharMetas() {
           <span><strong>${moeda(gasto)}</strong> de ${moeda(teto)}</span>
           <span class="meta-falta">${falta >= 0 ? "Sobram " + moeda(falta) : "Passou " + moeda(-falta)}</span>
         </div>
-        ${origem ? `<p class="meta-origem">${origem}</p>` : ""}
         <div class="meta-acoes">
           <button class="botao-editar" onclick="abrirEdicaoMeta('${m.id}')" aria-label="Editar">✏️</button>
           <button class="botao-editar botao-excluir" onclick="pedirExcluirMeta('${m.id}')" aria-label="Excluir">🗑️</button>

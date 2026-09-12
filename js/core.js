@@ -9,7 +9,7 @@
    index.html. Serve pra uma pergunta que já custou tempo: "o defeito que
    você está vendo é do código de agora, ou o celular ainda está com o
    app velho em cache?" — sem isso, a resposta é chute. */
-const VERSAO_APP = "2026-09-12 · 16";
+const VERSAO_APP = "2026-09-12 · 17";
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -316,14 +316,21 @@ function reservasDoMes(mesRef) {
     });
   }
 
-  // Só o que JÁ SAIU DA CONTA conta aqui. Compra no cartão não entrou
-  // nesta soma de propósito: ela ainda não tocou o extrato, e o saldo que
-  // estamos corrigindo é o do extrato.
-  const jaSaiu = {};
-  for (const l of lancamentos) {
-    if (l.tipo !== "saida" || mesDe(l.data) !== mesRef) continue;
-    jaSaiu[l.categoria] = (jaSaiu[l.categoria] || 0) + Number(l.valor);
-  }
+  /* O QUE JÁ FOI GASTO NA CATEGORIA — a MESMA conta que a tela de Metas
+     faz, chamando a mesma função. Não é detalhe de organização: é o que
+     impede as duas telas de discordarem sobre a mesma meta.
+
+     Antes, aqui só entrava o que tinha saído da CONTA, e a compra no
+     cartão ficava de fora "porque ainda não tocou o extrato". O resultado
+     foi este: com R$ 316,39 de mercado passados no cartão, a tela de
+     Metas dizia "sobram R$ 683,61" e o Resumo dizia "Mercado, ainda vai
+     sair R$ 1.000,00". Dois números para o mesmo teto, na mesma semana.
+
+     E reservar os mil inteiros estava errado nos dois sentidos: quem já
+     gastou R$ 316,39 do mercado não vai gastar mais mil — vai gastar, no
+     máximo, os R$ 683,61 que faltam. A reserva cheia era otimista com a
+     meta e pessimista com o saldo ao mesmo tempo. */
+  const jaSaiu = _gastoDoMesPorCategoria(mesRef);
 
   for (const m of metas) {
     if (!m.reservar) continue;
