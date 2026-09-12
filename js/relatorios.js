@@ -89,6 +89,255 @@ function _retratoDoMes(mesRef) {
   };
 }
 
+/* ═══ O QUE OS NÚMEROS DIZEM ══════════════════════════════════════════
+   A parte da tela que não mostra número: mostra o que o número quer
+   dizer. "R$ 3.227,90" é dado; "você estourou o mercado em 3 dos últimos
+   4 meses" é conselho — e é conselho que nunca erra, porque é conta.
+
+   Cada aviso é uma função que devolve {tom, texto} ou null. Null quer
+   dizer "não tenho nada a dizer sobre isso neste mês", e aviso sem o que
+   dizer NÃO APARECE. Lista que mostra sempre as mesmas seis linhas vira
+   paisagem, e paisagem ninguém lê — é assim que um alerta de verdade
+   passa despercebido no meio dos outros cinco de mentira.
+
+   Todos olham o mês que está na tela, e o passado A PARTIR DELE. Abrir
+   agosto e ler um aviso sobre outubro seria o mesmo defeito das telas que
+   discordam entre si, só que no tempo. */
+
+// "R$ 1.500,00" não pode quebrar entre o "R$" e o número — e nestas
+// frases ele quebra, porque o valor vai no meio do texto em vez de numa
+// coluna. Espaço que não quebra resolve, e só aqui: mudar o moeda() do
+// app inteiro por causa de uma tela seria caro pelo motivo errado.
+const _vlr = v => moeda(v).replace(" ", "\u00A0");
+
+// Mês com movimento é mês que tem lançamento ou compra. Mês em que a
+// pessoa não usou o app não pode contar como "mês em que ela não gastou
+// nada" — isso baixaria a média e viraria alerta em cima do vazio.
+function _temMovimento(mesRef) {
+  return lancamentos.some(l => mesDe(l.data) === mesRef)
+      || comprasCartao.some(c => mesDe(c.data) === mesRef);
+}
+
+// Os N meses com movimento ANTES de mesRef, do mais antigo pro mais novo.
+// Para de procurar em dois anos: sem esse teto, uma base vazia faria o
+// laço varrer o calendário inteiro à toa.
+function _mesesAnteriores(mesRef, quantos) {
+  const meses = [];
+  let m = mesRef;
+  for (let i = 0; i < 24 && meses.length < quantos; i++) {
+    m = mesVizinho(m, -1);
+    if (_temMovimento(m)) meses.push(m);
+  }
+  return meses.reverse();
+}
+
+/* ─── A meta que vive estourando ────────────────────────────────────── */
+
+function _avisoMetaEstourada(mesRef) {
+  const meses = _mesesAnteriores(mesRef, 4);
+  if (meses.length < 2) return null;   // dois meses não fazem um hábito
+
+  const gastos = meses.map(m => _gastoDoMesPorCategoria(m));
+
+  const contagem = metas.map(meta => {
+    const teto = Number(meta.valor);
+    const vezes = gastos.filter(g => (g[meta.categoria] || 0) > teto).length;
+    return { categoria: meta.categoria, vezes };
+  }).filter(x => x.vezes >= 2).sort((a, b) => b.vezes - a.vezes);
+
+  if (!contagem.length) return null;
+
+  const p = contagem[0];
+  return {
+    tom: "ruim",
+    texto: `Você estourou a meta de <b>${esc(p.categoria)}</b> em
+            <b>${p.vezes} dos últimos ${meses.length} meses</b>.`,
+  };
+}
+
+/* ─── Quanto do mês já tem dono ─────────────────────────────────────── */
+
+function _avisoObrigatorios(mesRef) {
+  // Contas E faturas, e não "gastos obrigatórios" em geral. A diferença
+  // não é de estilo: incluir as metas obrigatórias aqui contaria a compra
+  // de mercado no cartão duas vezes, uma na meta e outra na fatura. Nome
+  // preciso é o que impede a frase de mentir.
+  const emContas = contas
+    .filter(c => mesDe(c.vencimento) === mesRef)
+    .reduce((s, c) => s + Number(c.valor), 0);
+
+  let emFaturas = 0;
+  for (const cartao of cartoes) {
+    for (const mes of _mesesComFatura(cartao)) {
+      const venc = _vencimentoDaFatura(mes, cartao.dia_fechamento, cartao.dia_vencimento);
+      if (mesDe(venc) === mesRef) emFaturas += _totalDaFatura(cartao, mes);
+    }
+  }
+
+  const obrigatorio = _cent(emContas + emFaturas);
+  if (obrigatorio < 0.005) return null;
+
+  // A renda do mês é o que entrou MAIS o que ainda vai entrar — a mesma
+  // conta que o Resumo faz. Só o que já caiu daria 300% no dia 2.
+  const renda = _cent(_retratoDoMes(mesRef).entrou + aReceberDoMes(mesRef).total);
+  if (renda < 0.005) return null;
+
+  const pct = Math.round((obrigatorio / renda) * 100);
+  return {
+    tom: pct >= 80 ? "ruim" : pct >= 60 ? "atencao" : "bom",
+    texto: `Contas e faturas de ${soNomeDoMes(mesRef)} somam <b>${_vlr(obrigatorio)}</b> —
+            <b>${pct}%</b> do que entra no mês.`,
+  };
+}
+
+/* ─── O que as parcelas já prenderam lá na frente ───────────────────── */
+
+// Quanto de parcela cai em cada mês DEPOIS de mesRef. Cartão pelo mês em
+// que a fatura VENCE — o mesmo critério da reserva do Resumo, senão o
+// mesmo dinheiro apareceria em dois meses diferentes nas duas telas.
+function _parcelasPorMes(mesRef) {
+  const porMes = {};
+  const somar = (m, v) => { if (v >= 0.005) porMes[m] = _cent((porMes[m] || 0) + v); };
+
+  for (const cartao of cartoes) {
+    for (const mes of _mesesComFatura(cartao)) {
+      const venc = mesDe(_vencimentoDaFatura(mes, cartao.dia_fechamento, cartao.dia_vencimento));
+      if (venc <= mesRef) continue;
+      // Só o que é PARCELA. A compra à vista de uma fatura futura é gasto
+      // do mês que vem, não dívida contratada — e a frase fala de dívida.
+      somar(venc, _parcelasDaFatura(cartao, mes)
+        .filter(i => i.totalParcelas > 1)
+        .reduce((s, i) => s + i.valor, 0));
+    }
+  }
+
+  // O carnê: boleto parcelado ainda não pago.
+  for (const c of contas) {
+    if (c.pago || c.recorrente || !_parteDoCarne(c.nome)) continue;
+    const m = mesDe(c.vencimento);
+    if (m > mesRef) somar(m, Number(c.valor));
+  }
+
+  return porMes;
+}
+
+function _avisoParcelas(mesRef) {
+  // Olhar o futuro a partir de um mês que já passou não diz nada útil.
+  if (mesRef < mesDe(_hojeLocal())) return null;
+
+  const porMes = _parcelasPorMes(mesRef);
+  const meses = Object.keys(porMes).sort();
+  if (!meses.length) return null;
+
+  const primeiro = meses[0];
+  const ultimo = meses[meses.length - 1];
+  const total = _cent(meses.reduce((s, m) => s + porMes[m], 0));
+
+  return {
+    tom: "atencao",
+    texto: `Suas parcelas comprometem <b>${_vlr(porMes[primeiro])}</b> em
+            ${soNomeDoMes(primeiro)}${primeiro === ultimo ? "" : `, e seguem até
+            <b>${mesPorExtenso(ultimo).toLowerCase()}</b> — <b>${_vlr(total)}</b> no total`}.`,
+  };
+}
+
+/* ─── Este mês contra a sua média ───────────────────────────────────── */
+
+function _avisoMedia(mesRef) {
+  const meses = _mesesAnteriores(mesRef, 3);
+  if (meses.length < 2) return null;
+
+  const media = _cent(meses.reduce((s, m) => s + _retratoDoMes(m).gastou, 0) / meses.length);
+  if (media < 0.005) return null;
+
+  const atual = _retratoDoMes(mesRef).gastou;
+  const diferenca = _cent(atual - media);
+  const correndo = mesRef >= mesDe(_hojeLocal());
+
+  if (diferenca >= 0.005) {
+    return {
+      tom: "ruim",
+      texto: `Você ${correndo ? "já gastou" : "gastou"} <b>${_vlr(diferenca)} a mais</b> que
+              sua média dos últimos ${meses.length} meses${correndo ? " — e o mês ainda não acabou" : ""}.`,
+    };
+  }
+
+  // Gastar menos no dia 5 não é mérito, é calendário. Só vale dizer
+  // "gastou menos" depois que o mês fechou.
+  if (correndo) return null;
+  return {
+    tom: "bom",
+    texto: `Você gastou <b>${_vlr(-diferenca)} a menos</b> que sua média dos
+            últimos ${meses.length} meses.`,
+  };
+}
+
+/* ─── A categoria que subiu sem ninguém perceber ────────────────────── */
+
+function _avisoCategoriaQueSubiu(mesRef) {
+  const meses = _mesesAnteriores(mesRef, 3);
+  if (meses.length < 2) return null;
+
+  const anteriores = meses.map(m => _gastoDoMesPorCategoria(m));
+  const agora = _gastoDoMesPorCategoria(mesRef);
+
+  let pior = null;
+  for (const [cat, valor] of Object.entries(agora)) {
+    const media = _cent(anteriores.reduce((s, g) => s + (g[cat] || 0), 0) / anteriores.length);
+    // Piso de R$ 50: sem ele, um café de R$ 8 contra uma média de R$ 2
+    // vira "subiu 300%" e enche a tela de alarme sobre trocado.
+    if (media < 50) continue;
+    const alta = _cent(valor - media);
+    if (alta < 50 || valor < media * 1.3) continue;
+    if (!pior || alta > pior.alta) pior = { cat, valor, media, alta };
+  }
+  if (!pior) return null;
+
+  return {
+    tom: "atencao",
+    texto: `<b>${esc(pior.cat)}</b> subiu <b>${Math.round((pior.valor / pior.media - 1) * 100)}%</b>
+            sobre a sua média: ${_vlr(pior.valor)} contra ${_vlr(pior.media)}.`,
+  };
+}
+
+/* ─── Como os meses vêm terminando ──────────────────────────────────── */
+
+function _avisoMesesNoAzul(mesRef) {
+  const meses = _mesesAnteriores(mesRef, 4);
+  if (meses.length < 3) return null;
+
+  const azuis = meses.filter(m => {
+    const r = _retratoDoMes(m);
+    return r.entrou - r.gastou >= 0.005;
+  }).length;
+
+  if (azuis === meses.length) {
+    return { tom: "bom", texto: `Você fechou <b>os últimos ${meses.length} meses no azul</b>.` };
+  }
+  if (azuis === 0) {
+    return { tom: "ruim", texto: `Você fechou <b>os últimos ${meses.length} meses no vermelho</b>.` };
+  }
+  return null;   // dois e dois não é notícia, é vida normal
+}
+
+/* ─── A lista, montada ──────────────────────────────────────────────── */
+
+const _PESO_TOM = { ruim: 0, atencao: 1, bom: 2 };
+const _ICONE_TOM = { ruim: "⚠️", atencao: "🔎", bom: "✅" };
+
+function _avisosDoMes(mesRef) {
+  return [
+    _avisoMetaEstourada(mesRef),
+    _avisoMedia(mesRef),
+    _avisoObrigatorios(mesRef),
+    _avisoParcelas(mesRef),
+    _avisoCategoriaQueSubiu(mesRef),
+    _avisoMesesNoAzul(mesRef),
+  ].filter(Boolean)
+   // O que dói primeiro. Alerta no fim da lista é alerta que não foi lido.
+   .sort((a, b) => _PESO_TOM[a.tom] - _PESO_TOM[b.tom]);
+}
+
 /* ═══ A TELA ══════════════════════════════════════════════════════════ */
 
 const _ICO_BARRAS = `<svg viewBox="0 0 24 24" aria-hidden="true"><line x1="4" y1="20" x2="4" y2="10"/><line x1="10" y1="20" x2="10" y2="4"/><line x1="16" y1="20" x2="16" y2="13"/><line x1="22" y1="20" x2="22" y2="7"/></svg>`;
@@ -106,6 +355,7 @@ function desenharRelatorios() {
   destruirGrafico();
 
   const r = _retratoDoMes(mesAtual);
+  const avisos = _avisosDoMes(mesAtual);
   const temRenda = r.entrou >= 0.005;
   const usado = temRenda ? r.gastou / r.entrou : 0;
 
@@ -181,6 +431,18 @@ function desenharRelatorios() {
         <strong>${moeda(Math.abs(r.sobrou))}</strong>
       </div>
     </div>
+
+    ${avisos.length ? `
+      <div class="bloco">
+        <div class="bloco-topo"><h2>O que os números dizem</h2></div>
+        <div class="rel-avisos">
+          ${avisos.map(a => `
+            <div class="rel-aviso ${a.tom}">
+              <span class="rel-aviso-ico" aria-hidden="true">${_ICONE_TOM[a.tom]}</span>
+              <p>${a.texto}</p>
+            </div>`).join("")}
+        </div>
+      </div>` : ""}
 
     <div class="bloco">
       <div class="bloco-topo">

@@ -43,7 +43,7 @@ O que a pessoa mais vai abrir.
   Resumo já faz o top 6 em rosca; aqui é a lista inteira.
 - A nota que explica a conta, com a diferença pro Resumo à mostra.
 
-## 2. Frases de alerta
+## 2. Frases de alerta ✅ *(feito)*
 
 Conta pura, texto pronto. É o "conselho financeiro" sem IA nenhuma, e
 nunca erra:
@@ -54,7 +54,13 @@ nunca erra:
 - "Este mês você gastou **R$ 340 a mais** que sua média."
 
 Cada frase é uma função que devolve texto ou `null`. Só aparece a que
-tem o que dizer. Barato de fazer e é o que mais impressiona.
+tem o que dizer — lista que mostra sempre as mesmas seis linhas vira
+paisagem, e paisagem ninguém lê.
+
+Saíram seis: a meta que vive estourando, o mês contra a sua média, o
+peso das contas e faturas sobre a renda, as parcelas lá na frente, a
+categoria que subiu, e como os últimos meses vêm terminando. Todas
+olham o mês que está na tela, e o passado a partir dele.
 
 ## 3. A linha do tempo
 

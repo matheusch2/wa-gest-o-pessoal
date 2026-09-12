@@ -1980,6 +1980,31 @@ body.escuro .resumo-secao .item-icone.entrada { background: #17372d; }
 
 .rel-conta { font-size: 12px; color: var(--fraco); font-weight: 700; }
 
+/* AS FRASES. Elas não mostram número, mostram o que o número quer dizer
+   — e por isso são texto, não card. A tarja colorida à esquerda dá o tom
+   de relance: vermelho é "isso está te custando", âmbar é "olha isso",
+   verde é "continue assim". Sem a tarja, seis frases cinzas viram um
+   parágrafo, e parágrafo ninguém lê numa tela de celular. */
+.rel-avisos { display: flex; flex-direction: column; gap: 9px; }
+
+.rel-aviso {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 11px 13px;
+  border-radius: 12px;
+  border-left: 4px solid var(--fraco);
+  background: color-mix(in srgb, var(--texto) 4%, transparent);
+}
+.rel-aviso p { margin: 0; font-size: 13px; line-height: 1.55; }
+.rel-aviso b { font-weight: 800; }
+.rel-aviso-ico { flex-shrink: 0; font-size: 15px; line-height: 1.45; }
+
+.rel-aviso.ruim    { border-left-color: var(--saida);   background: color-mix(in srgb, var(--saida) 8%, transparent); }
+.rel-aviso.atencao { border-left-color: var(--aviso);   background: color-mix(in srgb, var(--aviso) 10%, transparent); }
+.rel-aviso.bom     { border-left-color: var(--entrada); background: color-mix(in srgb, var(--entrada) 8%, transparent); }
+.rel-aviso.ruim b  { color: var(--saida); }
+
 /* A nota de rodapé não é enfeite: é ela que impede a pergunta "por que
    este número não bate com o Resumo?" de virar desconfiança no app. */
 .rel-nota h3 { margin: 0 0 8px; font-size: 13px; font-weight: 800; color: var(--fraco); letter-spacing: .03em; text-transform: uppercase; }
