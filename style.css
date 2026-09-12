@@ -463,6 +463,29 @@ body.escuro .item.vencida { border-color: #5c2d3d; background: #331d24; }
 .conta-item.paga .conta-valor { color: var(--fraco); }
 .conta-item.paga .conta-ico { background: color-mix(in srgb, var(--entrada) 12%, transparent); }
 
+/* O CARNÊ NA LISTA. Uma linha só, com "2/26" do lado, e a seta dizendo
+   que tem mais coisa lá dentro — o mesmo desenho do cartão, porque é o
+   mesmo problema: uma compra parcelada não são 26 contas, é uma conta
+   com 26 vencimentos. */
+.conta-item.carne { cursor: pointer; }
+.conta-item.carne:active { background: var(--marca-cl); }
+.carne-pilula {
+  display: inline-block;
+  margin-left: 5px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--marca-cl);
+  color: var(--marca-txt);
+  font-size: 10.5px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  vertical-align: 1px;
+}
+
+/* Editar e excluir o carnê, lado a lado. */
+#carne-acoes { display: flex; gap: 8px; margin-top: 12px; }
+#carne-acoes .botao-fraco { margin: 0; }
+
 /* Abas no desenho das abas de boletos do WA Aqua: dividem a largura por
    igual e a ativa se marca por cor e sublinhado. */
 .contas-abas {

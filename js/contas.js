@@ -69,6 +69,61 @@ async function lancarProximoFixo(botao, nome) {
   desenharContas();
 }
 
+/* ─── OS CARNÊS ───────────────────────────────────────────────────────
+   Um carnê de 26 boletos virava 26 linhas na lista de "A pagar". Com dois
+   carnês, a tela tinha 52 linhas de "Moto (2/26)", "Moto (3/26)", e a
+   conta de luz do mês sumia no meio — a tela que existe pra dizer o que
+   pagar agora passava a esconder isso.
+
+   O cartão já tinha resolvido o mesmo problema: ele mostra UMA linha por
+   compra, com "3/18" do lado, e não dezoito. Aqui é igual. O carnê vira
+   uma linha só — a próxima parcela a vencer — e as outras ficam na tela
+   dele, que se abre no toque.
+
+   O que junta as parcelas é o "(i/n)" no fim do nome, que foi este mesmo
+   app que escreveu ao cadastrar. Conta recorrente nunca entra: ela não
+   tem fim, e "(1/26)" num aluguel não quereria dizer nada. */
+
+function _parteDoCarne(nome) {
+  const m = /^(.+) \((\d+)\/(\d+)\)$/.exec(String(nome || ""));
+  if (!m) return null;
+  const i = Number(m[2]), n = Number(m[3]);
+  if (n < 2 || i < 1 || i > n) return null;
+  return { base: m[1], i, n };
+}
+
+// Separa uma lista de contas em carnês agrupados e contas soltas.
+function _agruparCarnes(lista) {
+  const carnes = new Map();
+  const soltas = [];
+
+  for (const c of lista) {
+    const p = c.recorrente ? null : _parteDoCarne(c.nome);
+    if (!p) { soltas.push(c); continue; }
+    if (!carnes.has(p.base)) carnes.set(p.base, { base: p.base, n: p.n, parcelas: [] });
+    carnes.get(p.base).parcelas.push(Object.assign({}, c, p));
+  }
+
+  const grupos = [...carnes.values()].map(g => {
+    g.parcelas.sort((a, b) => a.i - b.i);
+    const abertas = g.parcelas.filter(x => !x.pago);
+    return Object.assign(g, {
+      abertas,
+      // A que vence primeiro entre as não pagas é a que representa o carnê
+      // na lista — é a próxima que a pessoa vai ter na mão.
+      proxima: abertas[0] || null,
+      falta: abertas.reduce((s, x) => s + Number(x.valor), 0),
+      pagas: g.parcelas.length - abertas.length,
+    });
+  });
+
+  return { grupos, soltas };
+}
+
+function _carnePorBase(base) {
+  return _agruparCarnes(contas).grupos.find(g => g.base === base) || null;
+}
+
 // Qual aba está aberta. Trocar de aba não empilha tela: é a mesma tela
 // mostrando outro recorte, então o "Voltar" continua indo pro menu.
 let _contasFiltro = "todos";
@@ -93,8 +148,22 @@ function desenharContas() {
 
   const fixos = fixosPorSerie();
 
+  /* A aba "A pagar" mostra o carnê inteiro como UMA linha: a próxima
+     parcela. As outras abas não agrupam de propósito — "Vencidos" tem que
+     mostrar cada boleto vencido, um a um, porque cada um é um atraso. */
+  const { grupos: carnes, soltas } = _agruparCarnes(abertas);
+  const aPagar = soltas
+    .map(c => ({ tipo: "conta", conta: c, vencimento: c.vencimento }))
+    .concat(carnes.filter(g => g.proxima).map(g => ({ tipo: "carne", carne: g, vencimento: g.proxima.vencimento })))
+    .sort((a, b) => a.vencimento.localeCompare(b.vencimento));
+
+  // O que some da lista por estar agrupado — dito em voz alta no cabeçalho,
+  // senão o total lá em cima não bate com a soma do que se vê.
+  const emCarnes = carnes.reduce((s, g) => s + g.falta, 0);
+  const parcelasEscondidas = carnes.reduce((s, g) => s + Math.max(0, g.abertas.length - 1), 0);
+
   const abas = [
-    { id: "todos", rotulo: "A pagar", itens: abertas, vazio: "Nenhuma conta em aberto. 🎉" },
+    { id: "todos", rotulo: "A pagar", itens: aPagar, vazio: "Nenhuma conta em aberto. 🎉" },
     { id: "vencendo", rotulo: "Vencendo", itens: vencendo, vazio: "Nada vencendo nos próximos dias." },
     { id: "vencidos", rotulo: "Vencidos", itens: vencidas, vazio: "Nenhuma conta vencida. 🎉" },
     { id: "pagos", rotulo: "Pagos", itens: pagas, vazio: "Nenhuma conta paga ainda." },
@@ -127,6 +196,31 @@ function desenharContas() {
         </div>
       </div>`;
   };
+
+  // A linha do carnê: a próxima parcela, com "2/26" do lado. O toque abre
+  // o carnê inteiro — as outras parcelas, e editar ou excluir a série.
+  const linhaCarne = (g) => {
+    const c = g.proxima;
+    const dias = Math.round((_parseDataLocal(c.vencimento) - _parseDataLocal(hoje)) / 86400000);
+    const estado = dias < 0 ? "vencida" : dias <= 5 ? "vencendo" : "";
+    const quando = dias < 0 ? `Venceu há ${Math.abs(dias)} dia${Math.abs(dias) > 1 ? "s" : ""}`
+                 : dias === 0 ? "Vence hoje"
+                 : `Vence em ${dias} dia${dias > 1 ? "s" : ""}`;
+    return `
+      <div class="conta-item carne ${estado}" onclick="abrirCarne('${esc(g.base).replace(/'/g, "\\'")}')">
+        <div class="conta-ico">🧾</div>
+        <div class="conta-nome">${esc(g.base)} <span class="carne-pilula">${c.i}/${g.n}</span></div>
+        <div class="conta-valor">${moeda(c.valor)}</div>
+        <div class="conta-prazo">
+          <span class="conta-chip ${estado}">${quando}</span>
+          <span class="conta-cat">faltam ${g.abertas.length}</span>
+        </div>
+        <div class="conta-acao"><span class="item-x">›</span></div>
+      </div>`;
+  };
+
+  // A aba "A pagar" mistura conta solta e carnê; as outras só têm conta.
+  const linhaAPagar = (x) => x.tipo === "carne" ? linhaCarne(x.carne) : linha(x.conta);
 
   const linhaFixo = (f) => `
     <div class="fixo-item ${f.emDia ? "" : "falta"}">
@@ -163,7 +257,13 @@ function desenharContas() {
       <small>${abertas.length
         ? `${abertas.length} conta${abertas.length > 1 ? "s" : ""} em aberto`
         : "Nada em aberto"}${vencidas.length
-        ? ` · <span class="alerta">${vencidas.length} vencida${vencidas.length > 1 ? "s" : ""}</span>` : ""}</small>
+        ? ` · <span class="alerta">${vencidas.length} vencida${vencidas.length > 1 ? "s" : ""}</span>` : ""}${
+        // Sem esta linha, o total diz R$ 31.200 e a lista mostra três
+        // linhas somando R$ 1.800 — dois números que não fecham na mesma
+        // tela, que num app de dinheiro é o pior defeito que existe.
+        parcelasEscondidas
+          ? `<br>${moeda(emCarnes)} em carnê, agrupado nas linhas 🧾`
+          : ""}</small>
     </div>
 
     <button class="botao" onclick="abrirNovaConta()">
@@ -185,11 +285,212 @@ function desenharContas() {
       </div>` : ""}
 
     ${abaAtual.itens.length
-      ? `<div class="lista">${abaAtual.itens.map(abaAtual.id === "fixos" ? linhaFixo : linha).join("")}</div>`
+      ? `<div class="lista">${abaAtual.itens.map(
+            abaAtual.id === "fixos" ? linhaFixo
+          : abaAtual.id === "todos" ? linhaAPagar
+          : linha).join("")}</div>`
       : `<div class="bloco"><p class="vazio">${abaAtual.vazio}</p></div>`}
 
     <button class="botao-fraco" onclick="voltarInicio()">Voltar</button>
   `;
+}
+
+/* ═══ A TELA DO CARNÊ ═════════════════════════════════════════════════
+   Onde ficam as outras parcelas, e onde se mexe na compra inteira em vez
+   de boleto por boleto. Excluir um carnê de 26 apagando 26 linhas à mão
+   era o tipo de coisa que faz a pessoa desistir de usar o app. */
+
+function abrirCarne(base) {
+  if (!_carnePorBase(base)) { erro("Carnê não encontrado."); return; }
+  abrirTela(() => desenharCarne(base));
+}
+
+function desenharCarne(base) {
+  destruirGrafico();
+  const g = _carnePorBase(base);
+  if (!g) { voltarInicio(); return; }
+
+  const hoje = _hojeLocal();
+  const total = g.parcelas.reduce((s, x) => s + Number(x.valor), 0);
+  const icoCarne = `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="4" width="22" height="16" rx="3"/><line x1="1" y1="10" x2="23" y2="10"/><line x1="5" y1="15" x2="9" y2="15"/></svg>`;
+
+  const linhas = g.parcelas.map(c => {
+    const dias = Math.round((_parseDataLocal(c.vencimento) - _parseDataLocal(hoje)) / 86400000);
+    const estado = c.pago ? "paga" : dias < 0 ? "vencida" : dias <= 5 ? "vencendo" : "";
+    const quando = c.pago ? "Paga em " + dataBR(c.pago_em || c.vencimento)
+                 : dias < 0 ? `Venceu há ${Math.abs(dias)} dia${Math.abs(dias) > 1 ? "s" : ""}`
+                 : dias === 0 ? "Vence hoje"
+                 : `Vence ${dataBR(c.vencimento)}`;
+    return `
+      <div class="conta-item ${estado}" id="conta-${c.id}">
+        <div class="conta-ico">${c.pago ? "✓" : "📄"}</div>
+        <div class="conta-nome">Boleto <span class="carne-pilula">${c.i}/${g.n}</span></div>
+        <div class="conta-valor">${moeda(c.valor)}</div>
+        <div class="conta-prazo"><span class="conta-chip ${estado}">${quando}</span></div>
+        <div class="conta-acao">
+          ${c.pago ? "" : `<button class="botao-pagar" onclick="pagarConta(this, '${c.id}')">Pagar</button>`}
+          <button class="item-x" onclick="pedirExcluirConta('${c.id}')" aria-label="Excluir">×</button>
+        </div>
+      </div>`;
+  }).join("");
+
+  document.getElementById("area").innerHTML = `
+    <section class="lancamento-tela" style="--cor-tipo:var(--marca-txt)">
+      <div class="lancamento-cabecalho">
+        <span class="lancamento-cabecalho-icone">${icoCarne}</span>
+        <span class="lancamento-caption">Carnê</span>
+        <h2>${esc(g.base)}</h2>
+      </div>
+    </section>
+
+    <div class="contas-total">
+      <span>${g.abertas.length ? "Falta pagar" : "Carnê quitado"}</span>
+      <strong>${moeda(g.abertas.length ? g.falta : total)}</strong>
+      <small>${g.pagas} de ${g.parcelas.length} pag${g.pagas === 1 ? "a" : "as"} · total ${moeda(total)}</small>
+    </div>
+
+    <div id="carne-acoes">
+      <button class="botao-fraco" onclick="abrirEdicaoCarne('${esc(g.base).replace(/'/g, "\\'")}')">
+        ✏️ Editar o carnê
+      </button>
+      <button class="botao-fraco cartao-apagar" onclick="pedirExcluirCarne('${esc(g.base).replace(/'/g, "\\'")}')">
+        🗑️ Excluir o carnê
+      </button>
+    </div>
+
+    <div class="bloco" style="margin-top:14px"><div class="lista">${linhas}</div></div>
+
+    <button class="botao-fraco" onclick="voltarTela()">Voltar</button>
+  `;
+}
+
+/* ─── Excluir o carnê ───────────────────────────────────────────────── */
+
+function pedirExcluirCarne(base) {
+  const alvo = document.getElementById("carne-acoes");
+  const g = _carnePorBase(base);
+  if (!alvo || !g) return;
+
+  alvo.innerHTML = `
+    <div class="confirmar">
+      <p>Tem certeza que quer excluir o carnê "${esc(g.base)}"?
+         ${g.abertas.length === g.parcelas.length
+           ? `Os ${g.parcelas.length} boletos somem.`
+           : `Os ${g.abertas.length} boletos em aberto somem. ${g.pagas > 1 ? `Os ${g.pagas} já pagos ficam` : "O já pago fica"} no histórico — aquele dinheiro saiu de verdade.`}</p>
+      <div class="confirmar-acoes">
+        <button onclick="desenharCarne('${esc(base).replace(/'/g, "\\'")}')">Cancelar</button>
+        <button class="sim" onclick="excluirCarne(this, '${esc(base).replace(/'/g, "\\'")}')">Sim, excluir</button>
+      </div>
+    </div>`;
+}
+
+async function excluirCarne(botao, base) {
+  if (botao?.disabled) return;
+  const g = _carnePorBase(base);
+  if (!g) return;
+
+  // Só as EM ABERTO. Boleto pago é história: o dinheiro saiu, e apagar
+  // seria reescrever um mês que já aconteceu.
+  const ids = g.abertas.map(x => x.id);
+  if (!ids.length) { erro("Este carnê não tem boleto em aberto."); return; }
+
+  const solta = travar(botao, "Excluindo...");
+  const { error } = await sb.from("contas").delete().in("id", ids).eq("user_id", usuario.id);
+  if (error) { solta(); erro("Erro ao excluir: " + error.message); return; }
+
+  contas = contas.filter(c => !ids.includes(c.id));
+  ok(`${ids.length} boleto${ids.length > 1 ? "s" : ""} excluído${ids.length > 1 ? "s" : ""}.`);
+  abrirContas();
+  pilha.pop();   // não empilha a lista duas vezes
+}
+
+/* ─── Editar o carnê ────────────────────────────────────────────────── */
+
+function abrirEdicaoCarne(base) {
+  const g = _carnePorBase(base);
+  if (!g) { erro("Carnê não encontrado."); return; }
+
+  abrirTela(() => {
+    destruirGrafico();
+    const cats = categorias.filter(c => c.tipo === "saida");
+    const atual = g.abertas[0] || g.parcelas[0];
+    const icoTexto = `<svg viewBox="0 0 24 24" aria-hidden="true"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="16" y2="12"/><line x1="4" y1="17" x2="12" y2="17"/></svg>`;
+    const icoEtiqueta = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.6 13.4 12 22l-9-9V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>`;
+
+    document.getElementById("area").innerHTML = `
+      <section class="lancamento-tela" style="--cor-tipo:var(--marca-txt)">
+      <div class="lancamento-cabecalho">
+        <span class="lancamento-caption">Carnê</span>
+        <h2>Editar ${esc(g.base)}</h2>
+      </div>
+
+      <div class="lancamento-form">
+        <div class="campo">
+          <div class="campo-label">${icoTexto}<label for="ec-nome">Nome</label></div>
+          <input type="text" id="ec-nome" value="${esc(g.base)}" autocomplete="off">
+        </div>
+
+        <div class="campo">
+          <label for="ec-valor">Valor de cada boleto</label>
+          <div class="lancamento-valor">
+            <span>R$</span>
+            <input type="text" inputmode="decimal" id="ec-valor" value="${Number(atual.valor).toFixed(2).replace(".", ",")}">
+          </div>
+        </div>
+
+        <div class="campo">
+          <div class="campo-label">${icoEtiqueta}<label for="ec-cat">Categoria</label></div>
+          ${campoDeCategoria({ id: "ec-cat", tipo: "saida",
+                              opcoes: cats.length ? cats.map(c => c.nome) : ["Outros"],
+                              escolhida: atual.categoria || "" })}
+        </div>
+
+        <p class="cartao-dica">
+          Muda só os <b>${g.abertas.length} boleto${g.abertas.length > 1 ? "s" : ""} em aberto</b>.
+          ${g.pagas ? `${g.pagas > 1 ? `Os ${g.pagas} já pagos ficam` : "O já pago fica"} como está — o que saiu, saiu.` : ""}
+          As datas não mudam por aqui: pra mexer nelas, exclua o carnê e cadastre de novo.
+        </p>
+      </div>
+
+      <button class="botao" onclick="salvarEdicaoCarne(this, '${esc(g.base).replace(/'/g, "\\'")}')">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+        Salvar
+      </button>
+      <button class="botao-fraco lancamento-voltar" onclick="voltarTela()">Voltar</button>
+      </section>`;
+  });
+}
+
+async function salvarEdicaoCarne(botao, base) {
+  if (botao?.disabled) return;
+  const g = _carnePorBase(base);
+  if (!g) return;
+
+  const nome = (document.getElementById("ec-nome").value || "").trim();
+  const valor = parseMoedaBR(document.getElementById("ec-valor").value);
+  const categoria = document.getElementById("ec-cat").value;
+
+  if (!nome) { erro("Dê um nome ao carnê."); return; }
+  if (valor === null || valor <= 0) { erro("Informe um valor maior que zero."); return; }
+  if (!g.abertas.length) { erro("Este carnê não tem boleto em aberto."); return; }
+
+  const solta = travar(botao, "Salvando...");
+
+  // Uma ida por boleto: o nome carrega o "(i/n)", que é diferente em cada
+  // um, então não dá pra mandar um update só pra todos.
+  for (const x of g.abertas) {
+    const { error } = await sb.from("contas")
+      .update({ nome: `${nome} (${x.i}/${g.n})`, valor, categoria })
+      .eq("id", x.id).eq("user_id", usuario.id);
+    if (error) { solta(); erro("Erro ao salvar: " + error.message); return; }
+
+    const alvo = contas.find(c => c.id === x.id);
+    if (alvo) { alvo.nome = `${nome} (${x.i}/${g.n})`; alvo.valor = valor; alvo.categoria = categoria; }
+  }
+
+  ok("Carnê atualizado!");
+  voltarTela();
+  desenharCarne(nome);
 }
 
 function abrirNovaConta() {
