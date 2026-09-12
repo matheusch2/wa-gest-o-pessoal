@@ -61,18 +61,78 @@ function _vencimentoDaFatura(mesRef, diaFechamento, diaVencimento) {
   return mes + "-" + String(diaVencimento).padStart(2, "0");
 }
 
+// Quantos meses separam dois "AAAA-MM". Negativo se o segundo vier antes.
+function _diffMeses(de, ate) {
+  const [a1, m1] = de.split("-").map(Number);
+  const [a2, m2] = ate.split("-").map(Number);
+  return (a2 * 12 + m2) - (a1 * 12 + m1);
+}
+
+/* ═══ A ASSINATURA ════════════════════════════════════════════════════
+   Netflix, Spotify, academia, nuvem. A compra parcelada ACABA; a
+   assinatura não — ela entra em todas as faturas, todo mês, com o mesmo
+   valor, até alguém cancelar.
+
+   Daí duas diferenças que mudam a conta: o valor é o de CADA MÊS (não um
+   total dividido), e o mês da cobrança anda junto com a fatura. A
+   cobrança de novembro cai na fatura que fica a mesma distância da
+   primeira que novembro fica do mês da assinatura.
+
+   Cancelar não apaga: preenche 'fim' com o último mês cobrado. Apagar
+   reescreveria faturas já pagas, e aquele dinheiro saiu de verdade. */
+
+/* Esta compra é gasto DESTE mês do calendário?
+
+   Compra comum: só no mês em que foi feita — parcelada inclusive, porque
+   a decisão de gastar foi tomada ali inteira.
+
+   Assinatura: em TODOS os meses em que ela corre. Netflix contratada em
+   março sai do bolso em abril, maio e junho, e contá-la só em março faria
+   a meta de Lazer parecer folgada em todos os meses seguintes com o
+   dinheiro saindo do mesmo jeito.
+
+   Mora aqui, e não em cada tela, porque já são quatro os lugares que
+   fazem esta pergunta — Metas, Resumo, Relatórios e as reservas. Quatro
+   cópias da mesma regra é quatro chances de uma delas ficar pra trás. */
+function _compraNoMes(c, mesRef) {
+  if (!c.recorrente) return mesDe(c.data) === mesRef;
+  if (mesRef < mesDe(c.data)) return false;
+  return !c.fim || mesRef <= mesDe(c.fim);
+}
+
+// O mês de cobrança que cai numa fatura, ou null se a assinatura ainda
+// não tinha começado ou já tinha sido cancelada.
+function _cobrancaDaAssinatura(cartao, compra, mesRef) {
+  const inicio = _mesDaPrimeiraParcela(compra.data, cartao.dia_fechamento);
+  const k = _diffMeses(inicio, mesRef);
+  if (k < 0) return null;
+  const mesCobranca = _somaMes(mesDe(compra.data), k);
+  if (compra.fim && mesCobranca > mesDe(compra.fim)) return null;
+  return mesCobranca;
+}
+
 // Todas as parcelas que caem na fatura de um mês, com o número da parcela
 // ("2/6") pra pessoa saber quanto ainda falta daquela compra.
 function _parcelasDaFatura(cartao, mesRef) {
   const itens = [];
   for (const c of comprasCartao) {
     if (c.cartao_id !== cartao.id) continue;
+
+    if (c.recorrente) {
+      const mesCobranca = _cobrancaDaAssinatura(cartao, c, mesRef);
+      if (!mesCobranca) continue;
+      itens.push({ compra: c, tipo: "assinatura", mesCobranca,
+                   parcela: 0, totalParcelas: 0, valor: Number(c.valor) });
+      continue;
+    }
+
     const inicio = _mesDaPrimeiraParcela(c.data, cartao.dia_fechamento);
     const total = Number(c.parcelas) || 1;
     for (let n = 1; n <= total; n++) {
       if (_somaMes(inicio, n - 1) !== mesRef) continue;
       itens.push({
         compra: c,
+        tipo: total > 1 ? "parcelada" : "avista",
         parcela: n,
         totalParcelas: total,
         valor: Number(c.valor) / total,
@@ -304,44 +364,48 @@ function desenharCartao(id) {
   const aberta = mes === _mesFaturaAberta(c);
   const s = _situacaoFatura(c, mes);
 
-  /* PARCELADAS E À VISTA SÃO DUAS COISAS DIFERENTES NA MESMA FATURA.
+  /* TRÊS COISAS DIFERENTES NA MESMA FATURA.
      A parcela é dívida que já estava contratada — vem de uma decisão de
-     meses atrás e vai continuar vindo. A compra à vista é o que se gastou
-     AGORA, no mês. Misturadas, a fatura não responde a pergunta que
-     interessa: quanto dela eu ainda escolho, e quanto já está preso?
+     meses atrás e vai continuar vindo. A assinatura é dívida que se
+     renova sozinha: nunca acaba, mas some no dia em que você cancelar. A
+     compra à vista é o que se gastou AGORA, no mês. Misturadas, a fatura
+     não responde a pergunta que interessa: quanto dela eu ainda escolho,
+     e quanto já está preso?
 
-     Cada grupo com seu subtotal, e o cabeçalho só aparece quando existem
-     os dois — fatura só de parceladas não precisa de título pra dizer o
-     óbvio. É a mesma separação das Metas, com a mesma cara. */
-  const parceladas = itens.filter(i => i.totalParcelas > 1);
-  const aVista = itens.filter(i => i.totalParcelas === 1);
-  const separar = parceladas.length > 0 && aVista.length > 0;
+     Cada grupo com seu subtotal, e os cabeçalhos só aparecem quando
+     existe mais de um grupo — fatura só de parceladas não precisa de
+     título pra dizer o óbvio. É a mesma separação das Metas. */
+  const grupos = [
+    ["Parceladas",  itens.filter(i => i.tipo === "parcelada")],
+    ["Assinaturas", itens.filter(i => i.tipo === "assinatura")],
+    ["À vista",     itens.filter(i => i.tipo === "avista")],
+  ].filter(([, lista]) => lista.length);
+  const separar = grupos.length > 1;
 
-  // A pílula só existe no grupo das parceladas — e lá TODA linha tem uma,
-  // então elas caem naturalmente na mesma coluna. No grupo à vista não
-  // sobra coluna vazia nenhuma.
-  const umaCompra = (i, comParcela) => `
+  // A pílula só existe nas parceladas e nas assinaturas — e dentro de
+  // cada grupo TODA linha tem a sua, então elas caem naturalmente na
+  // mesma coluna. No grupo à vista não sobra coluna vazia nenhuma.
+  const umaCompra = i => `
     <div class="compra-item" id="compra-${i.compra.id}">
       <div class="compra-txt">
         <strong>${esc(i.compra.descricao)}</strong>
-        <small>${dataBR(i.compra.data)}${i.compra.categoria ? " · " + esc(i.compra.categoria) : ""}</small>
+        <small>${i.tipo === "assinatura"
+          ? soNomeDoMes(i.mesCobranca) + (i.compra.categoria ? " · " + esc(i.compra.categoria) : "")
+          : dataBR(i.compra.data) + (i.compra.categoria ? " · " + esc(i.compra.categoria) : "")}</small>
       </div>
-      ${comParcela ? `<span class="compra-parcela">${i.parcela}/${i.totalParcelas}</span>` : ""}
+      ${i.tipo === "parcelada" ? `<span class="compra-parcela">${i.parcela}/${i.totalParcelas}</span>` : ""}
+      ${i.tipo === "assinatura" ? `<span class="compra-parcela assina">🔁</span>` : ""}
       <span class="compra-valor">${moeda(i.valor)}</span>
       <button class="botao-editar botao-excluir" onclick="pedirExcluirCompra('${i.compra.id}', '${c.id}')" aria-label="Excluir">🗑️</button>
     </div>`;
 
-  const grupo = (titulo, lista, comParcela) => !lista.length ? "" : `
+  const linhas = grupos.map(([titulo, lista]) => `
     ${separar ? `
       <div class="compra-grupo">
         <h3>${titulo}</h3>
         <span>${moeda(lista.reduce((s, i) => s + i.valor, 0))}</span>
       </div>` : ""}
-    ${lista.map(i => umaCompra(i, comParcela)).join("")}`;
-
-  const linhas =
-    grupo("Parceladas", parceladas, true) +
-    grupo("À vista", aVista, false);
+    ${lista.map(umaCompra).join("")}`).join("");
 
   document.getElementById("area").innerHTML = `
     <div class="cartao-capa" style="background:${b.cor};color:${b.texto}">
@@ -463,7 +527,7 @@ function abrirNovaCompra(cartaoId) {
 
       <div class="lancamento-form">
         <div class="campo">
-          <label for="cp-valor">Valor total da compra</label>
+          <label for="cp-valor" id="cp-valor-rotulo">Valor da compra</label>
           <div class="lancamento-valor">
             <span>R$</span>
             <input type="text" inputmode="decimal" id="cp-valor" placeholder="0,00" autocomplete="off"
@@ -478,8 +542,8 @@ function abrirNovaCompra(cartaoId) {
 
         <div class="dois">
           <div class="campo lancamento-campo-data">
-            <div class="campo-label">${icoData}<label for="cp-data">Data</label></div>
-            <input type="date" id="cp-data" value="${_hojeLocal()}">
+            <div class="campo-label">${icoData}<label for="cp-data" id="cp-data-rotulo">Data</label></div>
+            <input type="date" id="cp-data" value="${_hojeLocal()}" onchange="_previaParcelas()">
           </div>
           <div class="campo">
             <div class="campo-label">${icoEtiqueta}<label for="cp-cat">Categoria</label></div>
@@ -488,11 +552,45 @@ function abrirNovaCompra(cartaoId) {
           </div>
         </div>
 
-        <div class="campo" style="margin-bottom:0">
-          <div class="campo-label">${icoParcela}<label for="cp-parcelas">Parcelas</label></div>
+        <!-- A ASSINATURA NÃO CABIA NO CAMPO "PARCELAS". Netflix não é 1x
+             nem 12x: ela não acaba. Cadastrada como à vista, sumia da
+             fatura do mês seguinte; cadastrada como 24x, cobrava um vinte
+             e quatro avos por mês e mentia duas vezes.
+
+             Então o campo virou escolha, no mesmo formato de Contas. -->
+        <div class="campo" style="margin:16px 0 0">
+          <div class="campo-label">${icoParcela}<label>Tipo de compra</label></div>
+          <div class="escolha">
+            <label class="escolha-op">
+              <input type="radio" name="cp-tipo" value="avista" checked onchange="_aoTrocarTipoCompra()">
+              <span>
+                <strong>💳 À vista</strong>
+                <small>Uma cobrança só, na próxima fatura.</small>
+              </span>
+            </label>
+            <label class="escolha-op">
+              <input type="radio" name="cp-tipo" value="parcelado" onchange="_aoTrocarTipoCompra()">
+              <span>
+                <strong>🧾 Parcelado</strong>
+                <small>Tem fim — some da fatura quando a última parcela cair.</small>
+              </span>
+            </label>
+            <label class="escolha-op">
+              <input type="radio" name="cp-tipo" value="assinatura" onchange="_aoTrocarTipoCompra()">
+              <span>
+                <strong>🔁 Assinatura</strong>
+                <small>Não acaba — Netflix, Spotify, academia, nuvem. Entra
+                       em todas as faturas, todo mês, até você cancelar.</small>
+              </span>
+            </label>
+          </div>
+        </div>
+
+        <div class="campo" id="cp-caixa-parcelas" hidden>
+          <div class="campo-label">${icoParcela}<label for="cp-parcelas">Em quantas vezes</label></div>
           <select id="cp-parcelas" onchange="_previaParcelas()">
             ${Array.from({ length: 24 }, (_, i) => i + 1)
-              .map(n => `<option value="${n}">${n}x</option>`).join("")}
+              .map(n => `<option value="${n}"${n === 2 ? " selected" : ""}>${n}x</option>`).join("")}
           </select>
         </div>
 
@@ -501,15 +599,40 @@ function abrirNovaCompra(cartaoId) {
 
       <button class="botao saida" onclick="salvarCompra(this, '${c.id}', '${chave}')">
         <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-        Lançar compra
+        <span id="cp-botao-txt">Lançar compra</span>
       </button>
       <button class="botao-fraco lancamento-voltar" onclick="voltarTela()">Voltar</button>
       </section>`;
 
-    _previaParcelas();
+    _aoTrocarTipoCompra();
     // Sem foco automático: no celular ele abre o teclado sozinho e come
     // metade da tela antes de a pessoa ter lido o formulário.
   });
+}
+
+function _tipoDaCompra() {
+  return document.querySelector('input[name="cp-tipo"]:checked')?.value || "avista";
+}
+
+function _aoTrocarTipoCompra() {
+  const tipo = _tipoDaCompra();
+  const caixa = document.getElementById("cp-caixa-parcelas");
+  if (caixa) caixa.hidden = tipo !== "parcelado";
+
+  // Os rótulos mudam com o tipo porque os campos mudam de significado.
+  // "Valor" numa assinatura é por mês; "Data" nela é quando a cobrança
+  // começa, não quando alguém comprou alguma coisa. Deixar os mesmos
+  // rótulos pros três casos é onde nasce o valor digitado errado.
+  const rotulo = document.getElementById("cp-valor-rotulo");
+  if (rotulo) rotulo.textContent = tipo === "assinatura" ? "Valor por mês" : "Valor da compra";
+
+  const rotuloData = document.getElementById("cp-data-rotulo");
+  if (rotuloData) rotuloData.textContent = tipo === "assinatura" ? "Começa em" : "Data";
+
+  const botao = document.getElementById("cp-botao-txt");
+  if (botao) botao.textContent = tipo === "assinatura" ? "Salvar assinatura" : "Lançar compra";
+
+  _previaParcelas();
 }
 
 // "3x de R$ 400,00" enquanto a pessoa digita: parcelar é a decisão que ela
@@ -517,9 +640,20 @@ function abrirNovaCompra(cartaoId) {
 function _previaParcelas() {
   const alvo = document.getElementById("cp-previa");
   if (!alvo) return;
+
+  const tipo = _tipoDaCompra();
   const total = parseMoedaBR(document.getElementById("cp-valor")?.value);
-  const n = Number(document.getElementById("cp-parcelas")?.value) || 1;
+  const n = tipo === "parcelado" ? (Number(document.getElementById("cp-parcelas")?.value) || 1) : 1;
+
   if (!total || total <= 0) { alvo.textContent = ""; return; }
+
+  if (tipo === "assinatura") {
+    // O ano inteiro, com todas as letras. É o número que ninguém faz de
+    // cabeça e é o que muda a decisão: R$ 39,90 por mês é R$ 478,80 por ano.
+    alvo.textContent = `${moeda(total)} em toda fatura — ${moeda(total * 12)} por ano.`;
+    return;
+  }
+
   alvo.textContent = n === 1
     ? `À vista: ${moeda(total)}`
     : `${n}x de ${moeda(total / n)} — total ${moeda(total)}`;
@@ -528,20 +662,24 @@ function _previaParcelas() {
 async function salvarCompra(botao, cartaoId, chave) {
   if (botao?.disabled) return;
 
+  const tipo = _tipoDaCompra();
+  const assinatura = tipo === "assinatura";
   const valor = parseMoedaBR(document.getElementById("cp-valor").value);
   const descricao = (document.getElementById("cp-desc").value || "").trim();
   const data = document.getElementById("cp-data").value;
   const categoria = document.getElementById("cp-cat").value;
-  const parcelas = Number(document.getElementById("cp-parcelas").value) || 1;
+  const parcelas = tipo === "parcelado" ? (Number(document.getElementById("cp-parcelas").value) || 1) : 1;
 
   if (valor === null || valor <= 0) { erro("Informe um valor maior que zero."); return; }
-  if (!descricao) { erro("Diga o que foi a compra."); return; }
-  if (!data) { erro("Escolha a data."); return; }
+  if (!descricao) { erro(assinatura ? "Diga qual é a assinatura." : "Diga o que foi a compra."); return; }
+  if (!data) { erro(assinatura ? "Escolha quando ela começa." : "Escolha a data."); return; }
 
   const solta = travar(botao, "Salvando...");
   const { data: nova, error } = await sb.from("compras_cartao").insert({
     user_id: usuario.id, cartao_id: cartaoId,
-    descricao, valor, parcelas, data, categoria, chave_envio: chave,
+    descricao, valor, parcelas, data, categoria,
+    recorrente: assinatura, fim: null,
+    chave_envio: chave,
   }).select().single();
 
   if (error) {
@@ -552,7 +690,7 @@ async function salvarCompra(botao, cartaoId, chave) {
   }
 
   comprasCartao.push(nova);
-  ok(parcelas > 1 ? `Compra em ${parcelas}x lançada!` : "Compra lançada!");
+  ok(assinatura ? "Assinatura salva!" : parcelas > 1 ? `Compra em ${parcelas}x lançada!` : "Compra lançada!");
   voltarTela();
 }
 
@@ -566,6 +704,45 @@ function pedirExcluirCompra(id, cartaoId) {
   const linha = document.getElementById("compra-" + id);
   const c = comprasCartao.find(x => x.id === id);
   if (!linha || !c) return;
+
+  /* A ASSINATURA TEM DUAS SAÍDAS, E ELAS NÃO SÃO A MESMA COISA.
+
+     CANCELAR é o que acontece na vida real: você para de pagar hoje, e os
+     meses em que pagou continuam tendo sido pagos. As faturas que já
+     fecharam não mudam uma vírgula — inclusive as que você já quitou.
+
+     EXCLUIR é dizer "isto nunca existiu": some de todas as faturas, para
+     trás inclusive. Só serve pra erro de digitação, e por isso vem em
+     segundo, com o aviso do que ele desfaz.
+
+     Oferecer só o excluir era o caminho pra reescrever seis meses de
+     fatura paga por causa de uma Netflix cancelada ontem. */
+  if (c.recorrente) {
+    const cartao = cartoes.find(x => x.id === cartaoId);
+    const paraEm = cartao ? _mesFaturaAberta(cartao) : mesDe(_hojeLocal());
+    const jaParou = c.fim && mesDe(c.fim) < mesDe(_hojeLocal());
+
+    linha.innerHTML = `
+      <div class="confirmar" style="width:100%">
+        <p>${jaParou
+          ? `"${esc(c.descricao)}" já está cancelada desde ${soNomeDoMes(mesDe(c.fim))}.`
+          : `Cancelar "${esc(c.descricao)}"? Ela para de entrar a partir da fatura de
+             ${soNomeDoMes(paraEm)}. As faturas anteriores não mudam — aquele
+             dinheiro saiu de verdade.`}</p>
+        <div class="confirmar-acoes">
+          <button onclick="desenharCartao('${cartaoId}')">Voltar</button>
+          ${jaParou ? "" : `
+            <button class="sim neutro" onclick="cancelarAssinatura(this, '${id}', '${cartaoId}')">
+              Sim, cancelar
+            </button>`}
+        </div>
+        <button class="assina-apagar" onclick="pedirApagarAssinatura('${id}', '${cartaoId}')">
+          Lancei errado? Excluir de todas as faturas
+        </button>
+      </div>`;
+    return;
+  }
+
   const n = Number(c.parcelas) || 1;
   linha.innerHTML = `
     <div class="confirmar" style="width:100%">
@@ -575,6 +752,61 @@ function pedirExcluirCompra(id, cartaoId) {
         <button class="sim" onclick="excluirCompra(this, '${id}', '${cartaoId}')">Sim, excluir</button>
       </div>
     </div>`;
+}
+
+function pedirApagarAssinatura(id, cartaoId) {
+  const linha = document.getElementById("compra-" + id);
+  const c = comprasCartao.find(x => x.id === id);
+  if (!linha || !c) return;
+
+  const cartao = cartoes.find(x => x.id === cartaoId);
+  const meses = cartao
+    ? _mesesComFatura(cartao).filter(m => _cobrancaDaAssinatura(cartao, c, m)).length
+    : 0;
+
+  linha.innerHTML = `
+    <div class="confirmar" style="width:100%">
+      <p>Excluir "${esc(c.descricao)}" de vez? Ela sai${meses > 1
+        ? ` das ${meses} faturas em que aparece, inclusive as que você já pagou`
+        : " da fatura em que aparece"}. Se você só parou de assinar, o certo é cancelar.</p>
+      <div class="confirmar-acoes">
+        <button onclick="pedirExcluirCompra('${id}', '${cartaoId}')">Voltar</button>
+        <button class="sim" onclick="excluirCompra(this, '${id}', '${cartaoId}')">Sim, excluir</button>
+      </div>
+    </div>`;
+}
+
+// Cancelar = preencher o último mês cobrado, não apagar a linha. O último
+// mês cobrado é o da fatura ANTERIOR à que ainda está aberta: a aberta é
+// onde a cobrança de agora cairia, e é dela pra frente que ela não vem
+// mais.
+async function cancelarAssinatura(botao, id, cartaoId) {
+  if (botao?.disabled) return;
+  const c = comprasCartao.find(x => x.id === id);
+  const cartao = cartoes.find(x => x.id === cartaoId);
+  if (!c || !cartao) return;
+
+  const faturaAberta = _mesFaturaAberta(cartao);
+  const ultimaFatura = _somaMes(faturaAberta, -1);
+  const inicioFatura = _mesDaPrimeiraParcela(c.data, cartao.dia_fechamento);
+
+  // Cancelada antes mesmo da primeira cobrança: não sobrou mês nenhum, e
+  // aí cancelar e excluir dão no mesmo. Some inteira.
+  if (ultimaFatura < inicioFatura) { excluirCompra(botao, id, cartaoId); return; }
+
+  const ultimoMes = _somaMes(mesDe(c.data), _diffMeses(inicioFatura, ultimaFatura));
+  const solta = travar(botao, "Cancelando...");
+
+  const { data, error } = await sb.from("compras_cartao")
+    .update({ fim: ultimoMes + "-01" })
+    .eq("id", id).eq("user_id", usuario.id)
+    .select().single();
+
+  if (error) { solta(); erro("Erro ao cancelar: " + error.message); return; }
+
+  comprasCartao = comprasCartao.map(x => (x.id === id ? data : x));
+  ok(`Assinatura cancelada. Ela não entra mais a partir de ${soNomeDoMes(faturaAberta)}.`);
+  desenharCartao(cartaoId);
 }
 
 async function excluirCompra(botao, id, cartaoId) {
@@ -661,6 +893,20 @@ function _mesesComFatura(cartao) {
   for (const c of comprasCartao) {
     if (c.cartao_id !== cartao.id) continue;
     const inicio = _mesDaPrimeiraParcela(c.data, cartao.dia_fechamento);
+
+    // A ASSINATURA NÃO TEM FIM, e esta lista tem que ter. Ela vai até a
+    // fatura que ainda está aberta — daí pra frente é fatura que ainda
+    // não existe, e quem pergunta por elas (as faturas de antes, a que
+    // abre ao tocar no cartão) só quer saber das que já existem. Sem este
+    // teto, o laço não pararia nunca.
+    if (c.recorrente) {
+      const fim = c.fim
+        ? _somaMes(inicio, _diffMeses(mesDe(c.data), mesDe(c.fim)))
+        : _mesFaturaAberta(cartao);
+      for (let m = inicio; m <= fim; m = _somaMes(m, 1)) meses.add(m);
+      continue;
+    }
+
     const total = Number(c.parcelas) || 1;
     for (let n = 0; n < total; n++) meses.add(_somaMes(inicio, n));
   }

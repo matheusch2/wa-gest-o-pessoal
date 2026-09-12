@@ -1017,6 +1017,25 @@ body.escuro .login-titulo { color: var(--marca-txt); }
    não assustar quem está fazendo o certo. */
 .confirmar-acoes .sim.neutro { background: var(--marca); border-color: var(--marca); }
 
+/* Cancelar e excluir não são a mesma coisa, e a diferença importa: uma
+   respeita as faturas já pagas, a outra as reescreve. Por isso o excluir
+   não fica ao lado do cancelar como um irmão — ele desce, apagado, num
+   segundo toque, pra quem realmente lançou errado. */
+.assina-apagar {
+  display: block;
+  width: 100%;
+  margin: 10px 0 0;
+  padding: 7px 8px;
+  border: none;
+  background: none;
+  color: var(--fraco);
+  font-family: inherit;
+  font-size: 11.5px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.assina-apagar:active { color: var(--saida); }
+
 /* ─── 15. TELA GRANDE ───────────────────────────────────────────────────── */
 
 /* No computador o app continua sendo um app: coluna estreita e centrada,
@@ -1418,6 +1437,16 @@ body.escuro .resumo-secao .item-icone.entrada { background: #17372d; }
   padding: 2px 4px; border-radius: 999px;
   background: var(--marca-cl); color: var(--marca-txt);
   font-variant-numeric: tabular-nums;
+}
+
+/* A assinatura ocupa a MESMA coluna da parcela, com a mesma largura: são
+   dois jeitos de responder "de onde vem esta linha", e um embaixo do
+   outro eles se leem de uma passada só. O dourado a separa do "3/12" sem
+   precisar de legenda. */
+.compra-parcela.assina {
+  background: color-mix(in srgb, var(--dourado) 18%, transparent);
+  color: var(--dourado);
+  font-size: 12px;
 }
 
 /* Mesma história do outro lado: o valor manda na posição de tudo que vem

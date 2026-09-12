@@ -115,7 +115,7 @@ const _vlr = v => moeda(v).replace(" ", "\u00A0");
 // nada" — isso baixaria a média e viraria alerta em cima do vazio.
 function _temMovimento(mesRef) {
   return lancamentos.some(l => mesDe(l.data) === mesRef)
-      || comprasCartao.some(c => mesDe(c.data) === mesRef);
+      || comprasCartao.some(c => _compraNoMes(c, mesRef));
 }
 
 // Os N meses com movimento ANTES de mesRef, do mais antigo pro mais novo.

@@ -264,7 +264,7 @@ function _cardsDeNumero(entradas, saidas) {
 
 function _blocoComprasDoCartao() {
   const compras = comprasCartao
-    .filter(c => mesDe(c.data) === mesAtual)
+    .filter(c => _compraNoMes(c, mesAtual))
     .sort((a, b) => String(b.data).localeCompare(String(a.data)));
   if (!compras.length) return "";
 
@@ -283,8 +283,9 @@ function _blocoComprasDoCartao() {
             <div class="item-icone saida">💳</div>
             <div class="item-txt">
               <strong>${esc(c.descricao)}</strong>
-              <small>${esc(nomeDoCartao(c.cartao_id))} · ${dataBR(c.data)}${
-                Number(c.parcelas) > 1 ? ` · ${c.parcelas}x` : ""}</small>
+              <small>${esc(nomeDoCartao(c.cartao_id))} · ${c.recorrente
+                ? "assinatura 🔁"
+                : dataBR(c.data) + (Number(c.parcelas) > 1 ? ` · ${c.parcelas}x` : "")}</small>
             </div>
             <span class="item-valor saida">${moeda(c.valor)}</span>
           </div>`).join("")}

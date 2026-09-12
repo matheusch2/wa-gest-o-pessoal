@@ -139,6 +139,23 @@ create table if not exists compras_cartao (
 create unique index if not exists compras_cartao_chave_envio_key on compras_cartao (chave_envio);
 create index if not exists compras_cartao_cartao_idx on compras_cartao (cartao_id, data);
 
+-- ─── ASSINATURA ───────────────────────────────────────────────────────
+-- Netflix, Spotify, academia, nuvem. Não é compra à vista nem parcelada:
+-- a parcelada ACABA, a assinatura não. Ela entra em todas as faturas,
+-- todo mês, com o mesmo valor, até alguém cancelar.
+--
+-- Por isso o 'valor' dela é o valor POR MÊS, e não o total — total de uma
+-- coisa sem fim não existe. E por isso 'parcelas' não quer dizer nada
+-- aqui: fica 1 e ninguém olha.
+--
+-- 'fim' é o ÚLTIMO MÊS COBRADO, guardado como o dia 1º desse mês. Nulo
+-- quer dizer que ela ainda está correndo. Cancelar preenche este campo em
+-- vez de apagar a linha — apagar rescreveria faturas que já foram pagas,
+-- e aquele dinheiro saiu de verdade. Quem cancela a Netflix hoje não
+-- deixou de pagá-la nos seis meses anteriores.
+alter table compras_cartao add column if not exists recorrente boolean not null default false;
+alter table compras_cartao add column if not exists fim date;
+
 alter table compras_cartao enable row level security;
 
 create policy "cada um vê só as próprias compras"

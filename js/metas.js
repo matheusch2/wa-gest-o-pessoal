@@ -35,8 +35,10 @@ function _gastoDoMesPorCategoria(mesRef) {
     if (daFatura.has(l.id)) continue;
     somar(l.categoria, l.valor);
   }
+  // _compraNoMes mora em cartoes.js: é ela que sabe que a assinatura é
+  // gasto em todos os meses em que corre, e não só no da contratação.
   for (const c of comprasCartao) {
-    if (mesDe(c.data) !== mesRef) continue;
+    if (!_compraNoMes(c, mesRef)) continue;
     somar(c.categoria, c.valor);
   }
   return porCat;
