@@ -202,6 +202,7 @@ function abrirNovaConta() {
     const icoData = icoConta;
     const icoEtiqueta = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.6 13.4 12 22l-9-9V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>`;
     const icoTipo = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>`;
+    const icoParcelas = `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="4" width="22" height="16" rx="3"/><line x1="1" y1="10" x2="23" y2="10"/><line x1="5" y1="15" x2="9" y2="15"/></svg>`;
 
     document.getElementById("area").innerHTML = `
       <section class="lancamento-tela" style="--cor-tipo:var(--marca-txt)">
@@ -218,17 +219,17 @@ function abrirNovaConta() {
         </div>
 
         <div class="campo">
-          <label for="ct-valor">Valor</label>
+          <label for="ct-valor" id="ct-valor-rotulo">Valor</label>
           <div class="lancamento-valor">
             <span>R$</span>
-            <input type="text" inputmode="decimal" id="ct-valor" placeholder="0,00" autocomplete="off">
+            <input type="text" inputmode="decimal" id="ct-valor" placeholder="0,00" autocomplete="off" oninput="_previaBoletos()">
           </div>
         </div>
 
         <div class="dois">
           <div class="campo lancamento-campo-data">
             <div class="campo-label">${icoData}<label for="ct-venc">Vencimento</label></div>
-            <input type="date" id="ct-venc" value="${_hojeLocal()}">
+            <input type="date" id="ct-venc" value="${_hojeLocal()}" onchange="_previaBoletos()">
           </div>
           <div class="campo">
             <div class="campo-label">${icoEtiqueta}<label for="ct-cat">Categoria</label></div>
@@ -247,7 +248,7 @@ function abrirNovaConta() {
           <div class="campo-label">${icoTipo}<label>Tipo de conta</label></div>
           <div class="escolha">
             <label class="escolha-op">
-              <input type="radio" name="ct-tipo" value="fixa" checked>
+              <input type="radio" name="ct-tipo" value="fixa" checked onchange="_aoTrocarTipoConta()">
               <span>
                 <strong>🔁 Conta fixa</strong>
                 <small>Chega todo mês — aluguel, internet, energia, água.
@@ -255,14 +256,29 @@ function abrirNovaConta() {
               </span>
             </label>
             <label class="escolha-op">
-              <input type="radio" name="ct-tipo" value="boleto">
+              <input type="radio" name="ct-tipo" value="boleto" onchange="_aoTrocarTipoConta()">
               <span>
-                <strong>📄 Boleto ou conta avulsa</strong>
-                <small>Vence uma vez e acabou — IPTU, uma parcela, um conserto.
-                       Some da lista depois de paga.</small>
+                <strong>📄 Boleto ou carnê</strong>
+                <small>Tem fim — IPTU, um conserto, uma compra parcelada.
+                       Pode ser um boleto só ou um carnê de vários.</small>
               </span>
             </label>
           </div>
+        </div>
+
+        <!-- Carnê é boleto parcelado, e é o caso comum: 6x, 10x, 12x. Cada
+             parcela vira uma conta com seu próprio vencimento, um mês depois
+             da outra — porque é assim que elas chegam pra pagar.
+
+             A conta FIXA não tem esse campo: ela já repete pra sempre, e
+             perguntar "quantas vezes" pra algo sem fim não quer dizer nada. -->
+        <div class="campo" id="ct-caixa-parcelas" hidden>
+          <div class="campo-label">${icoParcelas}<label for="ct-parcelas">Quantos boletos</label></div>
+          <select id="ct-parcelas" onchange="_previaBoletos()">
+            ${Array.from({ length: 36 }, (_, i) => i + 1)
+              .map(n => `<option value="${n}">${n === 1 ? "Um boleto só" : n + " boletos"}</option>`).join("")}
+          </select>
+          <p class="cartao-dica" id="ct-previa" style="margin-top:7px"></p>
         </div>
       </div>
 
@@ -277,6 +293,58 @@ function abrirNovaConta() {
   });
 }
 
+/* ─── O CARNÊ ─────────────────────────────────────────────────────────
+   Boleto parcelado é o caso comum, não a exceção: a compra em 6x, o IPTU
+   em 10, o carnê da loja em 12. Cada parcela é uma conta com seu próprio
+   vencimento, um mês depois da outra — porque é exatamente assim que elas
+   chegam pra pagar, uma por vez.
+
+   O VALOR AQUI É O DA PARCELA, e não o total. Dois motivos: o carnê chega
+   com o valor de cada boleto impresso, então é o número que a pessoa tem
+   na mão; e dividir um total por 7 dá 85,714... — as parcelas não fechariam
+   com o total, e faltariam centavos que ninguém sabe de onde vieram.
+
+   Elas NÃO são recorrentes. Recorrente é o que não acaba; carnê acaba, e
+   por isso não aparece na aba de fixos. */
+
+function _aoTrocarTipoConta() {
+  const boleto = document.querySelector('input[name="ct-tipo"]:checked')?.value === "boleto";
+  const caixa = document.getElementById("ct-caixa-parcelas");
+  if (caixa) caixa.hidden = !boleto;
+  if (!boleto) {
+    const sel = document.getElementById("ct-parcelas");
+    if (sel) sel.value = "1";
+  }
+  _previaBoletos();
+}
+
+function _previaBoletos() {
+  const alvo = document.getElementById("ct-previa");
+  const rotulo = document.getElementById("ct-valor-rotulo");
+  if (!alvo) return;
+
+  const boleto = document.querySelector('input[name="ct-tipo"]:checked')?.value === "boleto";
+  const n = boleto ? (Number(document.getElementById("ct-parcelas")?.value) || 1) : 1;
+  const valor = parseMoedaBR(document.getElementById("ct-valor")?.value);
+
+  // O rótulo do valor diz o que se está digitando. Sem isso, "Valor" num
+  // carnê de 6x é ambíguo: total ou parcela?
+  if (rotulo) rotulo.textContent = n > 1 ? "Valor de cada boleto" : "Valor";
+
+  if (n < 2 || !valor || valor <= 0) { alvo.textContent = ""; return; }
+  const venc = document.getElementById("ct-venc")?.value;
+  const ultimo = venc ? _vencimentoDaParcela(venc, n - 1) : null;
+  alvo.textContent = `${n} boletos de ${moeda(valor)} — total ${moeda(valor * n)}`
+    + (ultimo ? `, o último em ${dataBR(ultimo)}` : "");
+}
+
+// O vencimento da parcela de índice i (0 = a primeira), mês a mês.
+function _vencimentoDaParcela(primeiro, i) {
+  let d = primeiro;
+  for (let k = 0; k < i; k++) d = proximoMesMesmoDia(d);
+  return d;
+}
+
 async function salvarConta(botao, chave) {
   if (botao?.disabled) return;
   const nome = (document.getElementById("ct-nome").value || "").trim();
@@ -284,15 +352,26 @@ async function salvarConta(botao, chave) {
   const vencimento = document.getElementById("ct-venc").value;
   const categoria = document.getElementById("ct-cat").value;
   const recorrente = document.querySelector('input[name="ct-tipo"]:checked').value === "fixa";
+  const parcelas = recorrente ? 1 : (Number(document.getElementById("ct-parcelas")?.value) || 1);
 
   if (!nome) { erro("Dê um nome à conta."); return; }
   if (valor === null || valor <= 0) { erro("Informe um valor maior que zero."); return; }
   if (!vencimento) { erro("Escolha o vencimento."); return; }
 
   const solta = travar(botao, "Salvando...");
-  const { data, error } = await sb.from("contas").insert({
-    user_id: usuario.id, nome, valor, vencimento, categoria, recorrente, chave_envio: chave,
-  }).select().single();
+
+  // Uma linha por boleto, num envio só: ou entram todas ou não entra
+  // nenhuma. Meio carnê cadastrado seria pior que nenhum.
+  const linhas = Array.from({ length: parcelas }, (_, i) => ({
+    user_id: usuario.id,
+    nome: parcelas > 1 ? `${nome} (${i + 1}/${parcelas})` : nome,
+    valor,
+    vencimento: _vencimentoDaParcela(vencimento, i),
+    categoria, recorrente,
+    chave_envio: parcelas > 1 ? `${chave}-${i + 1}` : chave,
+  }));
+
+  const { data, error } = await sb.from("contas").insert(linhas).select();
 
   if (error) {
     solta();
@@ -301,8 +380,8 @@ async function salvarConta(botao, chave) {
     return;
   }
 
-  contas.push(data);
-  ok("Conta cadastrada!");
+  contas.push(...(data || []));
+  ok(parcelas > 1 ? `${parcelas} boletos cadastrados!` : "Conta cadastrada!");
   voltarTela();
 }
 
