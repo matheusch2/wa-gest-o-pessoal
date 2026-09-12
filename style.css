@@ -463,24 +463,6 @@ body.escuro .item.vencida { border-color: #5c2d3d; background: #331d24; }
 .conta-item.paga .conta-valor { color: var(--fraco); }
 .conta-item.paga .conta-ico { background: color-mix(in srgb, var(--entrada) 12%, transparent); }
 
-/* "Repete todo mês": a caixa de marcar inteira é área de toque, senão o
-   alvo vira um quadradinho de 16px no meio do formulário. */
-.conta-repete {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 14px;
-  padding: 12px 13px;
-  background: var(--papel);
-  border: 1.5px solid var(--borda);
-  border-radius: 12px;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--texto);
-  cursor: pointer;
-}
-.conta-repete input { width: 20px !important; height: 20px !important; min-width: 20px; margin: 0; accent-color: var(--marca); }
-
 /* Abas no desenho das abas de boletos do WA Aqua: dividem a largura por
    igual e a ativa se marca por cor e sublinhado. */
 .contas-abas {

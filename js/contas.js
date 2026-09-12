@@ -98,7 +98,7 @@ function desenharContas() {
     { id: "vencendo", rotulo: "Vencendo", itens: vencendo, vazio: "Nada vencendo nos próximos dias." },
     { id: "vencidos", rotulo: "Vencidos", itens: vencidas, vazio: "Nenhuma conta vencida. 🎉" },
     { id: "pagos", rotulo: "Pagos", itens: pagas, vazio: "Nenhuma conta paga ainda." },
-    { id: "fixos", rotulo: "Fixos", itens: fixos, vazio: "Nenhum gasto fixo ainda. Marque \"Repete todo mês\" ao criar uma conta." },
+    { id: "fixos", rotulo: "Fixos", itens: fixos, vazio: "Nenhuma conta fixa ainda. Ao criar uma conta, escolha \"Conta fixa\"." },
   ];
   const abaAtual = abas.find(a => a.id === _contasFiltro) || abas[0];
 
@@ -201,6 +201,7 @@ function abrirNovaConta() {
     const icoTexto = `<svg viewBox="0 0 24 24" aria-hidden="true"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="16" y2="12"/><line x1="4" y1="17" x2="12" y2="17"/></svg>`;
     const icoData = icoConta;
     const icoEtiqueta = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.6 13.4 12 22l-9-9V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>`;
+    const icoTipo = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>`;
 
     document.getElementById("area").innerHTML = `
       <section class="lancamento-tela" style="--cor-tipo:var(--marca-txt)">
@@ -236,10 +237,33 @@ function abrirNovaConta() {
           </div>
         </div>
 
-        <label class="conta-repete">
-          <input type="checkbox" id="ct-rec">
-          <span>🔁 Repete todo mês</span>
-        </label>
+        <!-- Os dois tipos já existiam, mas escondidos num "repete todo mês"
+             sem nome: quem ia cadastrar um boleto não via o boleto em lugar
+             nenhum, e quem ia cadastrar o aluguel tinha que adivinhar que a
+             caixinha era isso. Escolha com nome e explicação, no mesmo
+             formato das Metas. Por baixo continua sendo o mesmo recorrente
+             de sempre — nada mudou no banco. -->
+        <div class="campo" style="margin:16px 0 0">
+          <div class="campo-label">${icoTipo}<label>Tipo de conta</label></div>
+          <div class="escolha">
+            <label class="escolha-op">
+              <input type="radio" name="ct-tipo" value="fixa" checked>
+              <span>
+                <strong>🔁 Conta fixa</strong>
+                <small>Chega todo mês — aluguel, internet, energia, água.
+                       Paga uma, o app já prepara a do mês seguinte.</small>
+              </span>
+            </label>
+            <label class="escolha-op">
+              <input type="radio" name="ct-tipo" value="boleto">
+              <span>
+                <strong>📄 Boleto ou conta avulsa</strong>
+                <small>Vence uma vez e acabou — IPTU, uma parcela, um conserto.
+                       Some da lista depois de paga.</small>
+              </span>
+            </label>
+          </div>
+        </div>
       </div>
 
       <button class="botao" onclick="salvarConta(this, '${chave}')">
@@ -259,7 +283,7 @@ async function salvarConta(botao, chave) {
   const valor = parseMoedaBR(document.getElementById("ct-valor").value);
   const vencimento = document.getElementById("ct-venc").value;
   const categoria = document.getElementById("ct-cat").value;
-  const recorrente = document.getElementById("ct-rec").checked;
+  const recorrente = document.querySelector('input[name="ct-tipo"]:checked').value === "fixa";
 
   if (!nome) { erro("Dê um nome à conta."); return; }
   if (valor === null || valor <= 0) { erro("Informe um valor maior que zero."); return; }
