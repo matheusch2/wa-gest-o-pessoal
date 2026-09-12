@@ -153,25 +153,7 @@ function desenharResumo(filtro) {
             <h2>Ainda vai sair</h2>
             <strong class="resumo-total-saida">${moeda(reservas.total)}</strong>
           </div>
-          <div class="lista">
-            ${reservas.linhas.map(r => `
-              <div class="item reserva-item"
-                   onclick="${r.tipo === "conta" ? "abrirContas()" : "abrirMetas()"}" style="cursor:pointer">
-                <div class="item-icone">${r.tipo === "conta" ? "📄" : iconeDoLancamento({ tipo: "saida", categoria: r.categoria })}</div>
-                <div class="item-txt">
-                  <strong>${esc(r.nome)}</strong>
-                  <small>${r.tipo === "conta"
-                    ? "Vence " + dataBR(r.vencimento)
-                    : r.gasto > 0
-                      // "gastos", e não "saíram": parte pode ter ido no
-                      // cartão e ainda não ter tocado a conta. Gastado,
-                      // está — que é o que a meta mede.
-                      ? `${moeda(r.gasto)} de ${moeda(r.previsto)} já gastos`
-                      : `Previsto ${moeda(r.previsto)} no mês`}</small>
-                </div>
-                <span class="item-valor saida">${moeda(r.falta)}</span>
-              </div>`).join("")}
-          </div>
+          <div class="lista">${reservas.linhas.map(_linhaReserva).join("")}</div>
         </div>` : ""}
 
       <div class="bloco resumo-secao">
@@ -207,6 +189,41 @@ function desenharResumo(filtro) {
   `;
 
   if (ranking.length) setTimeout(() => desenharGraficoCategorias(ranking), 0);
+}
+
+/* Uma linha do "Ainda vai sair". São três origens — conta, fatura e meta
+   — e cada uma leva pra tela de onde veio: quem toca na fatura quer ver a
+   fatura, não a lista de contas. */
+function _linhaReserva(r) {
+  const cara = {
+    conta:  { icone: "📄", acao: "abrirContas()" },
+    fatura: { icone: "💳", acao: `abrirCartao('${r.cartaoId}')` },
+    meta:   { icone: iconeDoLancamento({ tipo: "saida", categoria: r.categoria }), acao: "abrirMetas()" },
+  }[r.tipo];
+
+  const detalhe =
+    r.tipo === "conta" ? "Vence " + dataBR(r.vencimento)
+    : r.tipo === "fatura"
+      // Fatura paga pela metade mostra a metade que falta, com o total do
+      // lado: o número da direita ficaria menor que a fatura sem explicação.
+      ? (r.gasto > 0
+          ? `${moeda(r.gasto)} de ${moeda(r.previsto)} já pagos`
+          : "Vence " + dataBR(r.vencimento))
+      : r.gasto > 0
+        // "gastos", e não "saíram": parte pode ter ido no cartão e ainda
+        // não ter tocado a conta. Gastado, está — que é o que a meta mede.
+        ? `${moeda(r.gasto)} de ${moeda(r.previsto)} já gastos`
+        : `Previsto ${moeda(r.previsto)} no mês`;
+
+  return `
+    <div class="item reserva-item" onclick="${cara.acao}" style="cursor:pointer">
+      <div class="item-icone">${cara.icone}</div>
+      <div class="item-txt">
+        <strong>${esc(r.nome)}</strong>
+        <small>${detalhe}</small>
+      </div>
+      <span class="item-valor saida">${moeda(r.falta)}</span>
+    </div>`;
 }
 
 function trocarMes(passo) {

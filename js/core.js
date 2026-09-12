@@ -9,7 +9,7 @@
    index.html. Serve pra uma pergunta que já custou tempo: "o defeito que
    você está vendo é do código de agora, ou o celular ainda está com o
    app velho em cache?" — sem isso, a resposta é chute. */
-const VERSAO_APP = "2026-09-13 · 21";
+const VERSAO_APP = "2026-09-13 · 22";
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -279,12 +279,17 @@ function carregarChart() {
    falta fazer. Quem olha esse número e acha que pode gastar, gasta o
    dinheiro da conta de luz.
 
-   Então o Resumo reserva o que ainda tem que sair. Vem de dois lugares:
+   Então o Resumo reserva o que ainda tem que sair. Vem de três lugares:
 
    1. Contas a pagar não pagas com vencimento no mês. É dívida com nome,
       data e valor — reserva o valor inteiro.
 
-   2. Metas marcadas com "reservar". Aí o que se reserva é o que FALTA
+   2. A fatura do cartão que vence no mês, no que ainda falta dela. É a
+      maior conta da casa de muita gente, e ela vencia aqui sem aparecer:
+      o mês mostrava sobra de R$ 2.000 com uma fatura de R$ 1.800 caindo
+      no dia 10.
+
+   3. Metas marcadas com "reservar". Aí o que se reserva é o que FALTA
       pro previsto, não o previsto todo: gastou R$ 640 dos R$ 800 de
       mercado, só R$ 160 ainda vão sair. Os 640 já estão nas saídas, e
       contar de novo seria descontar duas vezes o mesmo dinheiro.
@@ -314,6 +319,42 @@ function reservasDoMes(mesRef) {
       previsto: Number(c.valor), gasto: 0, falta: Number(c.valor),
       vencimento: c.vencimento,
     });
+  }
+
+  /* A FATURA DO CARTÃO ────────────────────────────────────────────────
+     Reserva pelo VENCIMENTO, não pelo mês da fatura: a fatura de setembro
+     que vence dia 10 de outubro é dinheiro que sai em outubro, e é em
+     outubro que ela tem que estar reservada. Fosse pelo mês da fatura,
+     setembro descontaria duas vezes — as compras e o pagamento delas.
+
+     E reserva só o QUE FALTA. Fatura paga pela metade ainda tem metade
+     pra sair; fatura quitada não tem nada, e some daqui sozinha, sem
+     ninguém precisar marcar nada.
+
+     ISTO NÃO CONTA EM DOBRO COM A META, e vale escrever por quê, porque
+     parece que sim. A compra no cartão já entrou como gasto no mês em que
+     foi feita, e gasto ABATE a reserva da meta em vez de somar. Comprando
+     R$ 300 de mercado numa meta de R$ 1.000, a meta reserva R$ 700 e a
+     fatura reserva os R$ 300 — mil no total, que é exatamente o que vai
+     sair. O que muda é só a data em que cada pedaço sai da conta.
+
+     Fatura vencida de mês passado não volta a aparecer aqui: a regra é a
+     mesma das contas, o que vence no mês. Ela continua em aberto dentro
+     do cartão, no bloco "Faturas de antes". */
+  for (const cartao of cartoes) {
+    for (const mes of _mesesComFatura(cartao)) {
+      const venc = _vencimentoDaFatura(mes, cartao.dia_fechamento, cartao.dia_vencimento);
+      if (mesDe(venc) !== mesRef) continue;
+
+      const s = _situacaoFatura(cartao, mes);
+      if (s.restante < 0.005) continue;
+
+      linhas.push({
+        tipo: "fatura", nome: "Fatura " + cartao.nome, categoria: "",
+        previsto: s.total, gasto: s.pago, falta: s.restante,
+        vencimento: venc, cartaoId: cartao.id, mesFatura: mes,
+      });
+    }
   }
 
   /* O QUE JÁ FOI GASTO NA CATEGORIA — a MESMA conta que a tela de Metas
