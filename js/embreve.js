@@ -7,8 +7,8 @@
  * Quando a tela de verdade for feita, é só trocar a função correspondente,
  * e ela some daqui.
  *
- * Cartão e Metas de gastos já saíram: viraram js/cartoes.js e js/metas.js.
- * Faltam Meu plano (em Ajustes) e Relatórios (no menu).
+ * Cartão, Metas de gastos e Relatórios já saíram: viraram js/cartoes.js,
+ * js/metas.js e js/relatorios.js. Falta Meu plano (em Ajustes).
  */
 
 function _telaEmBreve(caption, titulo, icone, texto) {
@@ -33,16 +33,8 @@ function _telaEmBreve(caption, titulo, icone, texto) {
 }
 
 const _ICO_ESTRELA = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l3 6 6 .9-4.5 4.3 1 6.3-5.5-3-5.5 3 1-6.3L3 8.9 9 8z"/></svg>`;
-const _ICO_BARRAS = `<svg viewBox="0 0 24 24" aria-hidden="true"><line x1="4" y1="20" x2="4" y2="10"/><line x1="10" y1="20" x2="10" y2="4"/><line x1="16" y1="20" x2="16" y2="13"/><line x1="22" y1="20" x2="22" y2="7"/></svg>`;
 
 function abrirMeuPlano() {
   abrirTela(() => _telaEmBreve("Assinatura", "Meu plano", _ICO_ESTRELA,
     "Aqui ficam os dados do seu plano e as opções de assinatura."));
-}
-
-function abrirRelatorios() {
-  abrirTela(() => _telaEmBreve("Análise", "Relatórios e projeções", _ICO_BARRAS,
-    "Aqui vão ficar os relatórios do seu dinheiro e as projeções: para onde " +
-    "o mês está indo, como os meses se comparam, e o que dá pra esperar dos " +
-    "próximos com base no que já aconteceu."));
 }

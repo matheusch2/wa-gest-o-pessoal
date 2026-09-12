@@ -19,8 +19,8 @@ Se o seu Chromium estiver em outro lugar, aponte na hora de rodar:
     node ferramentas/montar-pagina-de-teste.js
     node ferramentas/rodar.js
 
-Ele abre as 38 telas do app — em claro e escuro, em tela de celular e de
-computador — e procura **uma regra de fora vencendo a regra do próprio
+Ele abre as telas do app listadas em `telas.json` — em claro e escuro, em
+tela de celular e de computador — e procura **uma regra de fora vencendo a regra do próprio
 componente**. É o defeito que já apareceu três vezes aqui: `.campo label`
 ganhando de `.escolha-op`, `.meta-sem strong` ganhando de `.fechar-folga`.
 A tela não quebra, só fica meio errada, e ninguém percebe olhando.

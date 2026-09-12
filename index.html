@@ -84,7 +84,7 @@
   <link rel="preconnect" href="https://efewoxdgfcgkodtqbqsz.supabase.co" crossorigin>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 
-  <link rel="stylesheet" href="style.css?v=57">
+  <link rel="stylesheet" href="style.css?v=58">
 
   <!-- defer: baixa em paralelo e só executa depois da página montada, em
        ordem. Sem ele, cada script trava a leitura do HTML no meio.
@@ -196,12 +196,14 @@
          cartoes.js    cartões, faturas, compras e pagamentos
          metas.js      tetos por categoria, obrigatórios e opcionais
          fechamento.js fecha o mês e leva a sobra pro seguinte
+         relatorios.js o retrato do mês — depois de metas.js e
+                       fechamento.js, de quem ele toma as contas emprestadas
          embreve.js    telas ainda por construir
          app.js        a partida: sessão, erros de carga, relógio
 
        O ?v=N no fim de cada um existe pra o celular não servir a versão
        velha do cache. Mexeu no arquivo, sobe o número. -->
-  <script defer src="js/core.js?v=24"></script>
+  <script defer src="js/core.js?v=25"></script>
   <script defer src="js/categorias.js?v=1"></script>
   <script defer src="js/auth.js?v=2"></script>
   <script defer src="js/resumo.js?v=14"></script>
@@ -213,7 +215,8 @@
   <script defer src="js/cartoes.js?v=12"></script>
   <script defer src="js/metas.js?v=11"></script>
   <script defer src="js/fechamento.js?v=4"></script>
-  <script defer src="js/embreve.js?v=4"></script>
+  <script defer src="js/relatorios.js?v=1"></script>
+  <script defer src="js/embreve.js?v=5"></script>
   <script defer src="js/app.js?v=6"></script>
 </body>
 </html>
