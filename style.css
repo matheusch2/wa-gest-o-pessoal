@@ -1626,6 +1626,16 @@ body.escuro .resumo-secao .item-icone.entrada { background: #17372d; }
 .meta-baixo { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; font-size: 12px; color: var(--fraco); }
 .meta-baixo strong { font-size: 13.5px; font-weight: 800; color: var(--texto); font-variant-numeric: tabular-nums; }
 .meta-falta { white-space: nowrap; font-weight: 700; }
+
+/* De onde veio o gasto. Discreta de propósito: é resposta pra uma dúvida
+   que só aparece quando o número não bate com o extrato, não informação
+   pra ler todo dia. */
+.meta-origem {
+  margin: 5px 0 0;
+  font-size: 11px;
+  color: var(--fraco);
+  font-variant-numeric: tabular-nums;
+}
 .meta-item.estourou .meta-falta { color: var(--saida); }
 
 /* Editar e excluir ficam no alto à direita, fora do caminho dos números —
