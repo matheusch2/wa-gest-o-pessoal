@@ -293,10 +293,18 @@ function _avisoCategoriaQueSubiu(mesRef) {
   }
   if (!pior) return null;
 
+  /* "SUBIU 1942%" NÃO É FRASE QUE AJUDA NINGUÉM. Percentual grande deixa
+     de ser medida e vira barulho: ninguém imagina 1942%, e a pessoa lê o
+     número como erro do app. Passando de três vezes a média, a frase
+     troca de régua e fala em vezes, que é como se fala. */
+  const vezes = pior.valor / pior.media;
+  const quanto = vezes >= 3
+    ? `<b>${vezes.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} vezes</b> a sua média`
+    : `<b>${Math.round((vezes - 1) * 100)}%</b> acima da sua média`;
+
   return {
     tom: "atencao",
-    texto: `<b>${esc(pior.cat)}</b> subiu <b>${Math.round((pior.valor / pior.media - 1) * 100)}%</b>
-            sobre a sua média: ${_vlr(pior.valor)} contra ${_vlr(pior.media)}.`,
+    texto: `<b>${esc(pior.cat)}</b> foi ${quanto}: ${_vlr(pior.valor)} contra ${_vlr(pior.media)}.`,
   };
 }
 
@@ -320,6 +328,108 @@ function _avisoMesesNoAzul(mesRef) {
   return null;   // dois e dois não é notícia, é vida normal
 }
 
+/* ─── O que as assinaturas custam ───────────────────────────────────── */
+
+// Quanto sai por mês em assinatura, e quanto isso dá no ano. Assinatura
+// é o gasto que ninguém soma: R$ 39,90 aqui, R$ 21,90 ali, e no fim do
+// ano deu mais que a viagem que não coube no orçamento.
+function _assinaturasAtivas(mesRef) {
+  return comprasCartao.filter(c => c.recorrente && _compraNoMes(c, mesRef));
+}
+
+function _avisoAssinaturas(mesRef) {
+  const ativas = _assinaturasAtivas(mesRef);
+  if (!ativas.length) return null;
+
+  const porMes = _cent(ativas.reduce((s, c) => s + Number(c.valor), 0));
+  return {
+    tom: "atencao",
+    texto: `${ativas.length === 1 ? "Sua assinatura soma" : `Suas ${ativas.length} assinaturas somam`}
+            <b>${_vlr(porMes)} por mês</b> — <b>${_vlr(porMes * 12)} por ano</b>.`,
+  };
+}
+
+/* ═══ A LINHA DO TEMPO ════════════════════════════════════════════════
+   O Resumo só enxerga um mês. É aqui que se vê o desenho: o mês em que
+   apertou, o mês em que sobrou, e se a linha está subindo ou descendo.
+   Só meses com movimento — mês em que a pessoa não usou o app viraria um
+   buraco no gráfico e leria como "não gastei nada". */
+
+function _linhaDoTempo(mesRef, quantos) {
+  const meses = _mesesAnteriores(mesRef, quantos - 1);
+  if (_temMovimento(mesRef)) meses.push(mesRef);
+  return meses.map(m => {
+    const r = _retratoDoMes(m);
+    return { mes: m, entrou: r.entrou, gastou: r.gastou, sobrou: r.sobrou };
+  });
+}
+
+/* ═══ O QUE JÁ ESTÁ COMPROMETIDO ══════════════════════════════════════
+   A projeção mais honesta que existe, porque não é adivinhação: tudo
+   isto JÁ ESTÁ CADASTRADO. São três naturezas diferentes, e elas ficam
+   separadas de propósito, porque a pergunta que importa é "quanto disso
+   eu consigo desfazer?":
+
+     PARCELAS      já foram contratadas. Não tem o que fazer: vão cair.
+     ASSINATURAS   caem até você cancelar. Dá pra desfazer hoje.
+     CONTAS FIXAS  aluguel, energia, internet. Vão vir de todo jeito.
+
+   Tudo pelo mês em que o dinheiro SAI: o cartão pelo vencimento da
+   fatura, a conta pelo vencimento dela. É a mesma régua da reserva do
+   Resumo — usar outra aqui faria as duas telas discordarem sobre o mesmo
+   mês, que é o defeito que mais dói neste app. */
+
+function _comprometidoPorMes(mesRef, quantos) {
+  const meses = Array.from({ length: quantos }, (_, i) => mesVizinho(mesRef, i + 1));
+  const linhas = meses.map(m => ({ mes: m, parcelas: 0, assinaturas: 0, fixas: 0 }));
+  const porMes = Object.fromEntries(linhas.map(l => [l.mes, l]));
+
+  for (const cartao of cartoes) {
+    // Um teto de busca: a fatura de daqui a 60 meses não interessa a
+    // ninguém, e assinatura ativa não dá fim ao laço sozinha.
+    for (let i = 1; i <= quantos + 12; i++) {
+      const mesFatura = _somaMes(_mesFaturaAberta(cartao), i - 1);
+      const venc = mesDe(_vencimentoDaFatura(mesFatura, cartao.dia_fechamento, cartao.dia_vencimento));
+      const alvo = porMes[venc];
+      if (!alvo) continue;
+      for (const item of _parcelasDaFatura(cartao, mesFatura)) {
+        if (item.tipo === "parcelada") alvo.parcelas = _cent(alvo.parcelas + item.valor);
+        else if (item.tipo === "assinatura") alvo.assinaturas = _cent(alvo.assinaturas + item.valor);
+      }
+    }
+  }
+
+  /* AS CONTAS FIXAS TÊM QUE SER PROJETADAS, e as do carnê não.
+     O carnê já existe inteiro no banco, uma linha por parcela — é só
+     somar as que caem em cada mês. A conta fixa não: o app só cria a do
+     mês seguinte quando a atual é paga, então lá na frente não há linha
+     nenhuma. Projetar é repetir o último valor conhecido de cada nome.
+
+     E só onde não existe linha de verdade: contar as duas coisas faria o
+     aluguel aparecer duas vezes no mês que o app já preparou. */
+  const fixas = new Map();
+  for (const c of contas) {
+    if (!c.recorrente) continue;
+    const atual = fixas.get(c.nome);
+    if (!atual || c.vencimento > atual.vencimento) fixas.set(c.nome, c);
+  }
+
+  for (const l of linhas) {
+    for (const c of contas) {
+      if (c.pago || mesDe(c.vencimento) !== l.mes) continue;
+      if (c.recorrente) l.fixas = _cent(l.fixas + Number(c.valor));
+      else if (_parteDoCarne(c.nome)) l.parcelas = _cent(l.parcelas + Number(c.valor));
+    }
+    for (const [nome, c] of fixas) {
+      const jaTem = contas.some(x => x.nome === nome && mesDe(x.vencimento) === l.mes);
+      if (!jaTem) l.fixas = _cent(l.fixas + Number(c.valor));
+    }
+    l.total = _cent(l.parcelas + l.assinaturas + l.fixas);
+  }
+
+  return linhas;
+}
+
 /* ─── A lista, montada ──────────────────────────────────────────────── */
 
 const _PESO_TOM = { ruim: 0, atencao: 1, bom: 2 };
@@ -331,11 +441,126 @@ function _avisosDoMes(mesRef) {
     _avisoMedia(mesRef),
     _avisoObrigatorios(mesRef),
     _avisoParcelas(mesRef),
+    _avisoAssinaturas(mesRef),
     _avisoCategoriaQueSubiu(mesRef),
     _avisoMesesNoAzul(mesRef),
   ].filter(Boolean)
    // O que dói primeiro. Alerta no fim da lista é alerta que não foi lido.
    .sort((a, b) => _PESO_TOM[a.tom] - _PESO_TOM[b.tom]);
+}
+
+/* ═══ OS GRÁFICOS ═════════════════════════════════════════════════════
+   O Chart.js pesa mais que o app inteiro e chega depois, de um CDN. Se
+   ele não vier, NADA nesta tela pode sumir junto: por isso todo número
+   que o gráfico desenha está também escrito em texto ali do lado ou
+   embaixo. O desenho é o extra; a frase é o conteúdo. */
+
+function _corDoTema(nome) {
+  const v = getComputedStyle(document.body).getPropertyValue(nome).trim();
+  return v || "#0f3b5c";
+}
+
+/* AS CORES SEGUEM O TEMA, e isso não é capricho: o azul da marca é
+   #0f3b5c, e no modo escuro ele fica quase igual ao fundo do bloco. O
+   bloco das "Parcelas" — que é o maior do gráfico de projeção —
+   simplesmente sumia, e sobrava um gráfico que dizia menos do que a
+   soma escrita embaixo dele.
+
+   Por isso as duas primeiras saem das variáveis do tema (elas já têm um
+   tom claro no escuro) e as outras são tons que funcionam nos dois
+   fundos. A última é o cinza do tema, pra fatia "Outros". */
+function _coresDoGrafico() {
+  return [_corDoTema("--marca-txt"), _corDoTema("--dourado"),
+          "#0ea5e9", "#db2777", "#8b5cf6", "#14b8a6", _corDoTema("--fraco")];
+}
+
+// A projeção tem três blocos empilhados e eles precisam se distinguir no
+// escuro também, onde a marca já é azul-claro: o roxo entra no lugar do
+// azul-céu, que ficaria colado nela.
+function _coresDaProjecao() {
+  return [_corDoTema("--marca-txt"), _corDoTema("--dourado"), "#8b5cf6"];
+}
+
+// Os eixos e as grades seguem o tema: no escuro, o cinza-claro do Chart.js
+// some no fundo e o gráfico fica boiando sem referência.
+function _eixos(empilhado) {
+  const fraco = _corDoTema("--fraco");
+  const grade = "color-mix(in srgb, " + fraco + " 22%, transparent)";
+  return {
+    x: { stacked: !!empilhado, grid: { display: false },
+         ticks: { color: fraco, font: { size: 10 } } },
+    y: { stacked: !!empilhado, beginAtZero: true, border: { display: false },
+         grid: { color: grade }, ticks: { color: fraco, font: { size: 10 },
+         callback: v => "R$ " + Number(v).toLocaleString("pt-BR", { maximumFractionDigits: 0 }) } },
+  };
+}
+
+const _DICA = { callbacks: { label: c => c.dataset.label + ": " + moeda(c.parsed.y ?? c.parsed) } };
+
+async function _desenharGraficosDoRelatorio(dados) {
+  if (!(await carregarChart())) return;
+
+  // Buscar a biblioteca leva tempo, e nesse tempo a pessoa pode ter saído
+  // da tela. Por isso os canvas são procurados DE NOVO aqui: os de antes
+  // já podem não existir, e desenhar neles seria desenhar no nada.
+  const pegar = id => document.getElementById(id);
+  const comum = { responsive: true, maintainAspectRatio: false,
+                  plugins: { legend: { display: false } } };
+
+  const cvCat = pegar("rel-canvas-cat");
+  if (cvCat && dados.ranking.length) {
+    const top = dados.ranking.slice(0, 6);
+    const resto = dados.ranking.slice(6).reduce((s, r) => s + r[1], 0);
+    graficos.push(new Chart(cvCat.getContext("2d"), {
+      type: "doughnut",
+      data: {
+        labels: top.map(r => r[0]).concat(resto > 0 ? ["Outros"] : []),
+        datasets: [{ data: top.map(r => r[1]).concat(resto > 0 ? [resto] : []),
+                     backgroundColor: _coresDoGrafico(), borderWidth: 0 }],
+      },
+      options: Object.assign({}, comum, { cutout: "58%",
+        plugins: { legend: { display: false },
+                   tooltip: { callbacks: { label: c => c.label + ": " + moeda(c.parsed) } } } }),
+    }));
+  }
+
+  const cvTempo = pegar("rel-canvas-tempo");
+  if (cvTempo && dados.tempo.length) {
+    graficos.push(new Chart(cvTempo.getContext("2d"), {
+      type: "bar",
+      data: {
+        labels: dados.tempo.map(x => soNomeDoMes(x.mes).slice(0, 3)),
+        datasets: [
+          { label: "Entrou", data: dados.tempo.map(x => x.entrou),
+            backgroundColor: _corDoTema("--entrada"), borderRadius: 4 },
+          { label: "Gastou", data: dados.tempo.map(x => x.gastou),
+            backgroundColor: _corDoTema("--saida"), borderRadius: 4 },
+        ],
+      },
+      options: Object.assign({}, comum, { scales: _eixos(false),
+        plugins: { legend: { display: false }, tooltip: _DICA } }),
+    }));
+  }
+
+  const cvProj = pegar("rel-canvas-proj");
+  if (cvProj && dados.projecao.some(x => x.total > 0)) {
+    graficos.push(new Chart(cvProj.getContext("2d"), {
+      type: "bar",
+      data: {
+        labels: dados.projecao.map(x => soNomeDoMes(x.mes).slice(0, 3)),
+        datasets: [
+          { label: "Parcelas", data: dados.projecao.map(x => x.parcelas),
+            backgroundColor: _coresDaProjecao()[0], borderRadius: 3 },
+          { label: "Assinaturas", data: dados.projecao.map(x => x.assinaturas),
+            backgroundColor: _coresDaProjecao()[1], borderRadius: 3 },
+          { label: "Contas fixas", data: dados.projecao.map(x => x.fixas),
+            backgroundColor: _coresDaProjecao()[2], borderRadius: 3 },
+        ],
+      },
+      options: Object.assign({}, comum, { scales: _eixos(true),
+        plugins: { legend: { display: false }, tooltip: _DICA } }),
+    }));
+  }
 }
 
 /* ═══ A TELA ══════════════════════════════════════════════════════════ */
@@ -375,14 +600,35 @@ function desenharRelatorios() {
       ? `${moeda(r.gastou - r.entrou)} a mais do que entrou`
       : `De cada R$ 100 que entraram, você gastou R$ ${Math.round(usado * 100)}`;
 
-  const linhaCategoria = ([cat, v]) => `
+  /* A LISTA GANHOU A ROSCA DO LADO. A barrinha por categoria dizia a
+     mesma coisa seis vezes seguidas e nenhuma delas de relance: pra saber
+     se o mercado era metade do mês, a pessoa tinha que comparar
+     comprimentos empilhados. A rosca responde isso num olhar, e a lista
+     continua trazendo o que a rosca não tem — o valor de cada uma, e
+     TODAS elas, não só as seis maiores.
+
+     A bolinha colorida liga as duas: a cor da fatia é a cor da linha. */
+  const cores = _coresDoGrafico();
+  const proj = _coresDaProjecao();
+  const linhaCategoria = ([cat, v], i) => `
     <div class="rel-cat">
-      <div class="rel-cat-topo">
-        <span class="rel-cat-nome">${iconeDoLancamento({ tipo: "saida", categoria: cat })} ${esc(cat)}</span>
-        <strong class="rel-cat-valor">${moeda(v)}</strong>
-      </div>
-      <div class="rel-cat-barra"><span style="width:${r.gastou > 0 ? (v / r.gastou) * 100 : 0}%"></span></div>
-      <small class="rel-cat-pct">${r.gastou > 0 ? Math.round(v / r.gastou * 100) : 0}% do que você gastou</small>
+      <span class="rel-cat-ponto" style="background:${cores[Math.min(i, cores.length - 1)]}"></span>
+      <span class="rel-cat-nome">${iconeDoLancamento({ tipo: "saida", categoria: cat })} ${esc(cat)}</span>
+      <span class="rel-cat-pct">${r.gastou > 0 ? Math.round(v / r.gastou * 100) : 0}%</span>
+      <strong class="rel-cat-valor">${moeda(v)}</strong>
+    </div>`;
+
+  const tempo = _linhaDoTempo(mesAtual, 6);
+  const projecao = _comprometidoPorMes(mesAtual, 6);
+  const totalProjetado = _cent(projecao.reduce((s, x) => s + x.total, 0));
+  const mediaGasto = tempo.length
+    ? _cent(tempo.reduce((s, x) => s + x.gastou, 0) / tempo.length) : 0;
+
+  const legenda = (cor, nome, valor) => `
+    <div class="rel-legenda-item">
+      <span class="rel-cat-ponto" style="background:${cor}"></span>
+      <span>${nome}</span>
+      <strong>${moeda(valor)}</strong>
     </div>`;
 
   /* A EXPLICAÇÃO DE COMO A CONTA É FEITA SAIU DAQUI. Eram dois parágrafos
@@ -455,14 +701,56 @@ function desenharRelatorios() {
         <h2>Para onde foi o dinheiro</h2>
         ${r.ranking.length > 1 ? `<span class="rel-conta">${r.ranking.length} categorias</span>` : ""}
       </div>
-      ${r.ranking.length
-        ? `<div class="rel-cats">${r.ranking.map(linhaCategoria).join("")}</div>`
+      ${r.ranking.length ? `
+        <div class="rel-rosca">
+          <canvas id="rel-canvas-cat"></canvas>
+          <div class="rel-rosca-meio"><small>Gasto</small><strong>${moeda(r.gastou)}</strong></div>
+        </div>
+        <div class="rel-cats">${r.ranking.map(linhaCategoria).join("")}</div>`
         : `<p class="vazio">Nenhum gasto em ${soNomeDoMes(mesAtual)}.</p>`}
     </div>
+
+    ${tempo.length > 1 ? `
+      <div class="bloco">
+        <div class="bloco-topo">
+          <h2>Como os meses vêm indo</h2>
+          <span class="rel-conta">${tempo.length} meses</span>
+        </div>
+        <div class="rel-grafico"><canvas id="rel-canvas-tempo"></canvas></div>
+        <div class="rel-legenda">
+          ${legenda(_corDoTema("--entrada"), "Entrou", _cent(tempo.reduce((s, x) => s + x.entrou, 0)))}
+          ${legenda(_corDoTema("--saida"), "Gastou", _cent(tempo.reduce((s, x) => s + x.gastou, 0)))}
+        </div>
+        <p class="rel-rodape">Você gasta <b>${_vlr(mediaGasto)}</b> por mês, em média.</p>
+      </div>` : ""}
+
+    ${totalProjetado > 0 ? `
+      <div class="bloco">
+        <div class="bloco-topo">
+          <h2>O que já está comprometido</h2>
+          <strong class="resumo-total-saida">${moeda(totalProjetado)}</strong>
+        </div>
+        <div class="rel-grafico"><canvas id="rel-canvas-proj"></canvas></div>
+        <div class="rel-legenda">
+          ${legenda(proj[0], "Parcelas", _cent(projecao.reduce((s, x) => s + x.parcelas, 0)))}
+          ${legenda(proj[1], "Assinaturas", _cent(projecao.reduce((s, x) => s + x.assinaturas, 0)))}
+          ${legenda(proj[2], "Contas fixas", _cent(projecao.reduce((s, x) => s + x.fixas, 0)))}
+        </div>
+        <p class="rel-rodape">
+          Dos próximos 6 meses, <b>${_vlr(totalProjetado)}</b> já têm dono — o mês
+          mais pesado é <b>${soNomeDoMes(projecao.reduce((a, b) => (b.total > a.total ? b : a)).mes)}</b>,
+          com ${_vlr(Math.max(...projecao.map(x => x.total)))}. Isto não é chute:
+          é o que já está cadastrado.
+        </p>
+      </div>` : ""}
 
     ${ajustes.length ? `
       <div class="bloco rel-nota">${ajustes.map(a => `<p>${a}</p>`).join("")}</div>` : ""}
 
     <button class="botao-fraco" onclick="voltarInicio()">Voltar</button>
   `;
+
+  // Depois do innerHTML, e sem travar o desenho: os números já estão na
+  // tela, o gráfico deles é o que chega em seguida.
+  setTimeout(() => _desenharGraficosDoRelatorio({ ranking: r.ranking, tempo, projecao }), 0);
 }

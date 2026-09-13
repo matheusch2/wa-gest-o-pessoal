@@ -9,7 +9,7 @@
    index.html. Serve pra uma pergunta que já custou tempo: "o defeito que
    você está vendo é do código de agora, ou o celular ainda está com o
    app velho em cache?" — sem isso, a resposta é chute. */
-const VERSAO_APP = "2026-09-13 · 26";
+const VERSAO_APP = "2026-09-13 · 27";
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -422,8 +422,18 @@ window.addEventListener("popstate", () => {
   if (pilha.length) { voltarTela(); history.pushState({ f: 1 }, ""); }
 });
 
+/* Uma tela pode ter mais de um gráfico — os Relatórios têm três. Cada um
+   segura um <canvas> que o innerHTML da próxima tela vai jogar fora, e o
+   Chart.js não percebe sozinho: sobra um desenho pendurado num elemento
+   que não existe mais, e o seguinte nasce por cima do fantasma.
+
+   Por isso todo gráfico se anota aqui, e trocar de tela destrói todos. */
+let graficos = [];
+
 function destruirGrafico() {
   if (grafico) { try { grafico.destroy(); } catch (e) {} grafico = null; }
+  for (const g of graficos) { try { g.destroy(); } catch (e) {} }
+  graficos = [];
 }
 
 /* ═══ DINHEIRO NA DIGITAÇÃO ═══════════════════════════════════════════

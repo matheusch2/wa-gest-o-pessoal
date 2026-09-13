@@ -32,7 +32,7 @@ Rótulo diferente pra conta diferente: "Entrou / Gastou" no relatório,
 
 ---
 
-## 1. O retrato do mês ✅ *(feito)*
+## 1. O retrato do mês ✅ *(feito — ganhou rosca)*
 
 O que a pessoa mais vai abrir.
 
@@ -62,7 +62,7 @@ peso das contas e faturas sobre a renda, as parcelas lá na frente, a
 categoria que subiu, e como os últimos meses vêm terminando. Todas
 olham o mês que está na tela, e o passado a partir dele.
 
-## 3. A linha do tempo
+## 3. A linha do tempo ✅ *(feito)*
 
 O Resumo só enxerga um mês. Aqui é o lugar de olhar 6 ou 12.
 
@@ -75,7 +75,7 @@ O Resumo só enxerga um mês. Aqui é o lugar de olhar 6 ou 12.
   até pra sugerir a meta: "sua média de Mercado é R$ 1.000; sua meta
   é 800".
 
-## 4. Projeção
+## 4. Projeção ✅ *(feito)*
 
 O "e projeções" do nome. É forte porque **o futuro já está cadastrado**
 — não é adivinhação:

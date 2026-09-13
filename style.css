@@ -1983,29 +1983,66 @@ body.escuro .resumo-secao .item-icone.entrada { background: #17372d; }
 .rel-topo.dentro   > strong { color: var(--texto); }
 .rel-topo.estourou > strong { color: var(--saida); }
 
-/* A lista inteira de categorias, e não as seis primeiras: a rosca do
-   Resumo já faz o top 6, e repetir aqui seria gastar uma tela pra
-   responder o que já foi respondido. O que falta lá é a cauda — as
-   categorias pequenas que, somadas, viram o vazamento. */
-.rel-cats { display: flex; flex-direction: column; gap: 13px; }
-
-.rel-cat .rel-cat-topo { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
-.rel-cat .rel-cat-nome { font-size: 14px; font-weight: 700; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.rel-cat .rel-cat-valor { flex-shrink: 0; font-size: 14px; font-weight: 800; font-variant-numeric: tabular-nums; }
-
-.rel-cat .rel-cat-barra {
-  height: 7px;
-  margin: 7px 0 5px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--texto) 9%, transparent);
-  overflow: hidden;
+/* A ROSCA, e a lista embaixo dela. A barrinha por categoria dizia a mesma
+   coisa seis vezes seguidas e nenhuma de relance: pra saber se o mercado
+   era metade do mês, era preciso comparar comprimentos empilhados. A
+   rosca responde num olhar; a lista traz o que ela não tem — o valor de
+   cada uma, e TODAS, não só as seis maiores. A bolinha liga as duas. */
+.rel-rosca {
+  position: relative;
+  width: 176px;
+  height: 176px;
+  margin: 2px auto 14px;
 }
-/* A barra mede a fatia dentro do próprio gasto, não contra a renda: aqui
-   a pergunta é "qual delas é a maior?". O peso contra o que entrou já
-   está lá em cima, no número grande. */
-.rel-cat .rel-cat-barra span { display: block; height: 100%; border-radius: 999px; background: var(--marca-txt); }
+.rel-rosca-meio {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 104px;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  pointer-events: none;
+}
+.rel-rosca-meio small,
+.rel-rosca-meio strong { display: block; white-space: nowrap; }
+.rel-rosca-meio small { color: var(--fraco); font-size: 10px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
+.rel-rosca-meio strong { margin-top: 2px; color: var(--texto); font-size: 13px; font-variant-numeric: tabular-nums; }
 
-.rel-cat .rel-cat-pct { display: block; font-size: 11.5px; color: var(--fraco); }
+.rel-cats { display: flex; flex-direction: column; gap: 9px; }
+
+/* Quatro colunas travadas: bolinha, nome, percentual e valor. Sem a
+   largura fixa nas duas últimas, cada linha para o número num lugar e a
+   coluna dos centavos dança lista abaixo. */
+.rel-cat {
+  display: grid;
+  grid-template-columns: 9px minmax(0, 1fr) 38px auto;
+  align-items: center;
+  gap: 9px;
+}
+.rel-cat .rel-cat-ponto { width: 9px; height: 9px; border-radius: 50%; }
+.rel-cat .rel-cat-nome { font-size: 13.5px; font-weight: 700; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rel-cat .rel-cat-pct { font-size: 11.5px; color: var(--fraco); text-align: right; font-variant-numeric: tabular-nums; }
+.rel-cat .rel-cat-valor { font-size: 13.5px; font-weight: 800; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+/* As barras do tempo e da projeção. Altura fixa: sem ela o Chart.js
+   responsivo cresce a cada redesenho até a tela virar só gráfico. */
+.rel-grafico { position: relative; height: 190px; margin: 2px 0 12px; }
+
+.rel-legenda { display: flex; flex-wrap: wrap; gap: 6px 16px; }
+.rel-legenda-item { display: flex; align-items: center; gap: 7px; font-size: 11.5px; color: var(--fraco); }
+.rel-legenda-item strong { font-size: 11.5px; color: var(--texto); font-variant-numeric: tabular-nums; }
+
+/* A frase embaixo do gráfico é o conteúdo, não a legenda dele: se o
+   Chart.js não baixar, é ela que ainda responde a pergunta da seção. */
+.rel-rodape {
+  margin: 11px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--borda);
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--fraco);
+}
+.rel-rodape b { color: var(--texto); font-weight: 800; }
 
 .rel-conta { font-size: 12px; color: var(--fraco); font-weight: 700; }
 
