@@ -385,9 +385,15 @@ function desenharRelatorios() {
       <small class="rel-cat-pct">${r.gastou > 0 ? Math.round(v / r.gastou * 100) : 0}% do que você gastou</small>
     </div>`;
 
-  // A nota só cita o que de fato aconteceu neste mês. Explicação genérica
-  // de coisa que não está na tela é ruído; com o valor na frente, ela vira
-  // a resposta pra "por que isto não bate com o Resumo?".
+  /* A EXPLICAÇÃO DE COMO A CONTA É FEITA SAIU DAQUI. Eram dois parágrafos
+     fixos, sempre iguais, no pé de toda visita — e ninguém lê a mesma
+     aula duas vezes. Ela vive nos comentários deste arquivo, que é onde
+     ela serve pra alguma coisa.
+
+     O QUE FICOU é o que não é genérico: a linha que aparece SÓ no mês em
+     que houve saldo trazido ou dinheiro guardado, com o valor na frente.
+     Essa não é aula, é a resposta pra "por que isto não bate com o
+     Resumo?" — e sem ela a pergunta vira desconfiança no app. */
   const ajustes = [];
   if (r.saldoTrazido >= 0.005) {
     ajustes.push(`Não entram aqui ${moeda(r.saldoTrazido)} de saldo trazido de
@@ -454,20 +460,8 @@ function desenharRelatorios() {
         : `<p class="vazio">Nenhum gasto em ${soNomeDoMes(mesAtual)}.</p>`}
     </div>
 
-    <div class="bloco rel-nota">
-      <h3>Como esta conta é feita</h3>
-      <p>
-        Conta as saídas do extrato <b>e as compras do cartão</b>, cada uma no
-        mês em que você comprou — passar o cartão é gastar, mesmo que o
-        dinheiro só saia da conta na fatura. O pagamento da fatura fica de
-        fora pra não contar a mesma despesa duas vezes.
-      </p>
-      <p>
-        É o mesmo critério das <b>Metas</b>. O <b>Resumo</b> faz outra conta,
-        a do extrato: lá você vê o que saiu da conta, aqui o que você gastou.
-      </p>
-      ${ajustes.map(a => `<p>${a}</p>`).join("")}
-    </div>
+    ${ajustes.length ? `
+      <div class="bloco rel-nota">${ajustes.map(a => `<p>${a}</p>`).join("")}</div>` : ""}
 
     <button class="botao-fraco" onclick="voltarInicio()">Voltar</button>
   `;

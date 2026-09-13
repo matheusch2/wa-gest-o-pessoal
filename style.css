@@ -2034,9 +2034,10 @@ body.escuro .resumo-secao .item-icone.entrada { background: #17372d; }
 .rel-aviso.bom     { border-left-color: var(--entrada); background: color-mix(in srgb, var(--entrada) 8%, transparent); }
 .rel-aviso.ruim b  { color: var(--saida); }
 
-/* A nota de rodapé não é enfeite: é ela que impede a pergunta "por que
-   este número não bate com o Resumo?" de virar desconfiança no app. */
-.rel-nota h3 { margin: 0 0 8px; font-size: 13px; font-weight: 800; color: var(--fraco); letter-spacing: .03em; text-transform: uppercase; }
+/* A aula de como a conta é feita saiu da tela: dois parágrafos fixos no
+   pé de toda visita são dois parágrafos que ninguém lê na segunda vez.
+   Ficou só o que aparece no mês em que tem o que dizer — e é ela que
+   impede a pergunta "por que este número não bate com o Resumo?" de
+   virar desconfiança no app. */
 .rel-nota p { margin: 0 0 9px; font-size: 12.5px; line-height: 1.6; color: var(--fraco); }
 .rel-nota p:last-child { margin-bottom: 0; }
-.rel-nota b { color: var(--texto); font-weight: 700; }
