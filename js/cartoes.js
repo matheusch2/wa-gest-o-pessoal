@@ -563,25 +563,15 @@ function abrirNovaCompra(cartaoId) {
           <div class="escolha">
             <label class="escolha-op">
               <input type="radio" name="cp-tipo" value="avista" checked onchange="_aoTrocarTipoCompra()">
-              <span>
-                <strong>💳 À vista</strong>
-                <small>Uma cobrança só, na próxima fatura.</small>
-              </span>
+              <span><strong>💳 À vista</strong></span>
             </label>
             <label class="escolha-op">
               <input type="radio" name="cp-tipo" value="parcelado" onchange="_aoTrocarTipoCompra()">
-              <span>
-                <strong>🧾 Parcelado</strong>
-                <small>Tem fim — some da fatura quando a última parcela cair.</small>
-              </span>
+              <span><strong>🧾 Parcelado</strong></span>
             </label>
             <label class="escolha-op">
               <input type="radio" name="cp-tipo" value="assinatura" onchange="_aoTrocarTipoCompra()">
-              <span>
-                <strong>🔁 Assinatura</strong>
-                <small>Não acaba — Netflix, Spotify, academia, nuvem. Entra
-                       em todas as faturas, todo mês, até você cancelar.</small>
-              </span>
+              <span><strong>🔁 Assinatura</strong></span>
             </label>
           </div>
         </div>
