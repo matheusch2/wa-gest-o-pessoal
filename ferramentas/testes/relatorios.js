@@ -27,18 +27,30 @@ const CENARIO = `
 `;
 
 module.exports = () => suite("Relatórios", async ({ p, ok, abrir, texto, valor, temChart }) => {
+  // Duas caixas: Entrou e Sobrou. O "gastou" é o número grande lá em cima
+  // — e por isso ele é lido de lá, não de uma terceira caixa repetida.
   const caixa = async i =>
     valor(await p.locator(".fatura-resumo > div").nth(i).locator("strong").textContent());
+  const gastouGrande = async () => valor(await p.textContent(".rel-topo > strong"));
 
   /* ─── A conta base ───────────────────────────────────────────────────
      Setembro: entrou 2.000. Gastou 640 de mercado + 1.200 de aluguel no
      extrato, mais 1.200 de tênis e 187,90 de mercado no cartão. */
   await abrir(CENARIO + "; abrirRelatorios();");
   ok("entrou = só as entradas do extrato", (await caixa(0)) === 2000);
-  ok("gastou = extrato + compras do cartão", (await caixa(1)) === 3227.90);
-  ok("e a terceira caixa é a diferença", (await caixa(2)) === 1227.90);
+  ok("gastou = extrato + compras do cartão", (await gastouGrande()) === 3227.90);
+  ok("e a segunda caixa é a diferença", (await caixa(1)) === 1227.90);
   ok("que neste mês é FALTOU, não SOBROU",
     /Faltou/.test(await texto(".fatura-resumo > div:last-child")));
+
+  /* O mesmo número não pode aparecer duas vezes na mesma olhada: o gastou
+     é o número grande, e a caixa do meio que o repetia saiu. */
+  ok("são duas caixas, não três", (await p.locator(".fatura-resumo > div").count()) === 2);
+  ok("e o gastou não se repete embaixo do próprio número",
+    !/Gastou/.test(await texto(".fatura-resumo")));
+  // A aritmética continua conferível de olho: entrou − gastou = a caixa.
+  ok("entrou menos gastou dá a caixa da direita",
+    Math.round(((await caixa(0)) - (await gastouGrande())) * 100) === -Math.round((await caixa(1)) * 100));
 
   /* ─── As fatias somam o total ────────────────────────────────────────
      Se as categorias não somarem o número grande, é o defeito clássico
@@ -81,14 +93,14 @@ module.exports = () => suite("Relatórios", async ({ p, ok, abrir, texto, valor,
     fechamentos = [{ id:"f8", mes_ref:"2026-08", sobra:357, levado:257, guardado:100,
                      lancamento_levado_id:"sal", lancamento_guardado_id:"grd" }];
     mesAtual = "2026-08"; abrirRelatorios();`);
-  ok("o que você guardou não vira gasto", (await caixa(1)) === 543);
+  ok("o que você guardou não vira gasto", (await gastouGrande()) === 543);
   ok("e nenhuma categoria 'Guardado' aparece", !/Guardado/.test(await texto(".rel-cats")));
 
   /* ─── Mês vazio não quebra e não elogia ──────────────────────────────
      Verde é "você está dentro"; elogiar um mês em que nada aconteceu é
      dizer o que não é verdade. */
   await abrir(CENARIO + `; mesAtual = "2026-12"; abrirRelatorios();`);
-  ok("mês sem nada não quebra", (await caixa(1)) === 0);
+  ok("mês sem nada não quebra", (await gastouGrande()) === 0);
   ok("sem divisão por zero", !/NaN|Infinity/.test(await texto("#area")));
   ok("e sem pintar de verde o que não aconteceu",
     (await p.locator(".rel-topo.dentro").count()) === 0);

@@ -686,9 +686,16 @@ function desenharRelatorios() {
       <small>${frase}</small>
     </div>
 
+    <!-- DUAS CAIXAS, E NÃO TRÊS. A do meio dizia "Gastou R$ 508,91" com o
+         mesmo R$ 508,91 escrito em letra garrafal cem pixels acima — o
+         mesmo número duas vezes na mesma olhada, ocupando espaço sem
+         acrescentar nada.
+
+         A conta continua inteira e continua conferível: o número grande é
+         o gastou, e 800 menos 508,91 dá os 291,09 da caixa da direita. O
+         que saiu foi a repetição, não a aritmética. -->
     <div class="fatura-resumo">
       <div><small>Entrou</small><strong>${moeda(r.entrou)}</strong></div>
-      <div><small>Gastou</small><strong>${moeda(r.gastou)}</strong></div>
       <div class="${r.vazio ? "" : r.sobrou >= 0 ? "destaque" : "destaque-ruim"}">
         <small>${r.sobrou >= 0 ? "Sobrou" : "Faltou"}</small>
         <strong>${moeda(Math.abs(r.sobrou))}</strong>
