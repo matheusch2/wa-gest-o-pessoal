@@ -56,6 +56,53 @@ module.exports = () => suite("Cartão e fatura", async ({ p, ok, abrir, chamadas
   ok("o total da lista é a soma das faturas que os cartões mostram",
     Math.round(totalLista * 100) === Math.round(somaCartoes * 100));
 
+  /* ─── Sete cartões não podem virar sete telas de rolagem ────────────
+     A pilha ficava cansativa, e a fatura que vence amanhã podia estar
+     embaixo de três já pagas. */
+  const SETE = `
+    cartoes = ["bb","inter","neon","nubank","c6","picpay","itau"].map((b,i) =>
+      ({ id:"k"+i, nome:"Cartão "+i, banco:b, dia_fechamento:1, dia_vencimento:10+i }));
+    comprasCartao = cartoes.map((c,i) => ({ id:"c"+i, cartao_id:c.id, descricao:"Compras",
+      valor:100*(i+1), parcelas:1, data:"2026-09-20", categoria:"Outros",
+      recorrente:false, fim:null }));
+    pagamentosFatura = [{ id:"p", cartao_id:"k0", mes_ref:"2026-10", tipo:"pago",
+                          valor:100, pago_em:"2026-10-01", lancamento_id:"x" }];
+    lancamentos = []; contas = []; metas = []; fechamentos = []; entradasFixas = [];
+    mesAtual = "2026-10"; _cartoesEmLista = false;`;
+
+  await abrir(SETE + "; abrirCartoes();");
+  ok("os cartões entram num trilho que desliza", (await p.locator(".cartao-trilho").count()) === 1);
+  ok("com um ponto por cartão", (await p.locator(".cartao-pontos span").count()) === 7);
+  ok("o primeiro ponto nasce aceso", (await p.locator(".cartao-pontos span.ativo").count()) === 1);
+
+  // O trilho rola por dentro. A PÁGINA não pode rolar pro lado — barra
+  // horizontal na tela inteira é defeito, não recurso.
+  const sobra = await p.evaluate(() =>
+    document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  ok("e a página não passa a rolar pro lado", sobra <= 0);
+
+  /* ─── Quem ainda deve vem primeiro ───────────────────────────────── */
+  await abrir(SETE + "; _cartoesEmLista = true; abrirCartoes();");
+  ok("o botão troca pra lista", (await p.locator(".cartao-linha").count()) === 7);
+  ok("e o trilho some", (await p.locator(".cartao-trilho").count()) === 0);
+
+  const nomes = await p.locator(".cartao-linha-txt strong").allTextContents();
+  const pagas = await p.locator(".cartao-linha-valor.quitada").count();
+  ok("a fatura já paga desce pro fim", nomes[nomes.length - 1] === "Cartão 0");
+  ok("e perde o vermelho — paga não é dívida", pagas === 1);
+
+  const datas = (await p.locator(".cartao-linha-txt small").allTextContents())
+    .filter(t => /vence/.test(t))
+    .map(t => t.match(/(\d\d)\/(\d\d)\/(\d{4})/).slice(1).reverse().join(""));
+  ok("entre as que devem, vence antes aparece antes",
+    JSON.stringify(datas) === JSON.stringify([...datas].sort()));
+
+  /* ─── Com dois cartões o botão não aparece ───────────────────────────
+     Ele resolve uma lista longa; com dois não há o que resolver, e botão
+     que não resolve nada é mais uma coisa pra ler. */
+  await abrir(CARTAO + "; abrirCartoes();");
+  ok("um cartão só não ganha o alternador", (await p.locator(".cartao-visao").count()) === 0);
+
   /* ─── Fechada não quer dizer paga ────────────────────────────────────
      O defeito: "faturas de antes" varria o mês corrente junto. Um cartão
      que fecha dia 1 fecha a fatura de outubro no dia 1º de outubro; no

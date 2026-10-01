@@ -156,52 +156,107 @@ function _mesFaturaAberta(cartao) {
 /* ═══ LISTA DE CARTÕES ════════════════════════════════════════════════ */
 
 const _ICO_CARTAO = `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="4" width="22" height="16" rx="3"/><line x1="1" y1="10" x2="23" y2="10"/><line x1="5" y1="15" x2="9" y2="15"/></svg>`;
+const _ICO_LISTA = `<svg viewBox="0 0 24 24" aria-hidden="true"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>`;
 
 function abrirCartoes() { abrirTela(desenharCartoes); }
+
+/* COM SETE CARTÕES, A PILHA VIRA UMA TELA DE ROLAR SEM FIM.
+   Cada cartão ocupa a altura de um cartão de verdade — bonito com dois,
+   cansativo com sete, e a fatura que vence amanhã pode estar embaixo de
+   três já pagas.
+
+   Então são duas visões da mesma lista, e um botão entre elas:
+
+     CARRINHO  os cartões lado a lado, deslizando com o dedo. Altura de um
+               só, e a borda do seguinte aparecendo diz que tem mais.
+     LISTA     uma linha por cartão. Os sete cabem numa olhada, que é o que
+               serve pra achar um.
+
+   O que não muda nas duas é a ORDEM: quem ainda deve vem primeiro, e
+   entre eles quem vence antes. */
+
+let _cartoesEmLista = false;
+
+function alternarVisaoCartoes() {
+  _cartoesEmLista = !_cartoesEmLista;
+  desenharCartoes();
+}
+
+// Tudo que as duas visões precisam saber de cada cartão, calculado uma vez
+// só. A fatura é a MESMA que abre ao tocar nele — lista e tela de dentro
+// falando de meses diferentes faz a pessoa desconfiar do número, com razão.
+function _filaDeCartoes() {
+  return cartoes.map(c => {
+    const mes = _faturaAoAbrir(c);
+    return {
+      c, mes,
+      b: _banco(c.banco),
+      s: _situacaoFatura(c, mes),
+      venc: _vencimentoDaFatura(mes, c.dia_fechamento, c.dia_vencimento),
+      aberta: mes === _mesFaturaAberta(c),
+    };
+  }).sort((x, y) =>
+    (x.s.restante >= 0.005 ? 0 : 1) - (y.s.restante >= 0.005 ? 0 : 1) ||
+    x.venc.localeCompare(y.venc) ||
+    x.c.nome.localeCompare(y.c.nome, "pt-BR"));
+}
 
 function desenharCartoes() {
   destruirGrafico();
 
-  const cards = cartoes.map(c => {
-    const b = _banco(c.banco);
-    // A MESMA fatura que abre ao tocar no cartão. Aqui estava a "aberta",
-    // e o cartão mostrava outubro vencendo 10/10 enquanto a conta a pagar
-    // era a de setembro, vencendo dia 10. Lista e tela de dentro falando
-    // de meses diferentes é o tipo de coisa que faz a pessoa desconfiar do
-    // número — com razão.
-    const mes = _faturaAoAbrir(c);
-    const aberta = mes === _mesFaturaAberta(c);
-    const venc = _vencimentoDaFatura(mes, c.dia_fechamento, c.dia_vencimento);
-    const s = _situacaoFatura(c, mes);
-    return `
-      <button class="cartao-card" style="background:${b.cor};color:${b.texto}"
-              onclick="abrirCartao('${c.id}')">
-        <div class="cartao-card-topo">
-          <span class="cartao-card-banco">${esc(b.nome)}</span>
-          ${_ICO_CARTAO}
-        </div>
-        <span class="cartao-card-nome">${esc(c.nome)}</span>
-        <div class="cartao-card-baixo">
-          <div>
-            <small>${s.parcial ? "Falta pagar" : aberta ? "Fatura atual" : "Fatura de " + soNomeDoMes(mes)}</small>
-            <strong>${moeda(s.quitada ? s.pago : s.parcial ? s.restante : s.total)}</strong>
-          </div>
-          <div class="cartao-card-venc">
-            ${s.quitada
-              ? `<span class="cartao-card-selo">${_ICO_CONFERE} Paga</span>`
-              : `<small>Vence</small><strong>${dataBR(venc)}</strong>`}
-          </div>
-        </div>
-      </button>`;
-  }).join("");
+  const fila = _filaDeCartoes();
 
-  // O que já foi pago sai da soma: virou saída no extrato no dia do
-  // pagamento, e continuar somando aqui seria contar o mesmo dinheiro duas
-  // vezes. E a soma é das mesmas faturas que os cartões mostram — senão o
-  // total não bate com a conta de baixo, e não há erro pior num app de
-  // dinheiro do que dois números que não fecham na mesma tela.
-  const totalGeral = cartoes.reduce(
-    (soma, c) => soma + _situacaoFatura(c, _faturaAoAbrir(c)).restante, 0);
+  const umCartao = ({ c, b, s, venc, mes, aberta }) => `
+    <button class="cartao-card" style="background:${b.cor};color:${b.texto}"
+            onclick="abrirCartao('${c.id}')">
+      <div class="cartao-card-topo">
+        <span class="cartao-card-banco">${esc(b.nome)}</span>
+        ${_ICO_CARTAO}
+      </div>
+      <span class="cartao-card-nome">${esc(c.nome)}</span>
+      <div class="cartao-card-baixo">
+        <div>
+          <small>${s.parcial ? "Falta pagar" : aberta ? "Fatura atual" : "Fatura de " + soNomeDoMes(mes)}</small>
+          <strong>${moeda(s.quitada ? s.pago : s.parcial ? s.restante : s.total)}</strong>
+        </div>
+        <div class="cartao-card-venc">
+          ${s.quitada
+            ? `<span class="cartao-card-selo">${_ICO_CONFERE} Paga</span>`
+            : `<small>Vence</small><strong>${dataBR(venc)}</strong>`}
+        </div>
+      </div>
+    </button>`;
+
+  // Na linha a cor do banco vira só um risco na lateral: sete retângulos
+  // coloridos lado a lado brigam entre si e nenhum se lê.
+  const umaLinha = ({ c, b, s, venc }) => `
+    <button class="cartao-linha" onclick="abrirCartao('${c.id}')">
+      <span class="cartao-linha-cor" style="background:${b.cor}"></span>
+      <div class="cartao-linha-txt">
+        <strong>${esc(c.nome)}</strong>
+        <small>${esc(b.nome)} · ${s.quitada ? "fatura paga" : "vence " + dataBR(venc)}</small>
+      </div>
+      <strong class="cartao-linha-valor${s.quitada ? " quitada" : ""}">
+        ${moeda(s.quitada ? s.pago : s.restante)}
+      </strong>
+    </button>`;
+
+  /* O que já foi pago sai da soma: virou saída no extrato no dia do
+     pagamento, e continuar somando aqui seria contar o mesmo dinheiro duas
+     vezes. E a soma é das mesmas faturas que os cartões mostram — senão o
+     total não bate com a conta de baixo, e não há erro pior num app de
+     dinheiro do que dois números que não fecham na mesma tela. */
+  const totalGeral = fila.reduce((soma, x) => soma + x.s.restante, 0);
+  const devendo = fila.filter(x => x.s.restante >= 0.005).length;
+
+  // O botão só aparece com três ou mais: com dois cartões não há o que
+  // resolver, e um botão que não resolve nada é mais uma coisa pra ler.
+  const alternador = fila.length < 3 ? "" : `
+    <button class="cartao-visao" onclick="alternarVisaoCartoes()">
+      ${_cartoesEmLista
+        ? `${_ICO_CARTAO} Ver em cartões`
+        : `${_ICO_LISTA} Ver os ${fila.length} em lista`}
+    </button>`;
 
   document.getElementById("area").innerHTML = `
     <section class="lancamento-tela" style="--cor-tipo:var(--marca-txt)">
@@ -218,9 +273,11 @@ function desenharCartoes() {
            sempre é dela que se trata. -->
       <span>Total em aberto</span>
       <strong>${moeda(totalGeral)}</strong>
-      <small>${cartoes.length
-        ? `${cartoes.length} ${cartoes.length > 1 ? "cartões cadastrados" : "cartão cadastrado"}`
-        : "Nenhum cartão ainda"}</small>
+      <small>${!fila.length
+        ? "Nenhum cartão ainda"
+        : devendo
+          ? `${devendo} de ${fila.length} ${fila.length > 1 ? "faturas em aberto" : "fatura em aberto"}`
+          : `${fila.length} ${fila.length > 1 ? "cartões, tudo pago" : "cartão, tudo pago"}`}</small>
     </div>
 
     <button class="botao" onclick="abrirNovoCartao()">
@@ -228,12 +285,42 @@ function desenharCartoes() {
       Novo cartão
     </button>
 
-    ${cartoes.length
-      ? `<div class="cartao-lista">${cards}</div>`
-      : `<div class="bloco" style="margin-top:14px"><p class="vazio">Cadastre seu primeiro cartão pra acompanhar as faturas.</p></div>`}
+    ${!fila.length
+      ? `<div class="bloco" style="margin-top:14px"><p class="vazio">Cadastre seu primeiro cartão pra acompanhar as faturas.</p></div>`
+      : _cartoesEmLista
+        ? `${alternador}<div class="cartao-linhas">${fila.map(umaLinha).join("")}</div>`
+        : `${alternador}
+           <div class="cartao-trilho" id="cartao-trilho">${fila.map(umCartao).join("")}</div>
+           ${fila.length > 1 ? `<div class="cartao-pontos" id="cartao-pontos" aria-hidden="true">
+             ${fila.map(() => `<span></span>`).join("")}</div>` : ""}`}
 
     <button class="botao-fraco" onclick="voltarInicio()">Voltar</button>
   `;
+
+  if (!_cartoesEmLista) _ligarCarrossel();
+}
+
+/* Os pontinhos embaixo do carrinho. Eles não são enfeite: num trilho que
+   desliza, são a única coisa que diz quantos cartões existem e em qual
+   deles você está. Puro CSS não alcança isso — a posição só se sabe
+   ouvindo a rolagem. */
+function _ligarCarrossel() {
+  const trilho = document.getElementById("cartao-trilho");
+  const pontos = document.getElementById("cartao-pontos");
+  if (!trilho || !pontos) return;
+
+  const marcar = () => {
+    const meio = trilho.scrollLeft + trilho.clientWidth / 2;
+    let escolhido = 0, menor = Infinity;
+    [...trilho.children].forEach((card, i) => {
+      const d = Math.abs(card.offsetLeft + card.offsetWidth / 2 - meio);
+      if (d < menor) { menor = d; escolhido = i; }
+    });
+    [...pontos.children].forEach((p, i) => p.classList.toggle("ativo", i === escolhido));
+  };
+
+  trilho.addEventListener("scroll", marcar, { passive: true });
+  marcar();
 }
 
 /* ═══ CADASTRAR CARTÃO ════════════════════════════════════════════════ */

@@ -1368,7 +1368,93 @@ body.escuro .resumo-secao .item-icone.entrada { background: #17372d; }
    valor embaixo. É por essa cor que a pessoa acha o cartão dela na lista,
    antes mesmo de ler o nome. */
 
-.cartao-lista { display: flex; flex-direction: column; gap: 12px; margin-top: 14px; }
+/* O TRILHO. Sete cartões empilhados são sete telas de rolagem, e a
+   fatura que vence amanhã pode estar embaixo de três já pagas. Lado a
+   lado eles ocupam a altura de UM, e o pedaço do seguinte aparecendo na
+   borda é o que diz, sem escrever, que tem mais pro lado.
+
+   O scroll-snap é o que faz o dedo parar no cartão e não no meio de dois.
+   E o overflow fica NO TRILHO, nunca na página: barra de rolagem lateral
+   na tela inteira é defeito, não recurso. */
+.cartao-trilho {
+  display: flex;
+  gap: 12px;
+  margin-top: 10px;
+  padding: 2px 2px 6px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.cartao-trilho::-webkit-scrollbar { display: none; }
+.cartao-trilho .cartao-card {
+  flex: 0 0 86%;
+  scroll-snap-align: center;
+}
+
+/* Os pontinhos dizem quantos são e em qual você está — a única coisa que
+   responde isso num trilho que desliza. */
+.cartao-pontos { display: flex; justify-content: center; gap: 6px; margin-top: 10px; }
+.cartao-pontos span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--texto) 18%, transparent);
+  transition: width .18s, background .18s;
+}
+.cartao-pontos span.ativo { width: 18px; border-radius: 999px; background: var(--marca-txt); }
+
+/* O botão que troca as duas visões. Pílula discreta e alinhada à direita:
+   ele é um ajuste de como olhar, não uma ação sobre o dinheiro. */
+.cartao-visao {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: auto;
+  margin: 14px 0 0 auto;
+  padding: 7px 13px;
+  border: 1.5px solid var(--borda);
+  border-radius: 999px;
+  background: var(--papel);
+  color: var(--fraco);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.cartao-visao svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.cartao-visao:active { background: var(--marca-cl); border-color: var(--marca-txt); color: var(--marca-txt); }
+
+/* A LISTA. Aqui a cor do banco vira um risco na lateral: sete retângulos
+   coloridos inteiros brigam entre si e nenhum se lê. O que a lista serve
+   pra fazer é achar um cartão, não admirá-lo. */
+.cartao-linhas { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+
+.cartao-linha {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 11px 13px;
+  border: 1.5px solid var(--borda);
+  border-radius: 12px;
+  background: var(--papel);
+  color: var(--texto);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.cartao-linha:active { background: var(--marca-cl); }
+
+.cartao-linha-cor { flex: 0 0 4px; align-self: stretch; min-height: 32px; border-radius: 999px; }
+.cartao-linha-txt { flex: 1; min-width: 0; }
+.cartao-linha-txt strong { display: block; font-size: 14.5px; font-weight: 800; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cartao-linha-txt small { display: block; font-size: 11.5px; color: var(--fraco); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.cartao-linha-valor { flex-shrink: 0; font-size: 14.5px; font-weight: 800; color: var(--saida); white-space: nowrap; font-variant-numeric: tabular-nums; }
+/* Fatura paga não é dívida: ela perde o vermelho e vira só histórico. */
+.cartao-linha-valor.quitada { color: var(--fraco); font-weight: 700; }
+
 
 .cartao-card, .cartao-capa {
   width: 100%;
