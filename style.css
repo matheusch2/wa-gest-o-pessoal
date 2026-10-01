@@ -1368,93 +1368,80 @@ body.escuro .resumo-secao .item-icone.entrada { background: #17372d; }
    valor embaixo. É por essa cor que a pessoa acha o cartão dela na lista,
    antes mesmo de ler o nome. */
 
-/* O TRILHO. Sete cartões empilhados são sete telas de rolagem, e a
-   fatura que vence amanhã pode estar embaixo de três já pagas. Lado a
-   lado eles ocupam a altura de UM, e o pedaço do seguinte aparecendo na
-   borda é o que diz, sem escrever, que tem mais pro lado.
+/* O BARALHO. Sete cartões em tamanho inteiro são sete telas de rolagem,
+   e a fatura que vence amanhã pode estar embaixo de três já pagas.
+   Empilhados como na carteira, cada um deixa à mostra só a tirinha de
+   cima — e os sete cabem numa tela sem nenhum sumir.
 
-   O scroll-snap é o que faz o dedo parar no cartão e não no meio de dois.
-   E o overflow fica NO TRILHO, nunca na página: barra de rolagem lateral
-   na tela inteira é defeito, não recurso. */
-.cartao-trilho {
-  display: flex;
-  gap: 12px;
-  margin-top: 10px;
-  padding: 2px 2px 6px;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-}
-.cartao-trilho::-webkit-scrollbar { display: none; }
-.cartao-trilho .cartao-card {
-  flex: 0 0 86%;
-  scroll-snap-align: center;
+   A altura é limitada com max-height, e não com height: é ela que dá a
+   abertura animada. Fosse display:none, o cartão apareceria aberto em vez
+   de abrir. */
+.cartao-baralho { display: flex; flex-direction: column; margin-top: 14px; }
+
+/* 54px = os 16 de respiro de cima, a linha do banco (24) e os 16 de
+   baixo. É o corte exato embaixo da tirinha: um pixel a mais e o nome do
+   cartão começa a vazar — o que ninguém vê nos cartões do meio, porque o
+   seguinte cobre, mas aparece no último, que não tem ninguém por cima. */
+.cartao-baralho .cartao-card {
+  position: relative;
+  max-height: 56px;
+  overflow: hidden;
+  transition: max-height .26s ease, margin .26s ease, box-shadow .26s ease;
 }
 
-/* Os pontinhos dizem quantos são e em qual você está — a única coisa que
-   responde isso num trilho que desliza. */
-.cartao-pontos { display: flex; justify-content: center; gap: 6px; margin-top: 10px; }
-.cartao-pontos span {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--texto) 18%, transparent);
-  transition: width .18s, background .18s;
+/* O resto do cartão continua ocupando o lugar dele (é isso que faz o
+   max-height ter pra onde crescer), mas invisível — assim ele aparece
+   junto com a abertura em vez de piscar na tela antes dela. */
+.cartao-baralho .cartao-card .cartao-card-nome,
+.cartao-baralho .cartao-card .cartao-card-baixo {
+  opacity: 0;
+  transition: opacity .2s ease;
 }
-.cartao-pontos span.ativo { width: 18px; border-radius: 999px; background: var(--marca-txt); }
+.cartao-baralho .cartao-card.aberto .cartao-card-nome,
+.cartao-baralho .cartao-card.aberto .cartao-card-baixo { opacity: 1; }
 
-/* O botão que troca as duas visões. Pílula discreta e alinhada à direita:
-   ele é um ajuste de como olhar, não uma ação sobre o dinheiro. */
-.cartao-visao {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  width: auto;
-  margin: 14px 0 0 auto;
-  padding: 7px 13px;
-  border: 1.5px solid var(--borda);
-  border-radius: 999px;
-  background: var(--papel);
+/* A sobreposição: cada cartão sobe por cima do anterior e cobre a barriga
+   dele, que é o que faz a pilha parecer pilha e não lista com pouco
+   espaço. O z-index vem no HTML, crescendo com a posição. */
+.cartao-baralho .cartao-card + .cartao-card { margin-top: -14px; }
+
+/* O ABERTO SAI DA PILHA. Ele cresce, ganha sombra e empurra o seguinte
+   pra baixo — sem esse respiro, o cartão de baixo cobriria justamente a
+   linha do valor e do vencimento, que é o que a pessoa veio ver. */
+.cartao-baralho .cartao-card.aberto {
+  max-height: 260px;
+  z-index: 40 !important;
+  box-shadow: 0 14px 28px -12px rgba(15,23,42,.65);
+}
+.cartao-baralho .cartao-card.aberto + .cartao-card { margin-top: 10px; }
+
+/* Na tirinha, o nome do banco sozinho não diz o que a pessoa veio ver —
+   o valor vai junto. Com o cartão aberto ele some, porque aí ele está
+   lá embaixo em corpo 19. */
+.cartao-card-resumo {
+  margin-left: auto;
+  font-size: 13.5px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  opacity: .95;
+  white-space: nowrap;
+}
+.cartao-card.aberto .cartao-card-resumo { display: none; }
+
+.cartao-baralho-dica {
+  margin: 12px 0 0;
+  text-align: center;
+  font-size: 11.5px;
+  line-height: 1.5;
   color: var(--fraco);
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
 }
-.cartao-visao svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
-.cartao-visao:active { background: var(--marca-cl); border-color: var(--marca-txt); color: var(--marca-txt); }
 
-/* A LISTA. Aqui a cor do banco vira um risco na lateral: sete retângulos
-   coloridos inteiros brigam entre si e nenhum se lê. O que a lista serve
-   pra fazer é achar um cartão, não admirá-lo. */
-.cartao-linhas { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
-
-.cartao-linha {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  width: 100%;
-  padding: 11px 13px;
-  border: 1.5px solid var(--borda);
-  border-radius: 12px;
-  background: var(--papel);
-  color: var(--texto);
-  font-family: inherit;
-  text-align: left;
-  cursor: pointer;
+/* Quem prefere o aparelho sem animação não vê a pilha pulando. */
+@media (prefers-reduced-motion: reduce) {
+  .cartao-baralho .cartao-card,
+  .cartao-baralho .cartao-card .cartao-card-nome,
+  .cartao-baralho .cartao-card .cartao-card-baixo { transition: none; }
 }
-.cartao-linha:active { background: var(--marca-cl); }
-
-.cartao-linha-cor { flex: 0 0 4px; align-self: stretch; min-height: 32px; border-radius: 999px; }
-.cartao-linha-txt { flex: 1; min-width: 0; }
-.cartao-linha-txt strong { display: block; font-size: 14.5px; font-weight: 800; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.cartao-linha-txt small { display: block; font-size: 11.5px; color: var(--fraco); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-.cartao-linha-valor { flex-shrink: 0; font-size: 14.5px; font-weight: 800; color: var(--saida); white-space: nowrap; font-variant-numeric: tabular-nums; }
-/* Fatura paga não é dívida: ela perde o vermelho e vira só histórico. */
-.cartao-linha-valor.quitada { color: var(--fraco); font-weight: 700; }
-
 
 .cartao-card, .cartao-capa {
   width: 100%;

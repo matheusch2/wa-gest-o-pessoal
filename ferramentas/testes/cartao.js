@@ -56,9 +56,9 @@ module.exports = () => suite("Cartão e fatura", async ({ p, ok, abrir, chamadas
   ok("o total da lista é a soma das faturas que os cartões mostram",
     Math.round(totalLista * 100) === Math.round(somaCartoes * 100));
 
-  /* ─── Sete cartões não podem virar sete telas de rolagem ────────────
-     A pilha ficava cansativa, e a fatura que vence amanhã podia estar
-     embaixo de três já pagas. */
+  /* ─── O baralho ──────────────────────────────────────────────────────
+     Sete cartões em tamanho inteiro são sete telas de rolagem, e a fatura
+     que vence amanhã podia estar embaixo de três já pagas. */
   const SETE = `
     cartoes = ["bb","inter","neon","nubank","c6","picpay","itau"].map((b,i) =>
       ({ id:"k"+i, nome:"Cartão "+i, banco:b, dia_fechamento:1, dia_vencimento:10+i }));
@@ -68,40 +68,54 @@ module.exports = () => suite("Cartão e fatura", async ({ p, ok, abrir, chamadas
     pagamentosFatura = [{ id:"p", cartao_id:"k0", mes_ref:"2026-10", tipo:"pago",
                           valor:100, pago_em:"2026-10-01", lancamento_id:"x" }];
     lancamentos = []; contas = []; metas = []; fechamentos = []; entradasFixas = [];
-    mesAtual = "2026-10"; _cartoesEmLista = false;`;
+    mesAtual = "2026-10"; _cartaoPrincipal = null;`;
 
   await abrir(SETE + "; abrirCartoes();");
-  ok("os cartões entram num trilho que desliza", (await p.locator(".cartao-trilho").count()) === 1);
-  ok("com um ponto por cartão", (await p.locator(".cartao-pontos span").count()) === 7);
-  ok("o primeiro ponto nasce aceso", (await p.locator(".cartao-pontos span.ativo").count()) === 1);
+  ok("os sete cartões estão todos na tela", (await p.locator(".cartao-baralho .cartao-card").count()) === 7);
+  ok("só um está aberto", (await p.locator(".cartao-card.aberto").count()) === 1);
 
-  // O trilho rola por dentro. A PÁGINA não pode rolar pro lado — barra
-  // horizontal na tela inteira é defeito, não recurso.
-  const sobra = await p.evaluate(() =>
-    document.documentElement.scrollWidth - document.documentElement.clientWidth);
-  ok("e a página não passa a rolar pro lado", sobra <= 0);
+  // Empilhados, os sete cabem numa tela. Em tamanho inteiro não caberiam.
+  const alturaBaralho = (await p.locator(".cartao-baralho").boundingBox()).height;
+  ok("e o baralho cabe numa tela de celular", alturaBaralho < 700);
 
-  /* ─── Quem ainda deve vem primeiro ───────────────────────────────── */
-  await abrir(SETE + "; _cartoesEmLista = true; abrirCartoes();");
-  ok("o botão troca pra lista", (await p.locator(".cartao-linha").count()) === 7);
-  ok("e o trilho some", (await p.locator(".cartao-trilho").count()) === 0);
+  /* Quem ainda deve vem primeiro, e entre eles quem vence antes — quem
+     abre esta tela quer saber o que pagar, e a ordem de cadastro não
+     responde isso. */
+  const ordem = await p.locator(".cartao-baralho .cartao-card").evaluateAll(
+    ns => ns.map(n => n.id));
+  ok("o mais urgente nasce aberto",
+    (await p.locator(".cartao-card.aberto").getAttribute("id")) === ordem[0]);
+  ok("e a fatura já paga desce pro fim", ordem[ordem.length - 1] === "cartao-k0");
 
-  const nomes = await p.locator(".cartao-linha-txt strong").allTextContents();
-  const pagas = await p.locator(".cartao-linha-valor.quitada").count();
-  ok("a fatura já paga desce pro fim", nomes[nomes.length - 1] === "Cartão 0");
-  ok("e perde o vermelho — paga não é dívida", pagas === 1);
+  /* ─── Um toque traz à frente; o segundo abre a fatura ─────────────────
+     Dois gestos no mesmo lugar, e eles não se atrapalham porque o primeiro
+     toque sempre tem um alvo diferente do segundo. */
+  await p.click("#cartao-k3");
+  ok("tocar num cartão o traz pra frente",
+    (await p.locator(".cartao-card.aberto").getAttribute("id")) === "cartao-k3");
+  ok("e fecha o que estava aberto", (await p.locator(".cartao-card.aberto").count()) === 1);
 
-  const datas = (await p.locator(".cartao-linha-txt small").allTextContents())
-    .filter(t => /vence/.test(t))
-    .map(t => t.match(/(\d\d)\/(\d\d)\/(\d{4})/).slice(1).reverse().join(""));
-  ok("entre as que devem, vence antes aparece antes",
-    JSON.stringify(datas) === JSON.stringify([...datas].sort()));
+  // Trocar de cartão NÃO redesenha a tela: com innerHTML os elementos
+  // nasceriam de novo e a abertura não teria como animar.
+  ok("o cabeçalho continua o da lista de cartões",
+    /Cartões/.test(await texto(".lancamento-cabecalho h2")));
 
-  /* ─── Com dois cartões o botão não aparece ───────────────────────────
-     Ele resolve uma lista longa; com dois não há o que resolver, e botão
-     que não resolve nada é mais uma coisa pra ler. */
+  await p.click("#cartao-k3");
+  ok("tocar de novo abre a fatura dele",
+    (await p.locator(".cartao-capa").count()) === 1);
+
+  /* ─── O cartão da frente não pode se perder ──────────────────────────
+     Ele some quando é excluído, e aí a tela precisa escolher outro em vez
+     de ficar sem nenhum aberto. */
+  await abrir(SETE + `; _cartaoPrincipal = "fantasma"; abrirCartoes();`);
+  ok("id que não existe mais cai no mais urgente",
+    (await p.locator(".cartao-card.aberto").count()) === 1);
+
+  /* ─── Um cartão só não ganha dica de baralho ─────────────────────── */
   await abrir(CARTAO + "; abrirCartoes();");
-  ok("um cartão só não ganha o alternador", (await p.locator(".cartao-visao").count()) === 0);
+  ok("com um cartão não há o que empilhar",
+    (await p.locator(".cartao-baralho-dica").count()) === 0);
+  ok("e ele nasce aberto", (await p.locator(".cartao-card.aberto").count()) === 1);
 
   /* ─── Fechada não quer dizer paga ────────────────────────────────────
      O defeito: "faturas de antes" varria o mês corrente junto. Um cartão
