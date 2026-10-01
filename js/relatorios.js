@@ -642,12 +642,10 @@ function desenharRelatorios() {
   // A frase embaixo do número grande. É ela que transforma "R$ 3.210" em
   // informação: sozinho, o valor não diz se foi muito ou pouco.
   const frase = !temRenda
-    ? (r.gastou >= 0.005
-        ? "Nada entrou neste mês — tudo isto saiu de dinheiro de antes"
-        : "Nada lançado neste mês")
+    ? (r.gastou >= 0.005 ? "E nada entrou neste mês" : "Nada lançado neste mês")
     : usado > 1
       ? `${moeda(r.gastou - r.entrou)} a mais do que entrou`
-      : `De cada R$ 100 que entraram, você gastou R$ ${Math.round(usado * 100)}`;
+      : `Custou R$ ${Math.round(usado * 100)} de cada R$ 100 que entraram`;
 
   /* A LISTA GANHOU A ROSCA DO LADO. A barrinha por categoria dizia a
      mesma coisa seis vezes seguidas e nenhuma delas de relance: pra saber
@@ -718,14 +716,24 @@ function desenharRelatorios() {
     </div>
 
     <div class="rel-topo ${classe}">
-      <span class="rel-topo-rotulo">Você gastou</span>
+      <!-- "VOCÊ GASTOU" PROMETIA O QUE O NÚMERO NÃO ENTREGA. Ele soma o
+           extrato com as compras do cartão, e o dono do app somou as
+           quatro saídas da lista e perguntou: "só foi gasto essa parte,
+           como é que dá mais de 500?". Estava certo — R$ 328,60 de
+           assinatura não saíram da conta dele.
+
+           O número não mudou, porque ele responde "quanto este mês me
+           custou" e as categorias logo abaixo somam exatamente ele. O que
+           mudou foi a palavra: "custou" é verdade com a fatura paga ou
+           não, e não finge que o dinheiro já saiu. -->
+      <span class="rel-topo-rotulo">O mês custou</span>
       <strong>${moeda(r.gastou)}</strong>
       <div class="rel-topo-barra"><span style="width:${Math.min(100, usado * 100)}%"></span></div>
       <small>${frase}</small>
       ${r.noCartao >= 0.005 ? `
         <p class="rel-topo-divisao">
-          <b>${_vlr(r.noExtrato)}</b> saíram da conta ·
-          <b>${_vlr(r.noCartao)}</b> ainda estão no cartão
+          <b>${_vlr(r.noExtrato)}</b> já saíram da conta ·
+          <b>${_vlr(r.noCartao)}</b> saem quando você pagar a fatura
         </p>` : ""}
     </div>
 

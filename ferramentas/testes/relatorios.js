@@ -84,8 +84,13 @@ module.exports = () => suite("Relatórios", async ({ p, ok, abrir, texto, valor,
      erro: quem olha diz "eu não paguei isso". Não pagou — sai quando a
      fatura for paga. A tela responde antes da pergunta. */
   ok("a tela separa o que saiu da conta do que está no cartão",
-    /saíram da conta/.test(await texto(".rel-topo")) &&
-    /ainda estão no cartão/.test(await texto(".rel-topo")));
+    /já saíram da conta/.test(await texto(".rel-topo")) &&
+    /saem quando você pagar a fatura/.test(await texto(".rel-topo")));
+
+  /* E o rótulo não pode prometer que o dinheiro saiu: o número inclui o
+     cartão, e quem soma as saídas da lista acha menos. */
+  ok("o rótulo não diz 'você gastou'", !/Você gastou/i.test(await texto(".rel-topo")));
+  ok("ele diz o que o número é", /O mês custou/i.test(await texto(".rel-topo")));
   const divisao = await texto(".rel-topo-divisao");
   // Extrato: 640 + 1200 = 1840. Cartão: 1200 + 187,90 = 1387,90.
   ok("com o valor do extrato", /R\$ 1\.840,00/.test(divisao));
