@@ -182,11 +182,22 @@ function _avisoObrigatorios(mesRef) {
   const renda = _cent(_retratoDoMes(mesRef).entrou + aReceberDoMes(mesRef).total);
   if (renda < 0.005) return null;
 
+  /* O DENOMINADOR TEM QUE APARECER. Antes a frase dizia "69% do que entra
+     no mês" e parava aí — e logo acima dela a tela mostrava "Entrou
+     R$ 800,00", porque dia 1º só o adiantamento tinha caído. R$ 5.274,87
+     não é 69% de R$ 800, e quem lesse as duas coisas juntas ficava sem
+     saber qual das duas estava errada.
+
+     Nenhuma estava: a frase conta o salário que ainda vai cair, e a caixa
+     não conta — ela é o que já caiu. Mas o número que fecha a conta não
+     estava escrito em lugar nenhum da tela, e número invisível não
+     explica nada. Agora ele aparece por extenso, e a frase se sustenta
+     sozinha. */
   const pct = Math.round((obrigatorio / renda) * 100);
   return {
     tom: pct >= 80 ? "ruim" : pct >= 60 ? "atencao" : "bom",
     texto: `Contas e faturas de ${soNomeDoMes(mesRef)} somam <b>${_vlr(obrigatorio)}</b> —
-            <b>${pct}%</b> do que entra no mês.`,
+            <b>${pct}%</b> dos <b>${_vlr(renda)}</b> que devem entrar no mês.`,
   };
 }
 
