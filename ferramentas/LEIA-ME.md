@@ -1,18 +1,56 @@
 # Ferramentas
 
-Duas conferências que o olho não faz. Nenhuma delas entra no site — são só
-para rodar antes de subir uma mudança grande de visual.
+Conferências que o olho não faz. Nenhuma delas entra no site — são para
+rodar antes de subir uma mudança.
+
+A mais importante é a primeira.
 
 ## Preciso instalar algo?
 
 Só uma vez, e fora do repositório:
 
-    npm install playwright
+    npm install playwright chart.js
     npx playwright install chromium
 
 Se o seu Chromium estiver em outro lugar, aponte na hora de rodar:
 
     CHROMIUM=/caminho/do/chromium node ferramentas/rodar.js
+
+## Os testes
+
+    node ferramentas/montar-pagina-de-teste.js
+    node ferramentas/testes/rodar.js
+
+Uma suíte só: `node ferramentas/testes/rodar.js cartao`
+
+Eles abrem o app de verdade num navegador sem tela, trocam os dados por um
+cenário e conferem o que aparece — e, quando a tela grava alguma coisa, o
+que ela mandou pro banco. Saída limpa termina em `Tudo certo — N
+conferências`.
+
+**O que eles protegem.** Não é a aparência: é a conta. Quase toda
+conferência aqui trava um defeito que de fato aconteceu neste app, e quase
+todos eram da mesma família — dois números para a mesma coisa em lugares
+diferentes:
+
+- as Metas diziam "sobram R$ 683" e o Resumo dizia "ainda vai sair R$ 1.000"
+- a lista de cartões mostrava uma fatura e a tela de dentro mostrava outra
+- "faturas de antes" varria o mês corrente, e marcava como paga a conta do mês
+- o aviso dividia por um número que não estava escrito na tela
+
+Nenhum desses é erro de digitação. São erros de raciocínio sobre dinheiro,
+e é por isso que eles precisam de teste e não de tipo.
+
+**Para confiar neles, quebre-os de propósito.** Troque no `js/core.js` o
+`if (mesDe(venc) !== mesRef) continue;` por `if (true) continue;` e rode de
+novo: a suíte de reservas tem que acusar. Se não acusar, o problema é o
+teste, não o código.
+
+**Suíte nova = arquivo novo em `ferramentas/testes/`.** O `rodar.js` acha
+sozinho — arquivo que começa com `_` é apoio e fica de fora.
+
+O `chart.js` é opcional: sem ele, as conferências dos gráficos se declaram
+puladas em vez de reprovarem.
 
 ## Auditor de CSS
 
