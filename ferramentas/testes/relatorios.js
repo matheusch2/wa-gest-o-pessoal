@@ -79,6 +79,27 @@ module.exports = () => suite("Relatórios", async ({ p, ok, abrir, texto, valor,
   ok("entrou menos gastou dá a caixa da direita",
     Math.round(((await caixa(0)) - (await gastouGrande())) * 100) === -Math.round((await caixa(1)) * 100));
 
+  /* ─── O número grande diz de onde vem cada pedaço ────────────────────
+     "Você gastou R$ 3.227,90" com o cartão dentro é verdade e parece
+     erro: quem olha diz "eu não paguei isso". Não pagou — sai quando a
+     fatura for paga. A tela responde antes da pergunta. */
+  ok("a tela separa o que saiu da conta do que está no cartão",
+    /saíram da conta/.test(await texto(".rel-topo")) &&
+    /ainda estão no cartão/.test(await texto(".rel-topo")));
+  const divisao = await texto(".rel-topo-divisao");
+  // Extrato: 640 + 1200 = 1840. Cartão: 1200 + 187,90 = 1387,90.
+  ok("com o valor do extrato", /R\$ 1\.840,00/.test(divisao));
+  ok("e o valor do cartão", /R\$ 1\.387,90/.test(divisao));
+  const r = await p.evaluate(() => _retratoDoMes("2026-09"));
+  ok("e os dois somam exatamente o número grande",
+    Math.round((r.noExtrato + r.noCartao) * 100) === Math.round(r.gastou * 100));
+
+  // Mês sem cartão nenhum não ganha a linha: ela não teria o que dizer.
+  await abrir(CENARIO + `; comprasCartao = []; abrirRelatorios();`);
+  ok("sem compra no cartão, a linha não aparece",
+    (await p.locator(".rel-topo-divisao").count()) === 0);
+  await abrir(CENARIO + "; abrirRelatorios();");
+
   /* ─── As fatias somam o total ────────────────────────────────────────
      Se as categorias não somarem o número grande, é o defeito clássico
      deste app na mesma tela. */

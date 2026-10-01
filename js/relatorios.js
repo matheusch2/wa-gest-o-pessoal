@@ -79,8 +79,20 @@ function _retratoDoMes(mesRef) {
   const gastou = _cent(ranking.reduce((s, [, v]) => s + v, 0));
   entrou = _cent(entrou);
 
+  /* DE ONDE VEIO CADA PEDAÇO DO GASTO.
+     "Você gastou R$ 508,91" com R$ 328,60 de assinatura no cartão é
+     verdade e parece erro: o dono do app olhou e disse "eu não paguei
+     isso". Não pagou mesmo — esse dinheiro sai quando a fatura for paga.
+     Guardar a divisão aqui é o que deixa a tela dizer isso em vez de
+     esperar que a pessoa adivinhe. */
+  const noCartao = _cent(comprasCartao
+    .filter(c => _compraNoMes(c, mesRef))
+    .reduce((s, c) => s + Number(c.valor), 0));
+
   return {
     entrou, gastou,
+    noCartao,
+    noExtrato: _cent(gastou - noCartao),
     sobrou: _cent(entrou - gastou),
     saldoTrazido: _cent(saldoTrazido),
     guardado: _cent(guardado),
@@ -710,6 +722,11 @@ function desenharRelatorios() {
       <strong>${moeda(r.gastou)}</strong>
       <div class="rel-topo-barra"><span style="width:${Math.min(100, usado * 100)}%"></span></div>
       <small>${frase}</small>
+      ${r.noCartao >= 0.005 ? `
+        <p class="rel-topo-divisao">
+          <b>${_vlr(r.noExtrato)}</b> saíram da conta ·
+          <b>${_vlr(r.noCartao)}</b> ainda estão no cartão
+        </p>` : ""}
     </div>
 
     <!-- DUAS CAIXAS, E NÃO TRÊS. A do meio dizia "Gastou R$ 508,91" com o

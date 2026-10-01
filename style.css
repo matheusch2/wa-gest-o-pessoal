@@ -1974,6 +1974,22 @@ body.escuro .resumo-secao .item-icone.entrada { background: #17372d; }
 }
 .rel-topo-barra span { display: block; height: 100%; border-radius: 999px; }
 
+/* A DIVISÃO DO NÚMERO GRANDE. "Você gastou R$ 508,91" com R$ 328,60 de
+   assinatura no cartão é verdade e parece erro — e quem olha diz, com
+   razão, "eu não paguei isso". Esta linha responde antes da pergunta: o
+   que saiu da conta de um lado, o que vai sair na fatura do outro.
+   Separada por um fio, porque é outra camada de informação, não mais
+   uma frase da mesma. */
+.rel-topo-divisao {
+  margin: 10px 0 0;
+  padding-top: 9px;
+  border-top: 1px solid var(--borda);
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--fraco);
+}
+.rel-topo-divisao b { color: var(--texto); font-weight: 800; }
+
 .rel-topo.dentro   { border-color: color-mix(in srgb, var(--entrada) 40%, transparent); }
 .rel-topo.perto    { border-color: color-mix(in srgb, var(--aviso) 45%, transparent); }
 .rel-topo.estourou { border-color: color-mix(in srgb, var(--saida) 40%, transparent); }
