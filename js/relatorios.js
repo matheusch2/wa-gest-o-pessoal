@@ -576,6 +576,32 @@ async function _desenharGraficosDoRelatorio(dados) {
 
 /* ═══ A TELA ══════════════════════════════════════════════════════════ */
 
+/* "SOBROU" PROMETE O QUE ESTA CONTA NÃO ENTREGA.
+
+   A caixa mostra entrou menos gastou — o que já caiu menos o que já
+   saiu. Ela NÃO desconta a conta que vence dia 20, a fatura do cartão,
+   nem o mercado que ainda falta fazer. Num mês que ainda está correndo,
+   chamar isso de "sobrou" faz a pessoa ler como dinheiro livre: R$ 291
+   com R$ 5.274 de contas chegando no mesmo mês.
+
+   O número do "quanto posso gastar" existe, e é o do RESUMO: lá ele
+   desconta as reservas e soma o que ainda vai entrar. São duas perguntas
+   diferentes, e cada uma tem a sua tela.
+
+   Então o rótulo diz o que o número é. Mês que já acabou sobrou ou
+   faltou, e aí a palavra está certa. Mês correndo é "até agora", que não
+   promete nada — e é por isso que o valor aí leva sinal: "até agora" com
+   um número positivo escondendo um saldo negativo seria a mesma mentira
+   com outro nome. */
+function _corrido(mesRef) {
+  return mesRef >= mesDe(_hojeLocal());
+}
+
+function _rotuloDaSobra(mesRef, sobrou) {
+  if (_corrido(mesRef)) return "Até agora";
+  return sobrou >= 0 ? "Sobrou" : "Faltou";
+}
+
 const _ICO_BARRAS = `<svg viewBox="0 0 24 24" aria-hidden="true"><line x1="4" y1="20" x2="4" y2="10"/><line x1="10" y1="20" x2="10" y2="4"/><line x1="16" y1="20" x2="16" y2="13"/><line x1="22" y1="20" x2="22" y2="7"/></svg>`;
 
 // Segue o mês do Resumo e das Metas. Trocar de mês num lugar e voltar no
@@ -697,8 +723,10 @@ function desenharRelatorios() {
     <div class="fatura-resumo">
       <div><small>Entrou</small><strong>${moeda(r.entrou)}</strong></div>
       <div class="${r.vazio ? "" : r.sobrou >= 0 ? "destaque" : "destaque-ruim"}">
-        <small>${r.sobrou >= 0 ? "Sobrou" : "Faltou"}</small>
-        <strong>${moeda(Math.abs(r.sobrou))}</strong>
+        <small>${_rotuloDaSobra(mesAtual, r.sobrou)}</small>
+        <strong>${_corrido(mesAtual) && r.sobrou < 0
+          ? "−" + moeda(-r.sobrou)
+          : moeda(Math.abs(r.sobrou))}</strong>
       </div>
     </div>
 

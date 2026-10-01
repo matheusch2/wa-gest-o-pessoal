@@ -43,6 +43,33 @@ module.exports = () => suite("Relatórios", async ({ p, ok, abrir, texto, valor,
   ok("que neste mês é FALTOU, não SOBROU",
     /Faltou/.test(await texto(".fatura-resumo > div:last-child")));
 
+  /* ─── "Sobrou" não promete o que esta conta não entrega ──────────────
+     A caixa é entrou menos gastou. Ela não desconta a conta que vence dia
+     20 nem a fatura do cartão — e num mês correndo, "sobrou" faz ler como
+     dinheiro livre. O número do "quanto posso gastar" é o do Resumo. */
+  await abrir(CENARIO + `; mesAtual = mesDe(_hojeLocal()); abrirRelatorios();`);
+  ok("mês que ainda está correndo diz 'Até agora'",
+    /Até agora/.test(await texto(".fatura-resumo")));
+  ok("e não promete que sobrou", !/Sobrou|Faltou/.test(await texto(".fatura-resumo")));
+
+  // Correndo, o valor leva sinal: "Até agora R$ 500" escondendo um saldo
+  // negativo seria a mesma mentira com outro nome.
+  await abrir(`
+    lancamentos = [{ id:"s", tipo:"saida", valor:500, data:_hojeLocal(),
+                     categoria:"Mercado", descricao:"Feira" }];
+    comprasCartao = []; cartoes = []; contas = []; metas = [];
+    pagamentosFatura = []; fechamentos = []; entradasFixas = [];
+    mesAtual = mesDe(_hojeLocal()); abrirRelatorios();`);
+  ok("saldo negativo aparece com o sinal",
+    /−R\$ 500,00/.test(await texto(".fatura-resumo")));
+  ok("e a caixa fica vermelha",
+    (await p.locator(".fatura-resumo .destaque-ruim").count()) === 1);
+
+  // Mês fechado sobrou ou faltou de verdade, e aí a palavra está certa.
+  await abrir(CENARIO + `; abrirRelatorios();`);
+  ok("mês que já acabou volta a dizer Sobrou ou Faltou",
+    /Sobrou|Faltou/.test(await texto(".fatura-resumo")));
+
   /* O mesmo número não pode aparecer duas vezes na mesma olhada: o gastou
      é o número grande, e a caixa do meio que o repetia saiu. */
   ok("são duas caixas, não três", (await p.locator(".fatura-resumo > div").count()) === 2);
