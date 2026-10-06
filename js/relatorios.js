@@ -407,11 +407,17 @@ function _comprometidoPorMes(mesRef, quantos) {
   const linhas = meses.map(m => ({ mes: m, parcelas: 0, assinaturas: 0, fixas: 0 }));
   const porMes = Object.fromEntries(linhas.map(l => [l.mes, l]));
 
+  /* AS FATURAS SÃO VARRIDAS PELO MÊS DELAS, não a partir da que está
+     aberta. A diferença aparece quando se olha o relatório de um mês que
+     já passou: a fatura do mês seguinte a ele já fechou, mas ainda vence
+     dentro da janela projetada — e começar na fatura aberta pulava ela,
+     deixando a projeção sem a parcela que vai cair. Foi o teste que achou.
+
+     A janela vai de um mês antes a um depois porque o vencimento pode
+     cair no mês seguinte ao da fatura (fecha dia 28, vence dia 5). */
   for (const cartao of cartoes) {
-    // Um teto de busca: a fatura de daqui a 60 meses não interessa a
-    // ninguém, e assinatura ativa não dá fim ao laço sozinha.
-    for (let i = 1; i <= quantos + 12; i++) {
-      const mesFatura = _somaMes(_mesFaturaAberta(cartao), i - 1);
+    for (let i = -1; i <= quantos + 1; i++) {
+      const mesFatura = _somaMes(mesRef, i);
       const venc = mesDe(_vencimentoDaFatura(mesFatura, cartao.dia_fechamento, cartao.dia_vencimento));
       const alvo = porMes[venc];
       if (!alvo) continue;

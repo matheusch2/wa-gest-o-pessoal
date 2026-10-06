@@ -315,7 +315,28 @@ create table if not exists entradas_fixas (
 );
 
 -- Uma por nome: dois "Salário" com valores diferentes não querem dizer nada.
+--
+-- E a regra vale ALÉM da arrumação: o recebimento do mês é reconhecido
+-- pela descrição do lançamento ser igual a este nome. Dois com o mesmo
+-- nome fariam um toque em "Recebi" marcar os dois como recebidos.
 create unique index if not exists entradas_fixas_user_nome_key on entradas_fixas (user_id, nome);
+
+-- ─── DE QUANDO ATÉ QUANDO ─────────────────────────────────────────────
+-- Nulo dos dois lados é o caso de sempre: entra todo mês, pra sempre.
+--
+-- 'fim' é o ÚLTIMO MÊS em que ela entra, guardado como o dia 1º desse mês.
+-- Serve pro contrato que acaba em março: o salário continua contando em
+-- janeiro, fevereiro e março, e some das projeções de abril em diante. Não
+-- apaga nada do passado — o que já foi recebido virou lançamento e vive no
+-- extrato, longe daqui.
+--
+-- 'inicio' é o primeiro. Com os dois no mesmo mês, a entrada vira EXTRA:
+-- o 13º de dezembro, as férias de julho, o freela que você já sabe que
+-- vem. Não precisou de campo novo pra isso — extra é uma fixa que começa
+-- e acaba no mesmo mês, e uma regra só é mais fácil de acertar do que
+-- duas que fazem quase a mesma coisa.
+alter table entradas_fixas add column if not exists inicio date;
+alter table entradas_fixas add column if not exists fim date;
 
 alter table entradas_fixas enable row level security;
 
