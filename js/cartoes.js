@@ -61,6 +61,21 @@ function _vencimentoDaFatura(mesRef, diaFechamento, diaVencimento) {
   return mes + "-" + String(diaVencimento).padStart(2, "0");
 }
 
+// O Neon mudou de ciclo: outubro/2026 foi a última fatura antiga,
+// novembro/2026 não teve cobrança e a próxima vence em dezembro.
+// A referência interna permanece o mês de fechamento, preservando
+// parcelas, pagamentos e reservas; somente o calendário exibido muda.
+function _mesVisivelDaFatura(cartao, mesRef) {
+  return cartao.banco === "neon" && mesRef >= "2026-11"
+    ? _somaMes(mesRef, 1) : mesRef;
+}
+
+function _mesInternoDaFatura(cartao, mesVisivel) {
+  if (cartao.banco !== "neon") return mesVisivel;
+  if (mesVisivel === "2026-11") return null; // sem fatura no banco
+  return mesVisivel >= "2026-12" ? _somaMes(mesVisivel, -1) : mesVisivel;
+}
+
 // Quantos meses separam dois "AAAA-MM". Negativo se o segundo vier antes.
 function _diffMeses(de, ate) {
   const [a1, m1] = de.split("-").map(Number);
@@ -241,7 +256,7 @@ function desenharCartoes() {
         <span class="cartao-card-nome">${esc(c.nome)}</span>
         <div class="cartao-card-baixo">
           <div>
-            <small>${s.parcial ? "Falta pagar" : aberta ? "Fatura atual" : "Fatura de " + soNomeDoMes(mes)}</small>
+            <small>${s.parcial ? "Falta pagar" : aberta ? "Fatura atual" : "Fatura de " + soNomeDoMes(_mesVisivelDaFatura(c, mes))}</small>
             <strong>${moeda(valor)}</strong>
           </div>
           <div class="cartao-card-venc">
@@ -396,14 +411,13 @@ async function salvarCartao(botao) {
 
 /* ═══ UM CARTÃO: A FATURA ═════════════════════════════════════════════ */
 
-// Qual mês de fatura está aberto na tela. Fica fora da função de desenho
-// pra pessoa poder navegar entre as faturas sem empilhar telas.
+// Mês visível na tela; o Neon usa o mês real da fatura do banco.
 let _faturaMes = null;
 
 function abrirCartao(id) {
   const c = cartoes.find(x => x.id === id);
   if (!c) { erro("Cartão não encontrado."); return; }
-  _faturaMes = _faturaAoAbrir(c);
+  _faturaMes = _mesVisivelDaFatura(c, _faturaAoAbrir(c));
   abrirTela(() => desenharCartao(id));
 }
 
@@ -418,12 +432,18 @@ function desenharCartao(id) {
   if (!c) { voltarInicio(); return; }
 
   const b = _banco(c.banco);
-  const mes = _faturaMes || _mesFaturaAberta(c);
-  const itens = _parcelasDaFatura(c, mes);
+  const mesVisivel = _faturaMes || _mesVisivelDaFatura(c, _mesFaturaAberta(c));
+  const mes = _mesInternoDaFatura(c, mesVisivel);
+  const itens = mes ? _parcelasDaFatura(c, mes) : [];
   const total = itens.reduce((s, i) => s + i.valor, 0);
-  const venc = _vencimentoDaFatura(mes, c.dia_fechamento, c.dia_vencimento);
-  const aberta = mes === _mesFaturaAberta(c);
-  const s = _situacaoFatura(c, mes);
+  const venc = mes ? _vencimentoDaFatura(mes, c.dia_fechamento, c.dia_vencimento) : null;
+  const aberta = mes !== null && mes === _mesFaturaAberta(c);
+  const s = mes ? _situacaoFatura(c, mes)
+    : { pagamentos: [], total: 0, pago: 0, restante: 0, quitada: false, parcial: false };
+  const avisoVencimento = mes === null ? "Novembro sem fatura no Neon"
+    : c.banco === "neon" && mesVisivel <= "2026-10"
+      ? "Histórico anterior à mudança do vencimento"
+      : "Vence em " + dataBR(venc) + (itens.length ? ` · ${itens.length} lançamento${itens.length > 1 ? "s" : ""}` : "");
 
   /* TRÊS COISAS DIFERENTES NA MESMA FATURA.
      A parcela é dívida que já estava contratada — vem de uma decisão de
@@ -481,20 +501,20 @@ function desenharCartao(id) {
     <div class="bloco" style="padding:11px">
       <div class="bloco-topo" style="margin:0">
         <button class="pilula" onclick="trocarFatura('${c.id}', -1)">‹</button>
-        <strong style="font-size:14.5px">${mesPorExtenso(mes)}</strong>
+        <strong style="font-size:14.5px">${mesPorExtenso(mesVisivel)}</strong>
         <button class="pilula" onclick="trocarFatura('${c.id}', 1)">›</button>
       </div>
     </div>
 
     <div class="contas-total">
-      <span>Fatura ${s.quitada ? "quitada" : aberta ? "aberta" : "de " + mesPorExtenso(mes)}</span>
+      <span>${mes === null ? "Sem fatura" : "Fatura " + (s.quitada ? "quitada" : aberta ? "aberta" : "de " + mesPorExtenso(mesVisivel))}</span>
       <strong>${moeda(total)}</strong>
-      <small>Vence em ${dataBR(venc)}${itens.length ? ` · ${itens.length} lançamento${itens.length > 1 ? "s" : ""}` : ""}</small>
+      <small>${avisoVencimento}</small>
     </div>
 
     ${_blocoFaturasAntigas(c)}
 
-    <div id="fatura-acao">${_acaoDaFatura(c, mes, s)}</div>
+    <div id="fatura-acao">${mes ? _acaoDaFatura(c, mes, s) : ""}</div>
 
     <button class="botao" onclick="abrirNovaCompra('${c.id}')">
       <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -1026,7 +1046,7 @@ function _acaoDaFatura(cartao, mesRef, s) {
       pedacos.push(`
         <button class="botao-fraco fatura-empurrar" onclick="pedirJogarSaldo('${cartao.id}', '${mesRef}')">
           ${_ICO_EMPURRA}
-          Jogar o resto pra fatura de ${soNomeDoMes(_somaMes(mesRef, 1))}
+          Jogar o resto pra fatura de ${soNomeDoMes(_mesVisivelDaFatura(cartao, _somaMes(mesRef, 1)))}
         </button>`);
     }
   }
@@ -1050,7 +1070,7 @@ function _blocoJaPago(cartao, mesRef, s) {
       <div class="fatura-pgto-txt">
         <strong>${moeda(p.valor)}</strong>
         <small>${dataBR(p.pago_em)} · ${p.tipo === "saldo"
-          ? "jogado pra fatura de " + soNomeDoMes(_somaMes(mesRef, 1))
+          ? "jogado pra fatura de " + soNomeDoMes(_mesVisivelDaFatura(cartao, _somaMes(mesRef, 1)))
           : p.lancamento_id
             ? "saída no extrato"
             : "pago fora do app"}</small>
@@ -1188,7 +1208,7 @@ function desenharPagarFatura(cartaoId, mesRef) {
     <section class="lancamento-tela" style="--cor-tipo:var(--entrada)">
     <div class="lancamento-cabecalho">
       <span class="lancamento-cabecalho-icone">${_ICO_CONFERE}</span>
-      <span class="lancamento-caption">${esc(c.nome)} · ${mesPorExtenso(mesRef)}</span>
+      <span class="lancamento-caption">${esc(c.nome)} · ${mesPorExtenso(_mesVisivelDaFatura(c, mesRef))}</span>
       <h2>Pagar fatura</h2>
     </div>
 
@@ -1334,7 +1354,7 @@ function pedirJogarSaldo(cartaoId, mesRef) {
 
   alvo.innerHTML = `
     <div class="confirmar">
-      <p>Jogar os ${moeda(s.restante)} que faltam pra fatura de ${mesPorExtenso(proximo)}?
+      <p>Jogar os ${moeda(s.restante)} que faltam pra fatura de ${mesPorExtenso(_mesVisivelDaFatura(c, proximo))}?
          Vira uma compra lá, e esta fatura fica quitada.</p>
       <div class="campo" style="margin:12px 0 0">
         <label for="saldo-parcelas">Em quantas vezes</label>
@@ -1367,7 +1387,7 @@ async function jogarSaldo(botao, cartaoId, mesRef) {
   // exatamente na fatura do mês seguinte, sem depender de quando é hoje.
   const { data: compra, error: erroCompra } = await sb.from("compras_cartao").insert({
     user_id: usuario.id, cartao_id: cartaoId,
-    descricao: `Saldo da fatura de ${soNomeDoMes(mesRef)}`,
+    descricao: `Saldo da fatura de ${soNomeDoMes(_mesVisivelDaFatura(c, mesRef))}`, 
     valor: s.restante, parcelas, data: proximo + "-01",
     categoria: "Cartão", chave_envio: chave,
   }).select().single();
@@ -1396,7 +1416,7 @@ async function jogarSaldo(botao, cartaoId, mesRef) {
 
   comprasCartao.push(compra);
   pagamentosFatura.push(pgto);
-  ok(`Saldo de ${moeda(s.restante)} foi pra fatura de ${mesPorExtenso(proximo)}.`);
+  ok(`Saldo de ${moeda(s.restante)} foi pra fatura de ${mesPorExtenso(_mesVisivelDaFatura(c, proximo))}.`);
   desenharCartao(cartaoId);
 }
 
