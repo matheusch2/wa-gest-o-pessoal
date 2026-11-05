@@ -375,6 +375,28 @@ create table if not exists reservas (
 -- nada, e a pessoa não saberia em qual guardou.
 create unique index if not exists reservas_user_nome_key on reservas (user_id, nome);
 
+-- ─── EMERGÊNCIA OU OBJETIVO ───────────────────────────────────────────
+-- São duas coisas diferentes com o mesmo nome. A de EMERGÊNCIA responde
+-- "quantos meses eu aguento sem receber nada", e por isso o objetivo dela
+-- se mede em meses de despesa: três, seis, doze. A de OBJETIVO é a
+-- viagem, a troca do carro, a obra — tem PREÇO, não tem meses.
+--
+-- Oferecer "6 meses de despesa" como atalho pra uma viagem era escrever
+-- um número que não quer dizer nada ali. E somar as duas pra dizer
+-- "cobre 4,9 meses" era pior: o dinheiro da viagem tem destino, ele não
+-- cobre mês nenhum de desemprego.
+alter table reservas
+  add column if not exists tipo text not null default 'objetivo'
+  check (tipo in ('emergencia', 'objetivo'));
+
+-- UMA emergência por pessoa. Duas tornariam ambígua a única pergunta que
+-- ela existe pra responder: com R$ 3.000 numa e R$ 2.000 noutra, quantos
+-- meses você aguenta? A resposta teria que somar as duas — e aí elas já
+-- eram uma só. Índice parcial: a trava só vale pra linha de emergência,
+-- e as de objetivo continuam quantas a pessoa quiser.
+create unique index if not exists reservas_uma_emergencia_key
+  on reservas (user_id) where tipo = 'emergencia';
+
 alter table reservas enable row level security;
 
 create policy "cada um vê só as próprias reservas"

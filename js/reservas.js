@@ -58,6 +58,42 @@ function _movimentosDaReserva(id) {
                     String(b.created_at || "").localeCompare(String(a.created_at || "")));
 }
 
+/* ═══ EMERGÊNCIA NÃO É A MESMA COISA QUE OBJETIVO ═════════════════════
+   Duas coisas diferentes dividiam o mesmo nome, e isso produziu dois
+   números errados antes de o dono do app apontar o primeiro:
+
+   1. O atalho "6 meses de despesa" aparecia ao criar uma reserva de
+      VIAGEM. Viagem tem preço — meses de despesa não querem dizer nada
+      ali, e o botão escrevia um número que não respondia a pergunta
+      nenhuma.
+
+   2. Pior, e esse ninguém tinha visto: o topo da tela somava TUDO e
+      dizia "cobre 4,9 meses". Os R$ 4.000 da viagem não cobrem mês
+      nenhum de desemprego — esse dinheiro já tem destino. A frase
+      prometia um colchão que não existia.
+
+   Então a reserva passa a saber o que ela é. A de emergência responde
+   "quantos meses eu aguento sem receber nada" e mede o objetivo em meses.
+   As de objetivo têm preço, e nem ganham a pergunta. */
+
+function _reservaDeEmergencia() {
+  return reservas.find(r => r.tipo === "emergencia") || null;
+}
+
+function _ehEmergencia(r) { return r?.tipo === "emergencia"; }
+
+/* O SELO SÓ APARECE QUANDO O NOME NÃO DIZ. Numa reserva chamada
+   "Emergência", o selo "EMERGÊNCIA" ao lado é a mesma palavra duas vezes
+   na mesma linha, comendo a largura do nome sem acrescentar nada. Quem
+   chamou a sua de "Colchão" ou "Fundo do susto" precisa do selo; quem
+   chamou de "Emergência", não. */
+function _precisaDoSelo(r) {
+  if (!_ehEmergencia(r)) return false;
+  const nome = String(r.nome || "")
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  return !nome.includes("emerg");
+}
+
 /* ═══ O NÚMERO QUE DÁ SENTIDO AO SALDO ════════════════════════════════
    "Você tem R$ 6.000 guardados" é um número sem régua: pode ser muito ou
    pouco, depende de quanto custa a sua vida. "Cobre 3 meses" é a mesma
@@ -67,12 +103,14 @@ function _movimentosDaReserva(id) {
    A média vem de _gastoMedioMensal(), em relatorios.js — a MESMA que a
    tela de relatórios escreve embaixo do gráfico. Calcular a média aqui de
    outro jeito faria as duas telas discordarem sobre quanto custa um mês
-   da mesma pessoa, que é o defeito que mais dói neste app. */
+   da mesma pessoa, que é o defeito que mais dói neste app.
 
-function _mesesQueAReservaCobre(total) {
+   O saldo que entra aqui é SÓ o da emergência, nunca o total guardado. */
+
+function _mesesQueAReservaCobre(saldoDaEmergencia) {
   const media = _gastoMedioMensal(6);
   if (media < 0.005) return null;
-  return { media, meses: total / media };
+  return { media, meses: saldoDaEmergencia / media };
 }
 
 // "3,4 meses" com uma casa até 10; depois disso a casa decimal não
@@ -138,11 +176,19 @@ function desenharReservas() {
   }
 
   const total = _totalGuardado();
-  const cobertura = _mesesQueAReservaCobre(total);
 
-  // Com objetivo, quem está mais longe de alcançá-lo aparece primeiro: é a
-  // que precisa de atenção. Sem objetivo, a maior na frente.
+  // A COBERTURA SAI SÓ DA EMERGÊNCIA. Somar tudo dizia "cobre 4,9 meses"
+  // contando R$ 4.000 de uma viagem — dinheiro que já tem destino e não
+  // cobre mês nenhum de desemprego.
+  const emergencia = _reservaDeEmergencia();
+  const saldoEmergencia = emergencia ? _saldoDaReserva(emergencia.id) : 0;
+  const cobertura = emergencia ? _mesesQueAReservaCobre(saldoEmergencia) : null;
+
+  // A emergência vem SEMPRE primeiro: é a que não pode ficar pra depois.
+  // Entre as de objetivo, quem está mais longe de alcançar aparece antes —
+  // é a que precisa de atenção. Sem objetivo, por nome.
   const lista = reservas.slice().sort((a, b) => {
+    if (_ehEmergencia(a) !== _ehEmergencia(b)) return _ehEmergencia(a) ? -1 : 1;
     const pa = a.objetivo ? _saldoDaReserva(a.id) / Number(a.objetivo) : 2;
     const pb = b.objetivo ? _saldoDaReserva(b.id) / Number(b.objetivo) : 2;
     return pa - pb || a.nome.localeCompare(b.nome, "pt-BR");
@@ -155,10 +201,13 @@ function desenharReservas() {
     const completa = objetivo > 0 && saldo >= objetivo - 0.005;
 
     return `
-      <div class="reserva-card ${completa ? "completa" : ""}" id="reserva-${r.id}"
-           onclick="abrirReserva('${r.id}')">
+      <div class="reserva-card ${completa ? "completa" : ""} ${_ehEmergencia(r) ? "emergencia" : ""}"
+           id="reserva-${r.id}" onclick="abrirReserva('${r.id}')">
         <div class="reserva-card-topo">
-          <span class="reserva-card-nome">${esc(r.nome)}</span>
+          <span class="reserva-card-nome">
+            <b>${esc(r.nome)}</b>
+            ${_precisaDoSelo(r) ? `<i class="reserva-selo">Emergência</i>` : ""}
+          </span>
           <strong class="reserva-card-saldo">${moeda(saldo)}</strong>
         </div>
         ${objetivo > 0 ? `
@@ -184,17 +233,23 @@ function desenharReservas() {
 
     <!-- A FRASE DEBAIXO DO NÚMERO É O CONTEÚDO, não enfeite. Um saldo
          guardado sozinho não diz se é muito ou pouco: "R$ 6.000" vale
-         meio ano pra uma pessoa e três semanas pra outra. "Cobre 3,2
-         meses" é a mesma informação com a régua dentro. -->
+         meio ano pra uma pessoa e três semanas pra outra.
+
+         E ela fala da EMERGÊNCIA, com o valor dela escrito. Antes somava
+         tudo: "você tem R$ 9.850 — cobre 4,9 meses", com R$ 4.000 de
+         viagem dentro. Era promessa de colchão que não existia, e no dia
+         em que fosse preciso o colchão a conta não fecharia. -->
     <div class="contas-total">
       <span>Você tem guardado</span>
       <strong>${moeda(total)}</strong>
       <small>${
         !reservas.length
           ? "Comece pela reserva de emergência."
-          : cobertura
-            ? `Cobre ${_mesesPorExtenso(cobertura.meses)} da sua vida — você gasta ${moeda(cobertura.media)} por mês, em média`
-            : "Lance alguns meses pra saber quantos meses isso cobre"
+          : !emergencia
+            ? "Você ainda não tem uma reserva de emergência — é a que segura os meses em que nada entra"
+            : cobertura
+              ? `Dos ${moeda(saldoEmergencia)} da emergência, dá pra viver ${_mesesPorExtenso(cobertura.meses)} — você gasta ${moeda(cobertura.media)} por mês, em média`
+              : "Lance alguns meses pra saber quantos meses a emergência cobre"
       }</small>
     </div>
 
@@ -263,7 +318,7 @@ function desenharReserva(id) {
     <section class="lancamento-tela" style="--cor-tipo:var(--marca-txt)">
       <div class="lancamento-cabecalho">
         <span class="lancamento-cabecalho-icone">${_ICO_RESERVA}</span>
-        <span class="lancamento-caption">Reserva</span>
+        <span class="lancamento-caption">${_ehEmergencia(r) ? "Reserva de emergência" : "Reserva"}</span>
         <h2>${esc(r.nome)}</h2>
       </div>
     </section>
@@ -276,6 +331,12 @@ function desenharReserva(id) {
             ? `Objetivo de ${moeda(objetivo)} alcançado`
             : `${Math.round(pct * 100)}% de ${moeda(objetivo)} · faltam ${moeda(objetivo - saldo)}`)
         : "Sem objetivo definido"}</small>
+      <!-- Só na emergência: é a única em que "quantos meses isto cobre"
+           é a pergunta. Na reserva da viagem o que importa é o preço da
+           viagem, não quanto tempo aquele dinheiro sustentaria a casa. -->
+      ${_ehEmergencia(r) && _mesesQueAReservaCobre(saldo)
+        ? `<small>Dá pra viver ${_mesesPorExtenso(_mesesQueAReservaCobre(saldo).meses)} com isto</small>`
+        : ""}
     </div>
 
     <!-- A barra SOLTA, sem card em volta. Dentro de um .bloco ela virava
@@ -342,23 +403,45 @@ function _desenharFormReserva(r) {
   const icoNome = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.6 13.4 12 22l-9-9V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>`;
   const icoAlvo = `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg>`;
 
-  const media = _gastoMedioMensal(6);
+  const icoTipo = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-4.5 8-10V5l-8-3-8 3v7c0 5.5 8 10 8 10z"/></svg>`;
 
-  // Os atalhos só aparecem com média conhecida: botão "3 meses" num app
-  // sem lançamento nenhum escreveria R$ 0,00 no campo e viraria um erro na
-  // cara da pessoa. E só pra reserva de emergência faz sentido medir o
-  // objetivo em meses — pra viagem, o objetivo é o preço da viagem.
-  const atalhos = media >= 0.005 ? `
-    <div class="reserva-atalhos">
-      <span>Reserva de emergência:</span>
-      ${[3, 6, 12].map(n => `
-        <button type="button" class="pilula" onclick="_porObjetivoEmMeses(${n})">
-          ${n} meses
-        </button>`).join("")}
-    </div>
-    <p class="cartao-dica" style="margin-top:7px">
-      Um mês da sua vida custa ${moeda(media)}, pela média dos últimos meses.
-    </p>` : "";
+  /* A PERGUNTA DO TIPO SÓ APARECE QUANDO AINDA É PERGUNTA.
+     Emergência é uma só, então: criando a primeira, a escolha aparece;
+     já existindo uma, a nova reserva é de objetivo e nem se pergunta —
+     e é isso que faz o formulário da "Viagem" ficar exatamente como o
+     dono do app queria, sem atalho de meses e sem pergunta nenhuma.
+     Editando, o tipo não muda: trocar o tipo de uma reserva com saldo
+     mudaria o significado do dinheiro que já está lá. */
+  const emergenciaExistente = _reservaDeEmergencia();
+  const jaTemOutraEmergencia = emergenciaExistente && (!r || emergenciaExistente.id !== r.id);
+  const tipoFixo = editando || jaTemOutraEmergencia;
+  const tipo = editando ? (r.tipo || "objetivo") : (jaTemOutraEmergencia ? "objetivo" : "emergencia");
+
+  const escolhaDeTipo = tipoFixo ? "" : `
+    <div class="campo">
+      <div class="campo-label">${icoTipo}<label>Pra que é esta reserva</label></div>
+      <div class="escolha">
+        <label class="escolha-op">
+          <input type="radio" name="rs-tipo" value="emergencia" checked
+                 onchange="_aoTrocarTipoDaReserva()">
+          <span>
+            <strong>Emergência</strong>
+            <small>O colchão pros meses em que nada entra. O objetivo dela se
+                   mede em meses da sua despesa, e é ela que aparece no topo
+                   com o "dá pra viver tanto tempo".</small>
+          </span>
+        </label>
+        <label class="escolha-op">
+          <input type="radio" name="rs-tipo" value="objetivo"
+                 onchange="_aoTrocarTipoDaReserva()">
+          <span>
+            <strong>Um objetivo</strong>
+            <small>A viagem, a troca do carro, a obra. Tem preço, e é esse
+                   preço que você põe como objetivo.</small>
+          </span>
+        </label>
+      </div>
+    </div>`;
 
   document.getElementById("area").innerHTML = `
     <section class="lancamento-tela" style="--cor-tipo:var(--marca-txt)">
@@ -369,10 +452,14 @@ function _desenharFormReserva(r) {
     </div>
 
     <div class="lancamento-form">
+      ${escolhaDeTipo}
+
       <div class="campo">
         <div class="campo-label">${icoNome}<label for="rs-nome">Nome</label></div>
         <input type="text" id="rs-nome" maxlength="40" autocomplete="off"
-               placeholder="Emergência, Viagem, Troca do carro"
+               placeholder="${tipoFixo && tipo === "objetivo"
+                 ? "Viagem, Troca do carro, Obra"
+                 : "Emergência, Viagem, Troca do carro"}"
                value="${esc(r ? r.nome : "")}">
       </div>
 
@@ -390,7 +477,11 @@ function _desenharFormReserva(r) {
            juntar — que é quase todo mundo no primeiro dia. Em branco, a
            reserva só mostra o saldo, sem barra de progresso. -->
       <p class="cartao-dica">Deixe em branco se ainda não sabe o número. Dá pra pôr depois.</p>
-      ${atalhos}
+
+      <!-- Os atalhos de meses vivem aqui dentro e são redesenhados quando
+           o tipo muda. Trocar a tela inteira apagaria o que já foi
+           digitado no nome. -->
+      <div id="rs-atalhos">${_atalhosDeObjetivo(tipo)}</div>
     </div>
 
     <button class="botao" onclick="salvarReserva(this, ${r ? `'${r.id}'` : "null"})">
@@ -399,6 +490,38 @@ function _desenharFormReserva(r) {
     </button>
     <button class="botao-fraco lancamento-voltar" onclick="voltarTela()">Voltar</button>
     </section>`;
+}
+
+/* OS ATALHOS SÓ EXISTEM PRA EMERGÊNCIA, e foi isso que o dono do app
+   apontou: criando uma reserva de VIAGEM, o botão "6 meses" escrevia seis
+   vezes a despesa mensal no campo de objetivo. Viagem tem preço — meses de
+   despesa não respondem pergunta nenhuma ali.
+
+   E só com média conhecida: botão "3 meses" num app sem lançamento nenhum
+   escreveria R$ 0,00 e viraria um erro na cara da pessoa. */
+function _atalhosDeObjetivo(tipo) {
+  const media = _gastoMedioMensal(6);
+  if (tipo !== "emergencia" || media < 0.005) return "";
+  return `
+    <div class="reserva-atalhos">
+      <span>Quantos meses você quer cobrir:</span>
+      ${[3, 6, 12].map(n => `
+        <button type="button" class="pilula" onclick="_porObjetivoEmMeses(${n})">
+          ${n} meses
+        </button>`).join("")}
+    </div>
+    <p class="cartao-dica" style="margin-top:7px">
+      Um mês da sua vida custa ${moeda(media)}, pela média dos últimos meses.
+    </p>`;
+}
+
+function _tipoEscolhidoNoForm() {
+  return document.querySelector('input[name="rs-tipo"]:checked')?.value || "objetivo";
+}
+
+function _aoTrocarTipoDaReserva() {
+  const alvo = document.getElementById("rs-atalhos");
+  if (alvo) alvo.innerHTML = _atalhosDeObjetivo(_tipoEscolhidoNoForm());
 }
 
 function _porObjetivoEmMeses(n) {
@@ -426,32 +549,43 @@ async function salvarReserva(botao, id) {
   const solta = travar(botao, "Salvando...");
 
   if (id) {
+    // O TIPO NÃO ENTRA NO UPDATE, de propósito: trocar o tipo de uma
+    // reserva que já tem saldo mudaria o significado do dinheiro que está
+    // lá dentro, e a tela do topo passaria a contar (ou a parar de contar)
+    // esse dinheiro como colchão sem ninguém ter mexido nele.
     const { data, error } = await sb.from("reservas")
       .update({ nome, objetivo })
       .eq("id", id).eq("user_id", usuario.id)
       .select().single();
-    if (error) {
-      solta();
-      erro(error.code === "23505" ? "Você já tem uma reserva com esse nome." : "Erro ao salvar: " + error.message);
-      return;
-    }
+    if (error) { solta(); erro(_erroDeReserva(error)); return; }
     reservas = reservas.map(x => (x.id === id ? data : x));
     ok("Reserva alterada!");
   } else {
+    const tipo = _tipoEscolhidoNoForm();
     const { data, error } = await sb.from("reservas")
-      .insert({ user_id: usuario.id, nome, objetivo })
+      .insert({ user_id: usuario.id, nome, objetivo, tipo })
       .select().single();
-    if (error) {
-      solta();
-      erro(error.code === "23505" ? "Você já tem uma reserva com esse nome." : "Erro ao salvar: " + error.message);
-      return;
-    }
+    if (error) { solta(); erro(_erroDeReserva(error)); return; }
     reservas.push(data);
     reservas.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
-    ok("Reserva criada!");
+    ok(tipo === "emergencia" ? "Reserva de emergência criada!" : "Reserva criada!");
   }
 
   voltarTela();
+}
+
+/* DOIS ÍNDICES ÚNICOS, DUAS FRASES DIFERENTES. A tabela trava nome
+   repetido E segunda emergência, e os dois chegam aqui como 23505. Sem
+   separar, criar a segunda emergência diria "você já tem uma reserva com
+   esse nome" — uma frase errada sobre um problema real, que é o jeito
+   mais rápido de a pessoa achar que o app está quebrado. */
+function _erroDeReserva(e) {
+  if (e?.code !== "23505") return "Erro ao salvar: " + e.message;
+  const onde = `${e.message || ""} ${e.details || ""}`;
+  if (onde.includes("reservas_uma_emergencia_key")) {
+    return "Você já tem uma reserva de emergência. Guarde mais nela, ou crie esta como objetivo.";
+  }
+  return "Você já tem uma reserva com esse nome.";
 }
 
 /* ═══ EXCLUIR A RESERVA ═══════════════════════════════════════════════

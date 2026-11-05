@@ -47,7 +47,7 @@ const TRES_MESES = `
 `;
 
 const UMA = `
-  reservas = [{ id:"r1", nome:"Emergência", objetivo:6000 }];
+  reservas = [{ id:"r1", nome:"Emergência", objetivo:6000, tipo:"emergencia" }];
   movimentosReserva = [
     { id:"mv1", reserva_id:"r1", tipo:"guardar", valor:2000, data:"${M(-2)}-05", lancamento_id:"g1" },
     { id:"mv2", reserva_id:"r1", tipo:"guardar", valor:600,  data:"${M(-1)}-05", lancamento_id:"g2" },
@@ -150,6 +150,51 @@ module.exports = () => suite("Reservas e investimentos", async ({ p, ok, abrir, 
   ok("e diz com base em quanto, pra conta ser conferível",
     frase.includes("1.000,00"));
 
+  /* A COBERTURA SAI SÓ DA EMERGÊNCIA, e este é o defeito que o pedido do
+     dono do app revelou por baixo. A tela somava TUDO: com R$ 2.500 de
+     emergência e R$ 4.000 de viagem, ela dizia "cobre 6,5 meses". Mas o
+     dinheiro da viagem tem destino — ele não cobre mês nenhum de
+     desemprego. Era promessa de colchão que não existia, e no dia em que
+     o colchão fosse preciso a conta não fecharia. */
+  await abrir(BASE + TRES_MESES + UMA + `
+    reservas.push({ id:"r2", nome:"Viagem", objetivo:4000, tipo:"objetivo" });
+    movimentosReserva.push({ id:"mv9", reserva_id:"r2", tipo:"guardar",
+                             valor:4000, data:"${M(-1)}-05", lancamento_id:"g9" });
+    abrirReservas();`);
+  ok("o total guardado soma tudo, porque é verdade",
+    valor(await texto(".contas-total strong")) === 6500);
+  const comViagem = await texto(".contas-total small");
+  ok("mas a cobertura conta só a emergência", comViagem.includes("2,5 meses"));
+  ok("e diz de qual dinheiro está falando", comViagem.includes("2.500,00"));
+  ok("os 4.000 da viagem NÃO viram meses de colchão",
+    !comViagem.includes("6,5 meses"));
+
+  // Sem emergência nenhuma, a tela não inventa cobertura a partir dos
+  // objetivos: ela diz o que está faltando.
+  await abrir(BASE + TRES_MESES + `
+    reservas = [{ id:"r2", nome:"Viagem", objetivo:4000, tipo:"objetivo" }];
+    movimentosReserva = [{ id:"mv9", reserva_id:"r2", tipo:"guardar",
+                           valor:4000, data:"${M(-1)}-05", lancamento_id:"g9" }];
+    abrirReservas();`);
+  const soObjetivo = await texto(".contas-total small");
+  ok("só com objetivos, a tela avisa que falta a emergência",
+    soObjetivo.includes("ainda não tem uma reserva de emergência"));
+  // A frase certa usa a palavra ("segura os meses em que nada entra"), então
+  // o que se confere é que não há NÚMERO de meses prometido.
+  ok("e não promete número nenhum de meses", !/\d[\d.,]*\s*(mês|meses)/.test(soObjetivo));
+
+  // Na tela de dentro, só a emergência ganha a frase dos meses.
+  await abrir(BASE + TRES_MESES + UMA + "; abrirReserva('r1');");
+  ok("a emergência diz quanto tempo ela sustenta",
+    (await texto(".contas-total")).includes("Dá pra viver"));
+  await abrir(BASE + TRES_MESES + `
+    reservas = [{ id:"r2", nome:"Viagem", objetivo:4000, tipo:"objetivo" }];
+    movimentosReserva = [{ id:"mv9", reserva_id:"r2", tipo:"guardar",
+                           valor:4000, data:"${M(-1)}-05", lancamento_id:"g9" }];
+    abrirReserva("r2");`);
+  ok("a da viagem não, porque ali a pergunta é o preço da viagem",
+    !(await texto(".contas-total")).includes("Dá pra viver"));
+
   /* O MÊS CORRIDO FICA DE FORA DA MÉDIA. No dia 3 ele tem três dias de
      gasto dentro; entrando na conta, ele a derruba, e a reserva passaria a
      prometer cobrir mais meses do que cobre — justo o número em que não se
@@ -167,6 +212,28 @@ module.exports = () => suite("Reservas e investimentos", async ({ p, ok, abrir, 
   ok("sem histórico, a tela não finge saber a cobertura",
     (await texto(".contas-total small")).includes("Lance alguns meses"));
 
+  /* O SELO SÓ APARECE QUANDO O NOME NÃO DIZ. "Emergência EMERGÊNCIA" é a
+     mesma palavra duas vezes na mesma linha, comendo a largura do nome. */
+  await abrir(BASE + UMA + "; abrirReservas();");
+  ok("reserva chamada Emergência não repete o selo",
+    (await p.locator(".reserva-selo").count()) === 0);
+  ok("mas a borda dourada a distingue mesmo assim",
+    (await p.locator(".reserva-card.emergencia").count()) === 1);
+
+  await abrir(BASE + `
+    reservas = [{ id:"rc", nome:"Colchão", objetivo:6000, tipo:"emergencia" }];
+    abrirReservas();`);
+  ok("com outro nome, o selo aparece pra dizer o que ela é",
+    (await texto(".reserva-selo")) === "Emergência");
+
+  // A emergência vem sempre primeiro: é a que não pode ficar pra depois.
+  await abrir(BASE + `
+    reservas = [{ id:"rz", nome:"Zebra", objetivo:100, tipo:"objetivo" },
+                { id:"ra", nome:"Aflição", objetivo:6000, tipo:"emergencia" }];
+    abrirReservas();`);
+  ok("e ela encabeça a lista, venha o nome que vier",
+    (await p.locator(".reserva-card").first().getAttribute("id")) === "reserva-ra");
+
   /* ─── A LISTA ────────────────────────────────────────────────────── */
   await abrir(BASE + UMA + "; abrirReservas();");
   ok("a reserva aparece como card", (await p.locator(".reserva-card").count()) === 1);
@@ -176,14 +243,14 @@ module.exports = () => suite("Reservas e investimentos", async ({ p, ok, abrir, 
   ok("e a que porcentagem chegou", baixo.includes("42%"));
 
   await abrir(BASE + `
-    reservas = [{ id:"r9", nome:"Viagem", objetivo:null }];
+    reservas = [{ id:"r9", nome:"Viagem", objetivo:null, tipo:"objetivo" }];
     abrirReservas();`);
   ok("reserva sem objetivo não ganha barra de progresso",
     (await p.locator(".reserva-barra").count()) === 0 &&
     (await texto(".reserva-card-baixo")).includes("Sem objetivo"));
 
   await abrir(BASE + `
-    reservas = [{ id:"r1", nome:"Emergência", objetivo:1000 }];
+    reservas = [{ id:"r1", nome:"Emergência", objetivo:1000, tipo:"emergencia" }];
     movimentosReserva = [{ id:"m", reserva_id:"r1", tipo:"guardar", valor:1000,
                            data:"${M(-1)}-01", lancamento_id:"g" }];
     abrirReservas();`);
@@ -254,7 +321,7 @@ module.exports = () => suite("Reservas e investimentos", async ({ p, ok, abrir, 
 
   // O botão nem fica disponível com a reserva vazia.
   await abrir(BASE + `
-    reservas = [{ id:"r0", nome:"Nova", objetivo:null }];
+    reservas = [{ id:"r0", nome:"Nova", objetivo:null, tipo:"objetivo" }];
     abrirReserva("r0");`);
   ok("reserva vazia não oferece resgatar",
     await p.locator(".reserva-botoes .botao.saida").isDisabled());
@@ -270,7 +337,7 @@ module.exports = () => suite("Reservas e investimentos", async ({ p, ok, abrir, 
       { id:"g", tipo:"saida",   valor:500,  data:"${M(0)}-11", categoria:"Guardado", descricao:"Guardado: Emergência" },
       { id:"v", tipo:"entrada", valor:200,  data:"${M(0)}-12", categoria:"Resgate", descricao:"Resgate: Viagem" },
     ];
-    reservas = [{ id:"r1", nome:"Emergência", objetivo:6000 }];
+    reservas = [{ id:"r1", nome:"Emergência", objetivo:6000, tipo:"emergencia" }];
     movimentosReserva = [
       { id:"m1", reserva_id:"r1", tipo:"guardar",  valor:500, data:"${M(0)}-11", lancamento_id:"g" },
       { id:"m2", reserva_id:"r1", tipo:"resgatar", valor:200, data:"${M(0)}-12", lancamento_id:"v" },
@@ -297,13 +364,39 @@ module.exports = () => suite("Reservas e investimentos", async ({ p, ok, abrir, 
   ok("e o resgate nas entradas, pelo mesmo motivo",
     valor(await texto(".resumo-numero.entrada strong")) === 3200);
 
-  /* ─── CADASTRAR ──────────────────────────────────────────────────── */
+  /* ─── EMERGÊNCIA NÃO É A MESMA COISA QUE OBJETIVO ────────────────────
+     O dono do app apontou: criando uma reserva de VIAGEM, o botão
+     "6 meses" escrevia seis vezes a despesa mensal no campo de objetivo.
+     Viagem tem preço; meses de despesa não respondem pergunta nenhuma
+     ali. E a mesma confusão estava no topo da tela, maior. */
   await abrir(BASE + TRES_MESES + "; abrirNovaReserva();");
-  ok("o objetivo em meses de despesa vira atalho",
+  ok("a primeira reserva pergunta pra que ela é",
+    (await p.locator('input[name="rs-tipo"]').count()) === 2);
+  ok("e já vem na emergência, que é por onde se começa",
+    (await p.locator('input[name="rs-tipo"]:checked').inputValue()) === "emergencia");
+  ok("na emergência, o objetivo em meses vira atalho",
     (await p.locator(".reserva-atalhos .pilula").count()) === 3);
   await p.click(".reserva-atalhos .pilula:has-text('6 meses')");
   ok("e o atalho de 6 meses põe seis vezes a média",
     valor(await p.inputValue("#rs-objetivo")) === 6000);
+
+  // O PEDIDO, EM UMA LINHA: trocar pra objetivo apaga os atalhos.
+  await p.click('input[name="rs-tipo"][value="objetivo"]');
+  ok("trocando pra objetivo, os atalhos de meses somem",
+    (await p.locator(".reserva-atalhos").count()) === 0);
+  ok("e o que já foi digitado continua lá",
+    valor(await p.inputValue("#rs-objetivo")) === 6000);
+
+  // Com uma emergência já criada, a pergunta deixa de ser pergunta: a
+  // próxima reserva só pode ser objetivo, e o formulário fica limpo.
+  await abrir(BASE + TRES_MESES + UMA + "; abrirNovaReserva();");
+  ok("com a emergência já criada, nem se pergunta o tipo",
+    (await p.locator('input[name="rs-tipo"]').count()) === 0);
+  ok("e a tela da Viagem não oferece meses de despesa",
+    (await p.locator(".reserva-atalhos").count()) === 0);
+  await p.evaluate(() => { document.getElementById("rs-nome").value = "Viagem"; });
+  await p.evaluate(() => salvarReserva(document.querySelector(".lancamento-tela > .botao")));
+  ok("e ela nasce como objetivo", (await chamadas())[0].dados.tipo === "objetivo");
 
   await abrir(BASE + "; abrirNovaReserva();");
   ok("sem média conhecida, não há atalho que escreva R$ 0,00",
@@ -315,6 +408,26 @@ module.exports = () => suite("Reservas e investimentos", async ({ p, ok, abrir, 
   const nova = await chamadas();
   ok("reserva sem objetivo pode ser criada",
     nova.length === 1 && nova[0].dados.nome === "Viagem" && nova[0].dados.objetivo === null);
+
+  // Editar não troca o tipo: mudaria o significado do dinheiro que já
+  // está lá dentro, sem ninguém ter mexido nele.
+  await abrir(BASE + UMA + "; abrirEdicaoReserva('r1');");
+  ok("editando, o tipo não é oferecido",
+    (await p.locator('input[name="rs-tipo"]').count()) === 0);
+  await p.evaluate(() => salvarReserva(document.querySelector(".lancamento-tela > .botao"), "r1"));
+  const ed = (await chamadas())[0];
+  ok("e o update não mexe no tipo",
+    ed.op === "update" && !("tipo" in ed.dados));
+
+  // Segunda emergência é recusada pelo banco com o MESMO 23505 do nome
+  // repetido. Frase errada sobre problema real é o jeito mais rápido de a
+  // pessoa achar que o app quebrou.
+  await abrir(BASE + "; abrirNovaReserva();");
+  await falharProxima("23505", 'duplicate key value violates unique constraint "reservas_uma_emergencia_key"');
+  await p.evaluate(() => { document.getElementById("rs-nome").value = "Outra emergência"; });
+  await p.evaluate(() => salvarReserva(document.querySelector(".lancamento-tela > .botao")));
+  ok("segunda emergência é explicada como tal",
+    (await texto(".aviso.erro")).includes("já tem uma reserva de emergência"));
 
   await abrir(BASE + "; abrirNovaReserva();");
   await p.evaluate(() => salvarReserva(document.querySelector(".lancamento-tela > .botao")));

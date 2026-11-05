@@ -54,8 +54,8 @@ document.addEventListener("DOMContentLoaded", () => {
     { id:"ef2", nome:"Aluguel recebido", valor:800, dia:10, categoria:"Extra" },
   ];
   reservas = [
-    { id:"r1", nome:"Emergência", objetivo:9000 },
-    { id:"r2", nome:"Viagem", objetivo:null },
+    { id:"r1", nome:"Emergência", objetivo:9000, tipo:"emergencia" },
+    { id:"r2", nome:"Viagem", objetivo:null, tipo:"objetivo" },
   ];
   movimentosReserva = [
     { id:"mr1", reserva_id:"r1", tipo:"guardar", valor:2000, data:"2026-07-30", lancamento_id:"g1" },

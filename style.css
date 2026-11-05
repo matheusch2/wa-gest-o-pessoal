@@ -2203,10 +2203,48 @@ body.escuro .resumo-secao .item-icone.entrada { background: #17372d; }
 /* Objetivo alcançado veste verde. É o único estado da tela que merece
    cor própria: o resto é progresso, e progresso é a cor da marca. */
 .reserva-card.completa { border-left-color: var(--entrada); }
+
+/* A EMERGÊNCIA SE IDENTIFICA, porque ela é outra coisa. As outras
+   reservas são objetivos — a viagem, o carro. Esta é o colchão, e é a
+   única cujo saldo responde "quantos meses eu aguento". Dourada: a cor
+   que este app já reserva pro que tem peso diferente. */
+.reserva-card.emergencia { border-left-color: var(--dourado); }
+
+.reserva-selo {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--dourado) 18%, transparent);
+  color: var(--dourado);
+  font-size: 9.5px;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
 .reserva-card:active { filter: brightness(.97); }
 
 .reserva-card-topo { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
-.reserva-card-nome { font-size: 14.5px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.reserva-card-nome {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  font-size: 14.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+/* O selo não encolhe; quem corta com reticências é o nome. Sem isto, um
+   nome comprido espremia o "EMERGÊNCIA" até virar três letras. */
+.reserva-card-nome > b {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: inherit;
+}
+.reserva-card-nome .reserva-selo { flex-shrink: 0; }
 .reserva-card-saldo { font-size: 15.5px; font-weight: 800; white-space: nowrap; font-variant-numeric: tabular-nums; }
 
 .reserva-barra {
