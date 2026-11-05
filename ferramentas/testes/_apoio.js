@@ -57,6 +57,21 @@ function montarPaginaComBanco() {
         q.single = () => q.then();
         q.then = (fn) => {
           window.CHAMADAS.push({ tabela: q._t, op: q._op, dados: q._dados, eq: q._eq, dentro: q._in });
+
+          /* O BANCO TAMBÉM PRECISA SABER DIZER NÃO. Metade do cuidado
+             deste app está no que acontece quando a gravação falha —
+             nome repetido, lançamento em dobro, fatura já quitada. Sem
+             um jeito de forçar o erro, o teste do caminho ruim passava
+             pelo caminho bom e dizia que estava tudo certo.
+
+             Foi assim que uma conferência daqui passou com o código
+             quebrado de propósito: ela nunca chegava no erro. */
+          if (window.PROXIMO_ERRO) {
+            const e = window.PROXIMO_ERRO;
+            window.PROXIMO_ERRO = null;
+            const r = { data: null, error: e };
+            return fn ? Promise.resolve(r).then(fn) : Promise.resolve(r);
+          }
           // Devolve a linha como o banco devolveria: o que existia, com o
           // que foi mandado por cima. Sem isso, um update que a tela relê
           // em seguida enxergaria um objeto vazio.
@@ -125,6 +140,10 @@ async function suite(nome, corpo) {
   };
 
   const chamadas = () => p.evaluate(() => window.CHAMADAS);
+  // A próxima gravação falha com este erro. Use o code de verdade do
+  // Postgres: 23505 é índice único violado.
+  const falharProxima = (code, message) =>
+    p.evaluate(e => { window.PROXIMO_ERRO = e; }, { code, message: message || "duplicate key" });
   const texto = (sel) => p.textContent(sel).then(t => (t || "").replace(/\s+/g, " ").trim());
   // "R$ 1.234,56" vira 1234.56 — a mesma armadilha do parseMoedaBR, do
   // lado de fora: parseFloat engoliria o milhar.
@@ -132,7 +151,7 @@ async function suite(nome, corpo) {
 
   console.log("\n── " + nome);
   try {
-    await corpo({ p, ok, abrir, chamadas, texto, valor, temChart: TEM_CHART });
+    await corpo({ p, ok, abrir, chamadas, texto, valor, falharProxima, temChart: TEM_CHART });
   } catch (e) {
     falhou++;
     console.log("FALHOU  a suíte quebrou: " + e.message);

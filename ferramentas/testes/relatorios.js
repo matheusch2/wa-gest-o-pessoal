@@ -162,14 +162,19 @@ module.exports = () => suite("Relatórios", async ({ p, ok, abrir, texto, valor,
      Dizia "69% do que entra no mês" com a caixa logo acima mostrando
      "Entrou R$ 800,00" — e R$ 5.274 não é 69% de R$ 800. As duas contas
      estavam certas; o divisor é que não estava escrito em lugar nenhum. */
+  // O mês é o CORRENTE, e tem que ser: num mês que já passou o app não
+  // promete mais entrada nenhuma, de propósito — e aí a frase deste aviso
+  // seria outra. Cenário com mês fixo quebra sozinho na virada do mês.
   await abrir(`
-    lancamentos = [{ id:"a", tipo:"entrada", valor:800, data:"2026-10-01",
+    const M = mesDe(_hojeLocal());
+    lancamentos = [{ id:"a", tipo:"entrada", valor:800, data:M + "-01",
                      categoria:"Extra", descricao:"Adiantamento" }];
     comprasCartao = []; cartoes = []; metas = []; pagamentosFatura = []; fechamentos = [];
-    contas = [{ id:"c1", nome:"Aluguel", valor:1800, vencimento:"2026-10-05",
+    contas = [{ id:"c1", nome:"Aluguel", valor:1800, vencimento:M + "-05",
                 pago:false, categoria:"Casa", recorrente:true }];
-    entradasFixas = [{ id:"f1", nome:"Salário", valor:4100, dia:5, categoria:"Salário" }];
-    mesAtual = "2026-10"; abrirRelatorios();`);
+    entradasFixas = [{ id:"f1", nome:"Salário", valor:4100, dia:28, categoria:"Salário",
+                       inicio:null, fim:null }];
+    mesAtual = M; abrirRelatorios();`);
   const avisos = (await p.locator(".rel-aviso p").allTextContents()).map(t => t.replace(/\s+/g, " "));
   const frase = avisos.find(t => /Contas e faturas/.test(t)) || "";
   ok("o aviso traz o valor das contas", /R\$ 1\.800,00/.test(frase));

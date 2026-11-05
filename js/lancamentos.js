@@ -184,10 +184,11 @@ function abrirEdicaoLancamento(id, volta) {
         </div>
         <div class="campo">
           <div class="campo-label">${icoEtiqueta}<label for="ed-cat">Categoria</label></div>
+          <!-- A categoria guardada entra na lista sozinha, mesmo que ela
+               não esteja mais cadastrada: quem cuida disso agora é o
+               campoDeCategoria, pra TODA tela de edição e não só esta. -->
           ${campoDeCategoria({ id: "ed-cat", tipo: l.tipo, escolhida: l.categoria,
-                              opcoes: cats.some(c => c.nome === l.categoria)
-                                ? cats.map(c => c.nome)
-                                : cats.map(c => c.nome).concat(l.categoria) })}
+                              opcoes: cats.map(c => c.nome) })}
         </div>
       </div>
     </div>

@@ -22,17 +22,42 @@
 
 const CATEGORIA_NOVA = "__nova";
 
+/* ═══ A CATEGORIA GUARDADA NUNCA PODE SUMIR DA LISTA ══════════════════
+   Um <select> sem nenhuma opção marcada não fica vazio: o navegador
+   seleciona a PRIMEIRA sozinho, calado. Então, abrindo um formulário de
+   edição cuja categoria guardada não está entre as opções — porque ela
+   foi apagada em Ajustes, ou porque aquela tela filtra a lista —, a tela
+   nascia mostrando outra categoria. Salvar dali trocava a categoria do
+   registro sem ninguém ter pedido, e sem nada na tela dizendo.
+
+   Era o "a categoria muda sozinho": não mudava ao lançar, mudava ao abrir
+   pra mexer em outra coisa e salvar.
+
+   A regra agora é desta função, e não de cada tela: se existe uma
+   escolhida, ela ENTRA na lista. Uma tela pode esconder categorias da
+   escolha — e as Metas escondem —, mas nenhuma pode esconder aquela que o
+   registro já está usando. */
+
 // Monta o <select> com a opção de criar no fim, mais o campinho escondido.
 // `aoTrocar` é o NOME de uma função sem argumentos (a prévia da tela, por
 // exemplo), chamada toda vez que a escolha muda.
 function campoDeCategoria({ id, tipo, opcoes, escolhida, aoTrocar }) {
   const depois = aoTrocar ? `'${aoTrocar}'` : "null";
-  const lista = opcoes.length
-    ? opcoes.map(n => `<option value="${esc(n)}"${n === escolhida ? " selected" : ""}>${esc(n)}</option>`).join("")
-    : "";
+
+  const atual = String(escolhida || "").trim();
+  const todas = atual && !opcoes.includes(atual) ? opcoes.concat([atual]) : opcoes;
+  const marcada = atual || todas[0] || "";
+
+  /* SEM NENHUMA CATEGORIA, o select ficava só com o "+ Nova categoria" —
+     e aí ele VALIA "__nova", que é valor de controle. Salvar assim
+     gravava a palavra "__nova" como categoria do registro. O lugar em
+     branco segura isso: ele vale "", e toda tela já recusa vazio. */
+  const lista = todas.length
+    ? todas.map(n => `<option value="${esc(n)}"${n === marcada ? " selected" : ""}>${esc(n)}</option>`).join("")
+    : `<option value="" selected>Escolha ou crie uma</option>`;
 
   return `
-    <select id="${id}" data-anterior="${esc(escolhida || opcoes[0] || "")}"
+    <select id="${id}" data-anterior="${esc(marcada)}"
             onchange="aoEscolherCategoria('${id}', '${tipo}', ${depois})">
       ${lista}
       <option value="${CATEGORIA_NOVA}">+ Nova categoria</option>
@@ -88,10 +113,26 @@ async function criarCategoriaNoCampo(botao, id, tipo, aoTrocar) {
 
   if (error) {
     solta();
-    // Já existe: pode ser que ela só não estivesse NESTA lista (uma meta
-    // já usa essa categoria, por exemplo). Dizer "já existe" é a resposta
-    // certa e evita a pessoa achar que criou.
-    erro(error.code === "23505" ? "Essa categoria já existe." : "Erro: " + error.message);
+    if (error.code !== "23505") { erro("Erro: " + error.message); return; }
+
+    /* JÁ EXISTE. Se ela está logo ali na lista, o certo não é só avisar:
+       é escolher ela. Antes a tela dizia "já existe" e deixava o select
+       no que estava — a pessoa lia a mensagem como confirmação e salvava
+       na categoria errada.
+
+       Quando ela NÃO está na lista é porque a tela escondeu de propósito
+       (as Metas escondem categoria que já tem meta), e aí escolher por
+       cima desfaria a regra da tela. Nesse caso, só o aviso. */
+    const jaNaLista = [...sel.options].some(o => o.value === nome);
+    if (jaNaLista) {
+      sel.value = nome;
+      sel.dataset.anterior = nome;
+      fecharNovaCategoria(id);
+      ok(`"${nome}" já existia — escolhi ela pra você.`);
+      if (aoTrocar) window[aoTrocar]?.();
+    } else {
+      erro(`"${nome}" já existe, mas não cabe nesta lista.`);
+    }
     return;
   }
 

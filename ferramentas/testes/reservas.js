@@ -14,35 +14,48 @@
 
 const { suite } = require("./_apoio");
 
-// Mercado com meta de 1.000: R$ 300 já no cartão, R$ 200 no extrato.
-// A fatura que vence no mês tem as compras do mês passado.
+/* OS MESES SÃO RELATIVOS A HOJE, e isso não é capricho: cenário com mês
+   fixo passa a falhar sozinho quando aquele mês vira passado — e o app
+   trata mês passado de outro jeito de propósito (ele não reserva nada).
+   Aconteceu: esta suíte quebrou na virada do mês sem ninguém mexer no
+   código. Escrito assim, ela vale em qualquer data.
+
+   Mercado com meta de 1.000: R$ 300 já no cartão, R$ 200 no extrato. A
+   fatura que vence no mês tem as compras do mês passado. */
 const CENARIO = `
+  const M = mesDe(_hojeLocal());
+  const ANT = _somaMes(M, -1);
   cartoes = [{ id:"k1", nome:"Nubank", banco:"nubank", dia_fechamento:1, dia_vencimento:10 }];
   comprasCartao = [
     { id:"c1", cartao_id:"k1", descricao:"Mercado", valor:300, parcelas:1,
-      data:"2026-10-01", categoria:"Mercado", recorrente:false, fim:null },
+      data:M + "-01", categoria:"Mercado", recorrente:false, fim:null },
   ];
   lancamentos = [
-    { id:"e1", tipo:"entrada", valor:4000, data:"2026-10-01", categoria:"Salário", descricao:"Salário" },
-    { id:"s1", tipo:"saida", valor:200, data:"2026-10-03", categoria:"Mercado", descricao:"Feira" },
+    { id:"e1", tipo:"entrada", valor:4000, data:M + "-01", categoria:"Salário", descricao:"Salário" },
+    { id:"s1", tipo:"saida", valor:200, data:M + "-03", categoria:"Mercado", descricao:"Feira" },
   ];
   metas = [{ id:"m1", categoria:"Mercado", valor:1000, reservar:true }];
   contas = []; pagamentosFatura = []; fechamentos = []; entradasFixas = [];
-  mesAtual = "2026-10";
+  mesAtual = M;
 `;
 
 module.exports = () => suite("Metas, Resumo e reservas", async ({ p, ok, abrir, texto, valor }) => {
+
+  // O mesmo mês que a página vai calcular: o navegador roda no mesmo
+  // fuso deste processo, e pedir à página exigiria ela já estar aberta.
+  const hoje = new Date();
+  const M = hoje.getFullYear() + "-" + String(hoje.getMonth() + 1).padStart(2, "0");
 
   /* ─── A MESMA FUNÇÃO, NÃO UMA CÓPIA ──────────────────────────────────
      O Resumo dizia "Mercado, ainda vai sair R$ 1.000" enquanto as Metas
      diziam "sobram R$ 683,61", porque um contava a compra no cartão e o
      outro não. Agora os dois chamam _gastoDoMesPorCategoria. */
   await abrir(CENARIO);
-  const gasto = await p.evaluate(() => _gastoDoMesPorCategoria("2026-10").Mercado);
+  const gasto = await p.evaluate(x => _gastoDoMesPorCategoria(x).Mercado, M);
   ok("gasto da categoria = extrato + cartão", gasto === 500);
 
-  const reserva = await p.evaluate(() =>
-    reservasDoMes("2026-10").linhas.find(l => l.tipo === "meta"));
+  const reserva = await p.evaluate(x =>
+    reservasDoMes(x).linhas.find(l => l.tipo === "meta"), M);
   ok("a meta reserva só o que falta dela", reserva.falta === 500);
   ok("e mostra o mesmo gasto que as Metas mostram", reserva.gasto === gasto);
 
@@ -56,26 +69,26 @@ module.exports = () => suite("Metas, Resumo e reservas", async ({ p, ok, abrir, 
      dia 10 — a maior conta da casa, a única que o app sabia calcular e
      não reservava. */
   await abrir(CENARIO + `; comprasCartao.push({ id:"c0", cartao_id:"k1", descricao:"TV",
-     valor:800, parcelas:1, data:"2026-09-15", categoria:"Casa", recorrente:false, fim:null });`);
-  const r = await p.evaluate(() => reservasDoMes("2026-10"));
+     valor:800, parcelas:1, data:ANT + "-15", categoria:"Casa", recorrente:false, fim:null });`);
+  const r = await p.evaluate(x => reservasDoMes(x), M);
   const fatura = r.linhas.find(l => l.tipo === "fatura");
   ok("a fatura aparece no 'ainda vai sair'", !!fatura);
   // A fatura de outubro junta a TV de setembro (800) e o mercado do dia 1º
   // (300) — o cartão fecha dia 1, então o dia 1º ainda entra nela.
   ok("pelo total do que falta nela", fatura.falta === 1100);
-  ok("e pelo mês em que VENCE, não o da fatura", fatura.vencimento === "2026-10-10");
+  ok("e pelo mês em que VENCE, não o da fatura", fatura.vencimento === M + "-10");
 
   /* ─── E NÃO CONTA EM DOBRO COM A META ────────────────────────────────
      Parece que sim, e não é: a compra no cartão já entrou como gasto, e
      gasto ABATE a reserva da meta em vez de somar. Meta de 1.000 com
      R$ 500 gastos reserva 500; a fatura reserva o que vence. */
-  await abrir(CENARIO + `; comprasCartao[0].data = "2026-09-20";`);
-  const r2 = await p.evaluate(() => reservasDoMes("2026-10"));
+  await abrir(CENARIO + `; comprasCartao[0].data = ANT + "-20";`);
+  const r2 = await p.evaluate(x => reservasDoMes(x), M);
   const meta2 = r2.linhas.find(l => l.tipo === "meta");
   const fat2 = r2.linhas.find(l => l.tipo === "fatura");
   // Setembro: 300 no cartão. Outubro: 200 no extrato → meta falta 800.
   // A fatura de outubro cobra os 300 de setembro.
-  ok("a meta reserva o que falta dela em outubro", meta2.falta === 800);
+  ok("a meta reserva o que falta dela no mês", meta2.falta === 800);
   ok("a fatura reserva o que vai sair da conta", fat2.falta === 300);
   ok("e o total é a soma, sem repetição", r2.total === 1100);
 
@@ -88,11 +101,11 @@ module.exports = () => suite("Metas, Resumo e reservas", async ({ p, ok, abrir, 
 
   /* ─── Conta paga sai da reserva sozinha ──────────────────────────── */
   await abrir(CENARIO + `; contas = [{ id:"cz", nome:"Luz", valor:180,
-     vencimento:"2026-10-20", pago:false, categoria:"Casa", recorrente:true }];`);
-  const comConta = await p.evaluate(() => reservasDoMes("2026-10").total);
+     vencimento:M + "-20", pago:false, categoria:"Casa", recorrente:true }];`);
+  const comConta = await p.evaluate(x => reservasDoMes(x).total, M);
   await abrir(CENARIO + `; contas = [{ id:"cz", nome:"Luz", valor:180,
-     vencimento:"2026-10-20", pago:true, pago_em:"2026-10-19", categoria:"Casa", recorrente:true }];`);
-  const semConta = await p.evaluate(() => reservasDoMes("2026-10").total);
+     vencimento:M + "-20", pago:true, pago_em:M + "-19", categoria:"Casa", recorrente:true }];`);
+  const semConta = await p.evaluate(x => reservasDoMes(x).total, M);
   ok("conta paga deixa de ser reservada", Math.round((comConta - semConta) * 100) === 18000);
 
   /* ─── Mês que já acabou não promete nada ─────────────────────────────
@@ -107,11 +120,11 @@ module.exports = () => suite("Metas, Resumo e reservas", async ({ p, ok, abrir, 
      Ele é a mesma despesa chegando pela segunda vez: as compras já foram
      contadas uma a uma, cada uma na sua categoria. */
   await abrir(CENARIO + `;
-    lancamentos.push({ id:"fat", tipo:"saida", valor:900, data:"2026-10-10",
+    lancamentos.push({ id:"fat", tipo:"saida", valor:900, data:M + "-10",
                        categoria:"Cartão", descricao:"Fatura Nubank" });
-    pagamentosFatura.push({ id:"pf", cartao_id:"k1", mes_ref:"2026-10", tipo:"pago",
-                            valor:900, pago_em:"2026-10-10", lancamento_id:"fat" });`);
-  const porCat = await p.evaluate(() => _gastoDoMesPorCategoria("2026-10"));
+    pagamentosFatura.push({ id:"pf", cartao_id:"k1", mes_ref:M, tipo:"pago",
+                            valor:900, pago_em:M + "-10", lancamento_id:"fat" });`);
+  const porCat = await p.evaluate(x => _gastoDoMesPorCategoria(x), M);
   ok("pagar a fatura não vira gasto novo", !porCat.Cartão);
   ok("e o mercado continua o mesmo", porCat.Mercado === 500);
 });
