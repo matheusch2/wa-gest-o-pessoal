@@ -158,42 +158,18 @@ module.exports = () => suite("Relatórios", async ({ p, ok, abrir, texto, valor,
   ok("e sem pintar de verde o que não aconteceu",
     (await p.locator(".rel-topo.dentro").count()) === 0);
 
-  /* ─── O aviso tem que trazer o número com que ele divide ─────────────
-     Dizia "69% do que entra no mês" com a caixa logo acima mostrando
-     "Entrou R$ 800,00" — e R$ 5.274 não é 69% de R$ 800. As duas contas
-     estavam certas; o divisor é que não estava escrito em lugar nenhum. */
-  // O mês é o CORRENTE, e tem que ser: num mês que já passou o app não
-  // promete mais entrada nenhuma, de propósito — e aí a frase deste aviso
-  // seria outra. Cenário com mês fixo quebra sozinho na virada do mês.
-  await abrir(`
-    const M = mesDe(_hojeLocal());
-    lancamentos = [{ id:"a", tipo:"entrada", valor:800, data:M + "-01",
-                     categoria:"Extra", descricao:"Adiantamento" }];
-    comprasCartao = []; cartoes = []; metas = []; pagamentosFatura = []; fechamentos = [];
-    contas = [{ id:"c1", nome:"Aluguel", valor:1800, vencimento:M + "-05",
-                pago:false, categoria:"Casa", recorrente:true }];
-    entradasFixas = [{ id:"f1", nome:"Salário", valor:4100, dia:28, categoria:"Salário",
-                       inicio:null, fim:null }];
-    mesAtual = M; abrirRelatorios();`);
-  const avisos = (await p.locator(".rel-aviso p").allTextContents()).map(t => t.replace(/\s+/g, " "));
-  const frase = avisos.find(t => /Contas e faturas/.test(t)) || "";
-  ok("o aviso traz o valor das contas", /R\$ 1\.800,00/.test(frase));
-  ok("E o número com que ele divide", /R\$ 4\.900,00/.test(frase));
-  ok("dizendo que esse dinheiro ainda vai entrar", /que devem entrar no mês/.test(frase));
-  ok("a caixa 'Entrou' continua mostrando só o que caiu", (await caixa(0)) === 800);
-
-  /* ─── Aviso sem o que dizer não aparece ──────────────────────────────
-     Quem instalou o app ontem não pode ler "estourou em 0 dos últimos 0
-     meses". Lista que mostra sempre as mesmas linhas vira paisagem. */
-  await abrir(`
-    lancamentos = [{ id:"x", tipo:"saida", valor:90, data:"2026-09-05",
-                     categoria:"Mercado", descricao:"Feira" }];
-    comprasCartao = []; contas = []; cartoes = []; fechamentos = []; entradasFixas = [];
-    metas = [{ id:"m1", categoria:"Mercado", valor:50, reservar:true }];
-    mesAtual = "2026-09"; abrirRelatorios();`);
-  ok("app recém-instalado não inventa aviso nenhum",
-    (await p.locator(".rel-aviso").count()) === 0);
-  ok("e o bloco inteiro some", (await p.locator(".rel-avisos").count()) === 0);
+  /* ─── O bloco de frases saiu da tela ─────────────────────────────────
+     Eram seis avisos em cima do relatório, e o dono do app mandou tirar
+     pra abrir espaço pros indicadores que ele quer de verdade. Esta
+     conferência existe pra ele não voltar sozinho num merge distraído:
+     as funções foram apagadas, não escondidas, e o git guarda as frases
+     se alguma for pedida de volta. */
+  await abrir(CENARIO + "; abrirRelatorios();");
+  ok("nenhuma caixa de aviso na tela", (await p.locator(".rel-aviso").count()) === 0);
+  ok("nem o bloco que as segurava", (await p.locator(".rel-avisos").count()) === 0);
+  ok("nem o título dele", !/O que os números dizem/.test(await texto("#area")));
+  ok("e o código não guarda mais as funções delas",
+    (await p.evaluate(() => typeof _avisosDoMes)) === "undefined");
 
   /* ─── A projeção separa o que dá pra desfazer do que não dá ──────── */
   await abrir(CENARIO + `;
