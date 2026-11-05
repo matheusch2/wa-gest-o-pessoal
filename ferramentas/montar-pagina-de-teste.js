@@ -53,6 +53,15 @@ document.addEventListener("DOMContentLoaded", () => {
     { id:"ef1", nome:"Salário", valor:3000, dia:5, categoria:"Salário" },
     { id:"ef2", nome:"Aluguel recebido", valor:800, dia:10, categoria:"Extra" },
   ];
+  reservas = [
+    { id:"r1", nome:"Emergência", objetivo:9000 },
+    { id:"r2", nome:"Viagem", objetivo:null },
+  ];
+  movimentosReserva = [
+    { id:"mr1", reserva_id:"r1", tipo:"guardar", valor:2000, data:"2026-07-30", lancamento_id:"g1" },
+    { id:"mr2", reserva_id:"r1", tipo:"guardar", valor:500, data:"2026-08-30", lancamento_id:"g2" },
+    { id:"mr3", reserva_id:"r2", tipo:"guardar", valor:300, data:"2026-09-02", lancamento_id:"g3" },
+  ];
   document.getElementById("area-login").remove();
   document.getElementById("menu").style.display = "grid";
   window.__pronto = true;

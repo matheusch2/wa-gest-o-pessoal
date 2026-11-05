@@ -43,19 +43,34 @@ function _idsDeFechamento() {
   return ids;
 }
 
+// Os lançamentos que nasceram de um movimento de reserva, por id. Mesma
+// natureza dos de cima e pelo mesmo motivo: guardar R$ 500 na reserva de
+// emergência não é gastar R$ 500, e resgatar não é ganhar. O dinheiro
+// mudou de lugar, não de dono.
+//
+// Por id, nunca pela categoria escrita no lançamento — "Guardado" é texto
+// livre, e quem criar uma categoria com esse nome à mão não pode ver os
+// próprios gastos sumirem daqui.
+function _idsDeReserva() {
+  return new Set(movimentosReserva.map(m => m.lancamento_id).filter(Boolean));
+}
+
 const _cent = v => Math.round(Number(v || 0) * 100) / 100;
 
 function _retratoDoMes(mesRef) {
   const doFechamento = _idsDeFechamento();
+  const deReserva = _idsDeReserva();
 
-  let entrou = 0, saldoTrazido = 0, guardado = 0;
+  let entrou = 0, saldoTrazido = 0, guardado = 0, resgatado = 0;
   for (const l of lancamentos) {
     if (mesDe(l.data) !== mesRef) continue;
     const rolagem = doFechamento.has(l.id);
+    const reserva = deReserva.has(l.id);
     if (l.tipo === "entrada") {
       if (rolagem) saldoTrazido += Number(l.valor);
+      else if (reserva) resgatado += Number(l.valor);
       else entrou += Number(l.valor);
-    } else if (rolagem) {
+    } else if (rolagem || reserva) {
       guardado += Number(l.valor);
     }
   }
@@ -66,7 +81,7 @@ function _retratoDoMes(mesRef) {
   const porCat = { ..._gastoDoMesPorCategoria(mesRef) };
   for (const l of lancamentos) {
     if (l.tipo !== "saida" || mesDe(l.data) !== mesRef) continue;
-    if (!doFechamento.has(l.id)) continue;
+    if (!doFechamento.has(l.id) && !deReserva.has(l.id)) continue;
     const cat = l.categoria || "Outros";
     porCat[cat] = _cent((porCat[cat] || 0) - Number(l.valor));
   }
@@ -96,6 +111,7 @@ function _retratoDoMes(mesRef) {
     sobrou: _cent(entrou - gastou),
     saldoTrazido: _cent(saldoTrazido),
     guardado: _cent(guardado),
+    resgatado: _cent(resgatado),
     ranking,
     vazio: entrou < 0.005 && gastou < 0.005,
   };
@@ -146,6 +162,21 @@ function _linhaDoTempo(mesRef, quantos) {
     const r = _retratoDoMes(m);
     return { mes: m, entrou: r.entrou, gastou: r.gastou, sobrou: r.sobrou };
   });
+}
+
+/* ═══ QUANTO UM MÊS SEU CUSTA ═════════════════════════════════════════
+   A média dos últimos meses com movimento. Serve pra pergunta que dá
+   sentido a uma reserva: "quantos meses eu aguento sem receber nada?"
+
+   O MÊS CORRIDO FICA DE FORA de propósito. No dia 3 ele tem três dias de
+   gasto dentro; entrando na média, ele a derruba, e a reserva passaria a
+   prometer cobrir mais meses do que cobre — justo o número em que não se
+   pode mentir, porque é o que a pessoa vai usar se perder o emprego. */
+
+function _gastoMedioMensal(quantos) {
+  const meses = _mesesAnteriores(mesDe(_hojeLocal()), quantos || 6);
+  if (!meses.length) return 0;
+  return _cent(meses.reduce((s, m) => s + _retratoDoMes(m).gastou, 0) / meses.length);
 }
 
 /* ═══ O QUE JÁ ESTÁ COMPROMETIDO ══════════════════════════════════════
@@ -443,6 +474,10 @@ function desenharRelatorios() {
   if (r.guardado >= 0.005) {
     ajustes.push(`Também não entram ${moeda(r.guardado)} que você guardou: sair da
                   conta pra poupar não é gastar.`);
+  }
+  if (r.resgatado >= 0.005) {
+    ajustes.push(`E ${moeda(r.resgatado)} que você tirou da reserva não contam como
+                  renda: esse dinheiro já era seu, só voltou pra conta.`);
   }
 
   document.getElementById("area").innerHTML = `

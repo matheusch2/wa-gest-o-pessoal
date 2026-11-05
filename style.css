@@ -1888,7 +1888,7 @@ body.escuro .resumo-secao .item-icone.entrada { background: #17372d; }
 .relogio-medida.forte { color: var(--saida); font-weight: 600; }
 
 /* ─── 21. O QUE AINDA VAI SAIR ─────────────────────────────────────────── */
-.reserva-item .item-valor { font-variant-numeric: tabular-nums; }
+.item-toque .item-valor { font-variant-numeric: tabular-nums; }
 
 /* ─── 22. FECHAMENTO DO MÊS ──────────────────────────────────────────────────
    O convite só aparece em mês que já acabou, e some depois de fechado —
@@ -2183,3 +2183,90 @@ body.escuro .resumo-secao .item-icone.entrada { background: #17372d; }
    virar desconfiança no app. */
 .rel-nota p { margin: 0 0 9px; font-size: 12.5px; line-height: 1.6; color: var(--fraco); }
 .rel-nota p:last-child { margin-bottom: 0; }
+
+/* ─── 26. RESERVAS ───────────────────────────────────────────────────────
+   Cada reserva é um saldo com uma pergunta embaixo: "quanto falta?". Sem
+   objetivo, ela é só o saldo — e isso é de propósito, porque exigir o
+   número impediria de começar quem ainda não sabe quanto quer juntar. */
+
+.reserva-lista { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+
+.reserva-card {
+  padding: 13px 14px;
+  border: 1.5px solid var(--borda);
+  border-left-width: 4px;
+  border-left-color: var(--marca-txt);
+  border-radius: 12px;
+  background: var(--papel);
+  cursor: pointer;
+}
+/* Objetivo alcançado veste verde. É o único estado da tela que merece
+   cor própria: o resto é progresso, e progresso é a cor da marca. */
+.reserva-card.completa { border-left-color: var(--entrada); }
+.reserva-card:active { filter: brightness(.97); }
+
+.reserva-card-topo { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.reserva-card-nome { font-size: 14.5px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.reserva-card-saldo { font-size: 15.5px; font-weight: 800; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+.reserva-barra {
+  height: 8px;
+  margin: 9px 0 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--texto) 10%, transparent);
+  overflow: hidden;
+}
+.reserva-barra.grande { height: 12px; margin: -4px 0 14px; }
+.reserva-barra.grande.cheia span { background: var(--entrada); }
+.reserva-barra span { display: block; height: 100%; border-radius: 999px; background: var(--marca-txt); }
+.reserva-card.completa .reserva-barra span { background: var(--entrada); }
+
+.reserva-card-baixo {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--fraco);
+}
+.reserva-card.completa .reserva-card-baixo span:last-child { color: var(--entrada); font-weight: 700; }
+
+/* Guardar e resgatar lado a lado, e guardar primeiro: é o que mais se
+   faz. Resgatar é a exceção, e botão de exceção não disputa o tamanho do
+   botão do caso comum — por isso os dois dividem a linha em vez de
+   empilharem dois botões de largura inteira. */
+.reserva-botoes { display: flex; gap: 10px; margin: 0 0 12px; }
+.reserva-botoes .botao { margin-top: 0; }
+
+/* RESGATAR NÃO VESTE VERMELHO CHEIO. Botão vermelho sólido lê como
+   "cuidado, isto estraga alguma coisa" — e tirar dinheiro da própria
+   reserva não estraga nada, é pra isso que ela serve. Contornado, ele diz
+   o que é de verdade: a opção secundária, na cor do dinheiro saindo.
+   O contorno é inset box-shadow, e não border, pra não mudar a altura e
+   desalinhar com o botão do lado. */
+.reserva-botoes .botao.saida {
+  background: transparent;
+  color: var(--saida);
+  box-shadow: inset 0 0 0 2px var(--saida);
+}
+.reserva-botoes .botao.saida:active:not(:disabled) {
+  background: color-mix(in srgb, var(--saida) 12%, transparent);
+}
+
+/* Os atalhos de valor: "faltam R$ 1.240" e "3 meses" são os números que a
+   pessoa quer digitar e não consegue calcular de cabeça. */
+.reserva-atalhos { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; }
+/* O rótulo ocupa a linha inteira pra os atalhos ficarem juntos embaixo:
+   "Reserva de emergência: [3 meses] [6 meses]" empurrava o terceiro
+   sozinho pra linha de baixo, e três opções lidas como 2+1 parecem duas
+   opções e um erro. */
+.reserva-atalhos > span {
+  flex-basis: 100%;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--fraco);
+}
+
+/* Editar e excluir ficam no pé da tela da reserva, não no alto: o alto é
+   do saldo, e o saldo é o motivo de alguém abrir esta tela. */
+.reserva-rodape { display: flex; justify-content: center; gap: 8px; margin: 4px 0 0; }

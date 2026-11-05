@@ -69,7 +69,7 @@ function _mesPorExtensoDe(data) {
 }
 
 /* ═══ O QUE AINDA VAI ENTRAR ══════════════════════════════════════════
-   O espelho de reservasDoMes(), e ele existe pelo mesmo motivo.
+   O espelho de aindaVaiSairDoMes(), e ele existe pelo mesmo motivo.
 
    O Resumo desconta do saldo tudo que ainda TEM QUE SAIR: a conta que
    vence dia 20, o mercado que ainda falta fazer. Mas o salário que ainda

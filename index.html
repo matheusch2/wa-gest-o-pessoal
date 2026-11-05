@@ -84,7 +84,7 @@
   <link rel="preconnect" href="https://efewoxdgfcgkodtqbqsz.supabase.co" crossorigin>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 
-  <link rel="stylesheet" href="style.css?v=68">
+  <link rel="stylesheet" href="style.css?v=69">
 
   <!-- defer: baixa em paralelo e só executa depois da página montada, em
        ordem. Sem ele, cada script trava a leitura do HTML no meio.
@@ -160,6 +160,19 @@
         <svg viewBox="0 0 24 24"><line x1="4" y1="20" x2="4" y2="10"/><line x1="10" y1="20" x2="10" y2="4"/><line x1="16" y1="20" x2="16" y2="13"/><line x1="22" y1="20" x2="22" y2="7"/></svg>
         Relatórios
       </button>
+      <!-- RESERVAS E INVESTIMENTOS ANDAM JUNTOS, e ficam lado a lado no
+           menu de propósito: são as duas metades da mesma pergunta — o
+           que está guardado pra emergência e o que está rendendo. A
+           primeira já funciona; a segunda é o botão antes da tela, porque
+           ela precisa de cotação de mercado que o app ainda não busca. -->
+      <button class="menu-botao" onclick="abrirReservas()">
+        <svg viewBox="0 0 24 24"><path d="M18.5 5.5c-.6.6-1 1.4-1.1 2.3A10.6 10.6 0 0 0 12 6.5c-4.7 0-8.5 2.9-8.5 6.5 0 1.9 1 3.6 2.7 4.8V20h3v-1.7c.4.1.9.1 1.3.1h3c.4 0 .9 0 1.3-.1V20h3v-2.2c.9-.6 1.6-1.5 2-2.4h1.2a.8.8 0 0 0 .8-.8v-2.2a.8.8 0 0 0-.8-.8h-1.3a6 6 0 0 0-1.2-1.7z"/><circle cx="8.5" cy="12" r="1"/><path d="M11.5 6.7 10.5 4"/></svg>
+        Reservas
+      </button>
+      <button class="menu-botao" onclick="abrirInvestimentos()">
+        <svg viewBox="0 0 24 24"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="15 7 21 7 21 13"/></svg>
+        Investimentos
+      </button>
     </nav>
 
     <!-- Toda tela interna é desenhada aqui dentro. -->
@@ -198,15 +211,17 @@
          fechamento.js fecha o mês e leva a sobra pro seguinte
          relatorios.js o retrato do mês — depois de metas.js e
                        fechamento.js, de quem ele toma as contas emprestadas
+         reservas.js   dinheiro guardado fora da conta — depois de
+                       relatorios.js, de quem ele toma o gasto médio do mês
          embreve.js    telas ainda por construir
          app.js        a partida: sessão, erros de carga, relógio
 
        O ?v=N no fim de cada um existe pra o celular não servir a versão
        velha do cache. Mexeu no arquivo, sobe o número. -->
-  <script defer src="js/core.js?v=42"></script>
+  <script defer src="js/core.js?v=43"></script>
   <script defer src="js/categorias.js?v=2"></script>
   <script defer src="js/auth.js?v=2"></script>
-  <script defer src="js/resumo.js?v=16"></script>
+  <script defer src="js/resumo.js?v=17"></script>
   <script defer src="js/lancamentos.js?v=14"></script>
   <script defer src="js/entradasfixas.js?v=5"></script>
   <script defer src="js/contas.js?v=10"></script>
@@ -215,8 +230,9 @@
   <script defer src="js/cartoes.js?v=17"></script>
   <script defer src="js/metas.js?v=12"></script>
   <script defer src="js/fechamento.js?v=4"></script>
-  <script defer src="js/relatorios.js?v=12"></script>
-  <script defer src="js/embreve.js?v=5"></script>
+  <script defer src="js/relatorios.js?v=13"></script>
+  <script defer src="js/reservas.js?v=1"></script>
+  <script defer src="js/embreve.js?v=6"></script>
   <script defer src="js/app.js?v=6"></script>
 </body>
 </html>

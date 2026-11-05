@@ -43,8 +43,16 @@ e é por isso que eles precisam de teste e não de tipo.
 
 **Para confiar neles, quebre-os de propósito.** Troque no `js/core.js` o
 `if (mesDe(venc) !== mesRef) continue;` por `if (true) continue;` e rode de
-novo: a suíte de reservas tem que acusar. Se não acusar, o problema é o
-teste, não o código.
+novo: a suíte `aindavaisair` tem que acusar. Ou troque no
+`js/reservas.js` o `total += m.tipo === "guardar" ? ... : -...` por
+`total += Number(m.valor)` — a suíte `reservas` acusa em oito lugares. Se
+não acusar, o problema é o teste, não o código.
+
+**Atenção aos nomes.** `reservas` é a suíte do dinheiro guardado (a tela
+Reservas). `aindavaisair` é a do que o Resumo reserva porque ainda tem que
+sair no mês — contas, fatura e metas. São assuntos diferentes que o
+português junta na mesma palavra, e foi por isso que a função do core
+deixou de se chamar `reservasDoMes` e virou `aindaVaiSairDoMes`.
 
 **Suíte nova = arquivo novo em `ferramentas/testes/`.** O `rodar.js` acha
 sozinho — arquivo que começa com `_` é apoio e fica de fora.

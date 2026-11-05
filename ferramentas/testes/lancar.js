@@ -22,10 +22,12 @@ module.exports = () => suite("Lançar: um botão só", async ({ p, ok, abrir, te
   await abrir(BASE + "; voltarInicio();");
   const botoes = await p.locator("#menu .menu-botao").allTextContents();
   const nomes = botoes.map(t => t.trim());
-  ok("o menu tem sete botões", nomes.length === 7);
-  ok("um deles é 'Lançar'", nomes.includes("Lançar"));
+  ok("há um 'Lançar' no menu", nomes.includes("Lançar"));
   ok("e os dois antigos sumiram",
     !nomes.includes("Lançar saída") && !nomes.includes("Lançar entrada"));
+  // A contagem é conferida na suíte das Reservas, que é quem mexeu nela
+  // por último. Aqui o que importa é que o lugar economizado continua
+  // economizado: um botão só, não dois.
   ok("o resto continua lá",
     ["Resumo do mês", "Contas a pagar", "Histórico", "Cartão",
      "Metas de gastos", "Relatórios"].every(n => nomes.includes(n)));
@@ -61,7 +63,7 @@ module.exports = () => suite("Lançar: um botão só", async ({ p, ok, abrir, te
     entradasFixas = [{ id:"f", nome:"Salário", valor:3000, dia:5,
                        categoria:"Salário", inicio:null, fim:null }];
     abrirResumo();`);
-  await p.click(".resumo-secao:has(h2:text-is('Ainda vai entrar')) .reserva-item");
+  await p.click(".resumo-secao:has(h2:text-is('Ainda vai entrar')) .item-toque");
   ok("o Resumo manda direto pro formulário de entrada",
     (await p.locator("#lc-valor").count()) === 1 &&
     (await p.locator(".lancar-op").count()) === 0);

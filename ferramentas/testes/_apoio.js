@@ -67,10 +67,20 @@ function montarPaginaComBanco() {
              Foi assim que uma conferência daqui passou com o código
              quebrado de propósito: ela nunca chegava no erro. */
           if (window.PROXIMO_ERRO) {
-            const e = window.PROXIMO_ERRO;
-            window.PROXIMO_ERRO = null;
-            const r = { data: null, error: e };
-            return fn ? Promise.resolve(r).then(fn) : Promise.resolve(r);
+            // '_pular' deixa o erro cair na SEGUNDA (ou terceira) gravação,
+            // não na primeira. É o que permite conferir o desfazer: guardar
+            // na reserva grava um lançamento e depois o movimento, e o que
+            // tem que ser testado é o lançamento sendo apagado quando o
+            // movimento falha. Sem isto, o erro só chegava no primeiro
+            // passo, onde não há nada pra desfazer.
+            if (window.PROXIMO_ERRO._pular > 0) {
+              window.PROXIMO_ERRO._pular--;
+            } else {
+              const e = window.PROXIMO_ERRO;
+              window.PROXIMO_ERRO = null;
+              const r = { data: null, error: e };
+              return fn ? Promise.resolve(r).then(fn) : Promise.resolve(r);
+            }
           }
           // Devolve a linha como o banco devolveria: o que existia, com o
           // que foi mandado por cima. Sem isso, um update que a tela relê
@@ -84,7 +94,8 @@ function montarPaginaComBanco() {
           try {
             const alvo = q._eq.find(e => e[0] === "id");
             if (alvo) {
-              for (const lista of [comprasCartao, contas, lancamentos, metas, cartoes]) {
+              for (const lista of [comprasCartao, contas, lancamentos, metas,
+                                   cartoes, reservas, movimentosReserva]) {
                 const achou = (lista || []).find(x => x.id === alvo[1]);
                 if (achou) { base = achou; break; }
               }
@@ -142,8 +153,11 @@ async function suite(nome, corpo) {
   const chamadas = () => p.evaluate(() => window.CHAMADAS);
   // A próxima gravação falha com este erro. Use o code de verdade do
   // Postgres: 23505 é índice único violado.
-  const falharProxima = (code, message) =>
-    p.evaluate(e => { window.PROXIMO_ERRO = e; }, { code, message: message || "duplicate key" });
+  // 'pular' adia o erro: falharProxima("x", "y", 1) deixa a primeira
+  // gravação passar e derruba a segunda.
+  const falharProxima = (code, message, pular) =>
+    p.evaluate(e => { window.PROXIMO_ERRO = e; },
+      { code, message: message || "duplicate key", _pular: pular || 0 });
   const texto = (sel) => p.textContent(sel).then(t => (t || "").replace(/\s+/g, " ").trim());
   // "R$ 1.234,56" vira 1234.56 — a mesma armadilha do parseMoedaBR, do
   // lado de fora: parseFloat engoliria o milhar.

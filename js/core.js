@@ -9,7 +9,7 @@
    index.html. Serve pra uma pergunta que já custou tempo: "o defeito que
    você está vendo é do código de agora, ou o celular ainda está com o
    app velho em cache?" — sem isso, a resposta é chute. */
-const VERSAO_APP = "2026-11-05 · 38";
+const VERSAO_APP = "2026-11-05 · 39";
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -23,6 +23,8 @@ let pagamentosFatura = [];
 let metas = [];
 let fechamentos = [];
 let entradasFixas = [];
+let reservas = [];
+let movimentosReserva = [];
 let mesAtual = "";   // "2026-08" — mês que o Resumo e o Histórico estão mostrando
 let grafico = null;
 
@@ -194,7 +196,7 @@ async function medirRelogio() {
 }
 
 async function carregarTudo(jaPediuCrachaNovo) {
-  const [rL, rC, rG, rCa, rCo, rFp, rMe, rFe, rEf] = (await Promise.all([
+  const [rL, rC, rG, rCa, rCo, rFp, rMe, rFe, rEf, rRe, rMr] = (await Promise.all([
     sb.from("lancamentos").select("*").order("data", { ascending: false }),
     sb.from("contas").select("*").order("vencimento", { ascending: true }),
     sb.from("categorias").select("*").order("nome", { ascending: true }),
@@ -204,9 +206,11 @@ async function carregarTudo(jaPediuCrachaNovo) {
     sb.from("metas").select("*").order("categoria", { ascending: true }),
     sb.from("fechamentos").select("*").order("mes_ref", { ascending: true }),
     sb.from("entradas_fixas").select("*").order("dia", { ascending: true }),
+    sb.from("reservas").select("*").order("nome", { ascending: true }),
+    sb.from("movimentos_reserva").select("*").order("data", { ascending: false }),
   ].map(_comPrazo)));
 
-  const respostas = [rL, rC, rG, rCa, rCo, rFp, rMe, rFe, rEf];
+  const respostas = [rL, rC, rG, rCa, rCo, rFp, rMe, rFe, rEf, rRe, rMr];
   if (respostas.some(r => r.error)) {
     const e = respostas.find(r => r.error).error;
     ultimoErroCarga = e;
@@ -235,6 +239,8 @@ async function carregarTudo(jaPediuCrachaNovo) {
   metas = rMe.data || [];
   fechamentos = rFe.data || [];
   entradasFixas = rEf.data || [];
+  reservas = rRe.data || [];
+  movimentosReserva = rMr.data || [];
 
   // Primeira vez: semeia as categorias para a pessoa não começar do zero.
   if (!categorias.length) await semearCategorias();
@@ -301,7 +307,7 @@ function carregarChart() {
    Depois de pago, nada disso sobra: pagar uma conta a marca como paga E
    vira saída no extrato, e a saída derruba o que faltava da meta. */
 
-function reservasDoMes(mesRef) {
+function aindaVaiSairDoMes(mesRef) {
   // Mês que já acabou não reserva nada. Reservar é dizer "isto ainda vai
   // sair", e num mês fechado nada mais vai sair dele: as contas ou foram
   // pagas ou estão vencidas, e vencida aparece no alerta de vencidas, não

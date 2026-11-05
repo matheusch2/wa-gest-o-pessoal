@@ -48,10 +48,10 @@ function desenharResumo(filtro) {
   // As duas pontas da previsão: o que ainda tem que sair e o que ainda
   // tem que entrar. Contar só uma delas era o que deixava o mês começar
   // no vermelho mesmo com o salário inteiro cadastrado.
-  const reservas = reservasDoMes(mesAtual);
+  const aSair = aindaVaiSairDoMes(mesAtual);
   const aReceber = aReceberDoMes(mesAtual);
-  const previsto = reservas.total > 0 || aReceber.total > 0;
-  const sobra = Math.round((saldo + aReceber.total - reservas.total) * 100) / 100;
+  const previsto = aSair.total > 0 || aReceber.total > 0;
+  const sobra = Math.round((saldo + aReceber.total - aSair.total) * 100) / 100;
 
   // Contas em aberto olham o mês inteiro, não só até hoje.
   const vencidas = contas.filter(c => !c.pago && c.vencimento < _hojeLocal());
@@ -85,21 +85,21 @@ function desenharResumo(filtro) {
         // e valem seis frases: "faltam R$ 203 pra cobrir o que ainda vai
         // sair" e "faltam R$ 203, já contando o salário que ainda não caiu"
         // são situações diferentes, e a segunda é bem mais grave.
-        const dois = aReceber.total > 0 && reservas.total > 0;
+        const dois = aReceber.total > 0 && aSair.total > 0;
         const status = valor < 0
           ? dois
             ? `Faltam ${moeda(-sobra)}, já contando ${moeda(aReceber.total)} a receber`
             : aReceber.total > 0
               ? `Faltam ${moeda(-sobra)} mesmo contando ${moeda(aReceber.total)} que ainda vão entrar`
-              : reservas.total > 0
+              : aSair.total > 0
                 ? `Faltam ${moeda(-sobra)} pra cobrir o que ainda vai sair`
                 : "As saídas passaram as entradas"
           : dois
-            ? `Livre, contando ${moeda(aReceber.total)} a receber e ${moeda(reservas.total)} a pagar`
+            ? `Livre, contando ${moeda(aReceber.total)} a receber e ${moeda(aSair.total)} a pagar`
             : aReceber.total > 0
               ? `Livre, já contando ${moeda(aReceber.total)} que ainda vão entrar`
-              : reservas.total > 0
-                ? `Livre, já tirando ${moeda(reservas.total)} que ainda vão sair`
+              : aSair.total > 0
+                ? `Livre, já tirando ${moeda(aSair.total)} que ainda vão sair`
                 : "Resultado positivo neste mês";
         return `
         <div class="saldo resumo-saldo">
@@ -134,7 +134,7 @@ function desenharResumo(filtro) {
           </div>
           <div class="lista">
             ${aReceber.linhas.map(r => `
-              <div class="item reserva-item" onclick="abrirLancar('entrada')" style="cursor:pointer">
+              <div class="item item-toque" onclick="abrirLancar('entrada')" style="cursor:pointer">
                 <div class="item-icone">${iconeDoLancamento({ tipo: "entrada", categoria: r.categoria })}</div>
                 <div class="item-txt">
                   <strong>${esc(r.nome)}</strong>
@@ -147,13 +147,13 @@ function desenharResumo(filtro) {
           </div>
         </div>` : ""}
 
-      ${reservas.total > 0 ? `
+      ${aSair.total > 0 ? `
         <div class="bloco resumo-secao">
           <div class="bloco-topo">
             <h2>Ainda vai sair</h2>
-            <strong class="resumo-total-saida">${moeda(reservas.total)}</strong>
+            <strong class="resumo-total-saida">${moeda(aSair.total)}</strong>
           </div>
-          <div class="lista">${reservas.linhas.map(_linhaReserva).join("")}</div>
+          <div class="lista">${aSair.linhas.map(_linhaDoQueVaiSair).join("")}</div>
         </div>` : ""}
 
       <div class="bloco resumo-secao">
@@ -194,7 +194,7 @@ function desenharResumo(filtro) {
 /* Uma linha do "Ainda vai sair". São três origens — conta, fatura e meta
    — e cada uma leva pra tela de onde veio: quem toca na fatura quer ver a
    fatura, não a lista de contas. */
-function _linhaReserva(r) {
+function _linhaDoQueVaiSair(r) {
   const cara = {
     conta:  { icone: "📄", acao: "abrirContas()" },
     fatura: { icone: "💳", acao: `abrirCartao('${r.cartaoId}')` },
@@ -216,7 +216,7 @@ function _linhaReserva(r) {
         : `Previsto ${moeda(r.previsto)} no mês`;
 
   return `
-    <div class="item reserva-item" onclick="${cara.acao}" style="cursor:pointer">
+    <div class="item item-toque" onclick="${cara.acao}" style="cursor:pointer">
       <div class="item-icone">${cara.icone}</div>
       <div class="item-txt">
         <strong>${esc(r.nome)}</strong>
@@ -437,6 +437,7 @@ function iconeDoLancamento(l) {
     .toLowerCase();
 
   if (l.tipo === "entrada") {
+    if (texto.includes("resgate") || texto.includes("reserva")) return "🐷";
     if (texto.includes("venda")) return "🛍️";
     if (texto.includes("extra")) return "💵";
     if (texto.includes("pix") || texto.includes("transferencia")) return "💵";
@@ -444,6 +445,7 @@ function iconeDoLancamento(l) {
   }
 
   const regras = [
+    [["guardado", "reserva", "poupanca"], "🐷"],
     [["mercado", "supermercado"], "🛒"],
     [["almoco", "jantar", "restaurante", "comida", "lanche", "alimentacao"], "🍽️"],
     [["casa", "aluguel", "moradia"], "🏠"],
