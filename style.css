@@ -922,6 +922,35 @@ button:active:not(:disabled) { transform: scale(.98); }
   color: var(--fraco);
 }
 
+/* A ESCOLHA DO SINAL. Dois alvos grandes, um por tipo, cada um na cor
+   que ele tem no resto do app — é a mesma leitura do verde e do vermelho
+   que as listas já ensinaram ao olho. Grandes porque esta tela existe só
+   pra isso: o dedo não precisa mirar. */
+.lancar-escolha { display: flex; flex-direction: column; gap: 12px; margin: 4px 0 16px; }
+
+.lancar-op {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  min-height: 86px;
+  padding: 18px 20px;
+  border: none;
+  border-radius: 16px;
+  color: #fff;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 6px 18px -10px rgba(15,23,42,.6);
+}
+.lancar-op.saida { background: var(--saida); }
+.lancar-op.entrada { background: var(--entrada); }
+.lancar-op:active { transform: translateY(1px); filter: brightness(.94); }
+
+.lancar-op svg { width: 30px; height: 30px; flex-shrink: 0; fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.lancar-op strong { display: block; font-size: 18px; font-weight: 800; }
+.lancar-op small { display: block; margin-top: 2px; font-size: 12.5px; opacity: .9; }
+
 /* ─── 11. GRÁFICO ───────────────────────────────────────────────────────── */
 
 .grafico { position: relative; height: 230px; }

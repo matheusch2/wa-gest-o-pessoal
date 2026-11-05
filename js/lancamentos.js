@@ -18,6 +18,49 @@
    o que deixou o menu dizendo uma coisa e as listas outra. */
 const ICO_SETA_ENTRADA = `<svg viewBox="0 0 24 24" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>`;
 const ICO_SETA_SAIDA = `<svg viewBox="0 0 24 24" aria-hidden="true"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>`;
+// As duas juntas: é o ícone do botão do menu e o da tela de escolha.
+const ICO_SETA_DUPLA = `<svg viewBox="0 0 24 24" aria-hidden="true"><line x1="8" y1="4" x2="8" y2="17"/><polyline points="4 13 8 17 12 13"/><line x1="16" y1="20" x2="16" y2="7"/><polyline points="12 11 16 7 20 11"/></svg>`;
+
+/* ═══ UM BOTÃO SÓ NO MENU ═════════════════════════════════════════════
+   "Lançar saída" e "Lançar entrada" ocupavam dois dos oito lugares do
+   menu pra fazer a mesma coisa com o sinal trocado. Viraram um, e a
+   escolha do sinal virou a primeira tela.
+
+   Custa um toque a mais em quem já sabia o que ia lançar — e vale: o menu
+   é o lugar onde se procura o que fazer, não onde se faz. Duas portas pro
+   mesmo cômodo deixavam as outras seis mais difíceis de achar.
+
+   Quem já sabe continua entrando direto: o Resumo manda pra cá com o
+   tipo decidido, e as entradas fixas também. Esta tela é pro menu. */
+
+function abrirLancarEscolha() { abrirTela(desenharLancarEscolha); }
+
+function desenharLancarEscolha() {
+  destruirGrafico();
+  document.getElementById("area").innerHTML = `
+    <section class="lancamento-tela" style="--cor-tipo:var(--marca-txt)">
+      <div class="lancamento-cabecalho">
+        <span class="lancamento-cabecalho-icone">${ICO_SETA_DUPLA}</span>
+        <span class="lancamento-caption">Novo lançamento</span>
+        <h2>O que você vai lançar?</h2>
+      </div>
+
+      <!-- A SAÍDA VEM PRIMEIRO porque é o que mais se lança: entrada são
+           três ou quatro no mês, saída são dezenas. O dedo cai no de cima. -->
+      <div class="lancar-escolha">
+        <button class="lancar-op saida" onclick="abrirLancar('saida')">
+          ${ICO_SETA_SAIDA}
+          <span><strong>Saída</strong><small>Dinheiro que saiu da conta</small></span>
+        </button>
+        <button class="lancar-op entrada" onclick="abrirLancar('entrada')">
+          ${ICO_SETA_ENTRADA}
+          <span><strong>Entrada</strong><small>Dinheiro que caiu na conta</small></span>
+        </button>
+      </div>
+
+      <button class="botao-fraco" onclick="voltarInicio()">Voltar</button>
+    </section>`;
+}
 
 function abrirLancar(tipo) { abrirTela(() => desenharLancar(tipo)); }
 

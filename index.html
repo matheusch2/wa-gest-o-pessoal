@@ -84,7 +84,7 @@
   <link rel="preconnect" href="https://efewoxdgfcgkodtqbqsz.supabase.co" crossorigin>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 
-  <link rel="stylesheet" href="style.css?v=67">
+  <link rel="stylesheet" href="style.css?v=68">
 
   <!-- defer: baixa em paralelo e só executa depois da página montada, em
        ordem. Sem ele, cada script trava a leitura do HTML no meio.
@@ -126,13 +126,13 @@
         <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
         Resumo do mês
       </button>
-      <button class="menu-botao" onclick="abrirLancar('saida')">
-        <svg viewBox="0 0 24 24"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
-        Lançar saída
-      </button>
-      <button class="menu-botao" onclick="abrirLancar('entrada')">
-        <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
-        Lançar entrada
+      <!-- UM BOTÃO SÓ. "Lançar saída" e "Lançar entrada" ocupavam dois dos
+           oito lugares pra fazer a mesma coisa com o sinal trocado; a
+           escolha do sinal virou a primeira tela. Duas portas pro mesmo
+           cômodo deixavam as outras seis mais difíceis de achar. -->
+      <button class="menu-botao" onclick="abrirLancarEscolha()">
+        <svg viewBox="0 0 24 24"><line x1="8" y1="4" x2="8" y2="17"/><polyline points="4 13 8 17 12 13"/><line x1="16" y1="20" x2="16" y2="7"/><polyline points="12 11 16 7 20 11"/></svg>
+        Lançar
       </button>
       <button class="menu-botao" onclick="abrirContas()">
         <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
@@ -203,11 +203,11 @@
 
        O ?v=N no fim de cada um existe pra o celular não servir a versão
        velha do cache. Mexeu no arquivo, sobe o número. -->
-  <script defer src="js/core.js?v=41"></script>
+  <script defer src="js/core.js?v=42"></script>
   <script defer src="js/categorias.js?v=2"></script>
   <script defer src="js/auth.js?v=2"></script>
   <script defer src="js/resumo.js?v=16"></script>
-  <script defer src="js/lancamentos.js?v=13"></script>
+  <script defer src="js/lancamentos.js?v=14"></script>
   <script defer src="js/entradasfixas.js?v=5"></script>
   <script defer src="js/contas.js?v=10"></script>
   <script defer src="js/historico.js?v=3"></script>
