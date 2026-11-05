@@ -66,6 +66,19 @@ function montarPaginaComBanco() {
 
              Foi assim que uma conferência daqui passou com o código
              quebrado de propósito: ela nunca chegava no erro. */
+          /* TABELA QUE NÃO EXISTE NO BANCO DAQUELE USUÁRIO. É o estrago
+             que as Reservas causaram de verdade: duas tabelas novas, e
+             quem não tinha rodado o banco.sql viu o app INTEIRO recusar
+             carregar. Aqui a tabela some só pra quem for nomeada, que é
+             exatamente o que acontece lá fora. */
+          if ((window.TABELAS_SEM_BANCO || []).includes(q._t)) {
+            const r = { data: null, error: {
+              code: "PGRST205",
+              message: "Could not find the table 'public." + q._t + "' in the schema cache",
+            } };
+            return fn ? Promise.resolve(r).then(fn) : Promise.resolve(r);
+          }
+
           if (window.PROXIMO_ERRO) {
             // '_pular' deixa o erro cair na SEGUNDA (ou terceira) gravação,
             // não na primeira. É o que permite conferir o desfazer: guardar
@@ -90,6 +103,28 @@ function montarPaginaComBanco() {
           // propriedade de window, então são lidas pelo nome mesmo — e
           // dentro de um try, porque este código é definido antes de o
           // core.js rodar.
+          /* LEITURA PURA devolve LISTA. Sem insert, update nem delete, o
+             que o app está fazendo é carregar — e carregar devolve linhas,
+             não um objeto. Devolver a própria global daquela tabela faz o
+             carregarTudo() dar uma volta de verdade no teste, com o
+             cenário intacto do outro lado. */
+          if (q._op === null) {
+            const globais = {
+              lancamentos: () => lancamentos, contas: () => contas,
+              categorias: () => categorias, cartoes: () => cartoes,
+              compras_cartao: () => comprasCartao,
+              pagamentos_fatura: () => pagamentosFatura,
+              metas: () => metas, fechamentos: () => fechamentos,
+              entradas_fixas: () => entradasFixas,
+              reservas: () => reservas,
+              movimentos_reserva: () => movimentosReserva,
+            };
+            let linhas = [];
+            try { linhas = (globais[q._t] ? globais[q._t]() : []) || []; } catch (e) {}
+            const r = { data: linhas, error: null };
+            return fn ? Promise.resolve(r).then(fn) : Promise.resolve(r);
+          }
+
           let base = {};
           try {
             const alvo = q._eq.find(e => e[0] === "id");

@@ -95,8 +95,47 @@ const _ICO_CHECK = `<svg viewBox="0 0 24 24" aria-hidden="true"><polyline points
 
 function abrirReservas() { abrirTela(desenharReservas); }
 
+/* AS TABELAS PODEM NÃO ESTAR LÁ, e a tela tem que dizer isso. Esta parte
+   do app chegou depois do banco de quem já usa: quem não rodou o banco.sql
+   de novo não tem as tabelas, e uma lista vazia mentiria — leria como "não
+   tenho reserva nenhuma" em vez de "esta parte ainda não foi instalada".
+
+   O app em volta continua inteiro: o carregamento trata tabela que falta
+   como lista vazia de propósito, pra que a falta fique dentro da tela que
+   depende dela em vez de derrubar as outras oito. */
+function _faltaOBancoDasReservas() {
+  return faltaATabela("reservas") || faltaATabela("movimentos_reserva");
+}
+
 function desenharReservas() {
   destruirGrafico();
+
+  if (_faltaOBancoDasReservas()) {
+    document.getElementById("area").innerHTML = `
+      <section class="lancamento-tela" style="--cor-tipo:var(--marca-txt)">
+        <div class="lancamento-cabecalho">
+          <span class="lancamento-cabecalho-icone">${_ICO_RESERVA}</span>
+          <span class="lancamento-caption">Guardado</span>
+          <h2>Reservas</h2>
+        </div>
+
+        <div class="bloco">
+          <p class="em-breve-txt">
+            Esta parte é nova e precisa de uma atualização no banco — ela
+            guarda as reservas em tabelas que o seu Supabase ainda não tem.
+          </p>
+          <p class="cartao-dica" style="margin-top:12px">
+            Abra o Supabase, vá em <b>SQL Editor → New query</b>, cole o
+            <b>banco.sql</b> do projeto inteiro e rode. Ele não estraga nada
+            do que já existe: tudo lá dentro só cria o que estiver faltando.
+            Depois, feche e abra o app.
+          </p>
+        </div>
+
+        <button class="botao-fraco" onclick="voltarInicio()">Voltar</button>
+      </section>`;
+    return;
+  }
 
   const total = _totalGuardado();
   const cobertura = _mesesQueAReservaCobre(total);

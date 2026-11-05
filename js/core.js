@@ -9,7 +9,7 @@
    index.html. Serve pra uma pergunta que já custou tempo: "o defeito que
    você está vendo é do código de agora, ou o celular ainda está com o
    app velho em cache?" — sem isso, a resposta é chute. */
-const VERSAO_APP = "2026-11-05 · 39";
+const VERSAO_APP = "2026-11-05 · 40";
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -195,55 +195,111 @@ async function medirRelogio() {
   } catch (e) { return null; }
 }
 
-async function carregarTudo(jaPediuCrachaNovo) {
-  const [rL, rC, rG, rCa, rCo, rFp, rMe, rFe, rEf, rRe, rMr] = (await Promise.all([
-    sb.from("lancamentos").select("*").order("data", { ascending: false }),
-    sb.from("contas").select("*").order("vencimento", { ascending: true }),
-    sb.from("categorias").select("*").order("nome", { ascending: true }),
-    sb.from("cartoes").select("*").order("nome", { ascending: true }),
-    sb.from("compras_cartao").select("*").order("data", { ascending: false }),
-    sb.from("pagamentos_fatura").select("*").order("pago_em", { ascending: true }),
-    sb.from("metas").select("*").order("categoria", { ascending: true }),
-    sb.from("fechamentos").select("*").order("mes_ref", { ascending: true }),
-    sb.from("entradas_fixas").select("*").order("dia", { ascending: true }),
-    sb.from("reservas").select("*").order("nome", { ascending: true }),
-    sb.from("movimentos_reserva").select("*").order("data", { ascending: false }),
-  ].map(_comPrazo)));
+/* ═══ TABELA QUE FALTA NÃO DERRUBA O APP ══════════════════════════════
+   Isto nasceu de um estrago de verdade. As Reservas trouxeram duas tabelas
+   novas; quem abriu o app antes de rodar o banco.sql no Supabase não viu a
+   tela de Reservas quebrada — viu o APP INTEIRO recusando carregar, com
+   "Could not find the table 'public.reservas'" embaixo. Nove tabelas
+   respondiam certo e as duas que faltavam levavam as nove junto.
 
-  const respostas = [rL, rC, rG, rCa, rCo, rFp, rMe, rFe, rEf, rRe, rMr];
-  if (respostas.some(r => r.error)) {
-    const e = respostas.find(r => r.error).error;
-    ultimoErroCarga = e;
+   A regra passa a ser: tabela que não existe vira lista vazia, e o app
+   abre. Só o lançamento é indispensável — sem ele não há app nenhum, e aí
+   sim a tela diz pra rodar o banco.sql, que é o caso de instalação nova.
+
+   Isso vale pra sempre, não só pra estas duas: toda tabela que este app
+   ganhar daqui pra frente vai entrar sem poder derrubar o que já existe. */
+
+const _TABELA_ESSENCIAL = "lancamentos";
+
+function _tabelaNaoExiste(e) {
+  // PGRST205 é o PostgREST dizendo que a tabela não está no cache de
+  // esquema; 42P01 é o Postgres dizendo que a relação não existe. A
+  // mensagem entra junto porque nem toda versão manda o código.
+  return e?.code === "PGRST205" || e?.code === "42P01"
+      || /could not find the table|relation .* does not exist/i.test(e?.message || "");
+}
+
+// Quais tabelas o servidor não encontrou na última carga. A tela que
+// depende de uma delas lê isto pra explicar o que fazer, em vez de
+// aparecer vazia como se não houvesse nada cadastrado.
+let tabelasFaltando = [];
+
+function faltaATabela(nome) { return tabelasFaltando.includes(nome); }
+
+async function carregarTudo(jaPediuCrachaNovo) {
+  const pedidos = [
+    ["lancamentos",        sb.from("lancamentos").select("*").order("data", { ascending: false })],
+    ["contas",             sb.from("contas").select("*").order("vencimento", { ascending: true })],
+    ["categorias",         sb.from("categorias").select("*").order("nome", { ascending: true })],
+    ["cartoes",            sb.from("cartoes").select("*").order("nome", { ascending: true })],
+    ["compras_cartao",     sb.from("compras_cartao").select("*").order("data", { ascending: false })],
+    ["pagamentos_fatura",  sb.from("pagamentos_fatura").select("*").order("pago_em", { ascending: true })],
+    ["metas",              sb.from("metas").select("*").order("categoria", { ascending: true })],
+    ["fechamentos",        sb.from("fechamentos").select("*").order("mes_ref", { ascending: true })],
+    ["entradas_fixas",     sb.from("entradas_fixas").select("*").order("dia", { ascending: true })],
+    ["reservas",           sb.from("reservas").select("*").order("nome", { ascending: true })],
+    ["movimentos_reserva", sb.from("movimentos_reserva").select("*").order("data", { ascending: false })],
+  ];
+
+  const respostas = await Promise.all(pedidos.map(([, q]) => _comPrazo(q)));
+  const porTabela = {};
+  pedidos.forEach(([nome], i) => { porTabela[nome] = respostas[i]; });
+
+  const faltando = pedidos
+    .map(([nome]) => nome)
+    .filter(nome => porTabela[nome].error && _tabelaNaoExiste(porTabela[nome].error));
+
+  // Qualquer OUTRO erro continua sendo fatal: sem conexão, sessão expirada,
+  // crachá recusado. Esses não são "falta uma parte do app", são "não deu
+  // pra falar com o servidor", e mostrar dados pela metade aí seria pior.
+  const outro = pedidos
+    .map(([nome]) => porTabela[nome].error)
+    .find(e => e && !_tabelaNaoExiste(e));
+
+  if (outro) {
+    ultimoErroCarga = outro;
 
     // Crachá recusado: pede um novo e tenta mais UMA vez. Quando o
     // problema é o token guardado, isso conserta sem a pessoa ver nada.
     // A trava do "jaPediu" existe pra não virar laço infinito quando o
     // problema for o relógio — aí nenhum crachá novo vai servir.
-    if (!jaPediuCrachaNovo && ehErroDeCracha(e.message)) {
+    if (!jaPediuCrachaNovo && ehErroDeCracha(outro.message)) {
       const { error: erroTroca } = await sb.auth.refreshSession();
       if (!erroTroca) return carregarTudo(true);
     }
 
-    erro(mensagemDoErro(e));
+    erro(mensagemDoErro(outro));
+    return false;
+  }
+
+  // Falta o lançamento: não é uma parte do app que falta, é o app. Banco
+  // vazio, instalação nova — e aí a frase certa é a de sempre.
+  if (faltando.includes(_TABELA_ESSENCIAL)) {
+    ultimoErroCarga = porTabela[_TABELA_ESSENCIAL].error;
+    erro("As tabelas ainda não existem. Rode o banco.sql no Supabase.");
     return false;
   }
 
   ultimoErroCarga = null;
+  tabelasFaltando = faltando;
 
-  lancamentos = rL.data || [];
-  contas = rC.data || [];
-  categorias = rG.data || [];
-  cartoes = rCa.data || [];
-  comprasCartao = rCo.data || [];
-  pagamentosFatura = rFp.data || [];
-  metas = rMe.data || [];
-  fechamentos = rFe.data || [];
-  entradasFixas = rEf.data || [];
-  reservas = rRe.data || [];
-  movimentosReserva = rMr.data || [];
+  const dados = (nome) => porTabela[nome].data || [];
+  lancamentos      = dados("lancamentos");
+  contas           = dados("contas");
+  categorias       = dados("categorias");
+  cartoes          = dados("cartoes");
+  comprasCartao    = dados("compras_cartao");
+  pagamentosFatura = dados("pagamentos_fatura");
+  metas            = dados("metas");
+  fechamentos      = dados("fechamentos");
+  entradasFixas    = dados("entradas_fixas");
+  reservas         = dados("reservas");
+  movimentosReserva = dados("movimentos_reserva");
 
   // Primeira vez: semeia as categorias para a pessoa não começar do zero.
-  if (!categorias.length) await semearCategorias();
+  // Com a tabela faltando não há onde semear, e insistir só daria outro
+  // erro em cima de um app que acabou de abrir funcionando.
+  if (!categorias.length && !faltaATabela("categorias")) await semearCategorias();
   return true;
 }
 

@@ -74,6 +74,60 @@ module.exports = () => suite("Reservas e investimentos", async ({ p, ok, abrir, 
   ok("e aponta pras Reservas, que já funcionam",
     (await texto(".em-breve-txt")).includes("Reservas"));
 
+  /* ─── A TABELA QUE FALTA NÃO DERRUBA O APP ───────────────────────────
+     Estrago de verdade, e grave: as Reservas trouxeram duas tabelas
+     novas, e quem abriu o app antes de rodar o banco.sql no Supabase não
+     viu a tela de Reservas quebrada — viu "Não deu pra carregar seus
+     dados" e o app inteiro parado. Nove tabelas respondiam certo e as
+     duas que faltavam levavam as nove junto.
+
+     Estas conferências existem pra isso não poder se repetir com a
+     PRÓXIMA tabela que este app ganhar. */
+  await abrir(BASE + TRES_MESES + UMA + `
+    window.TABELAS_SEM_BANCO = ["reservas", "movimentos_reserva"];`);
+  const carregou = await p.evaluate(() => carregarTudo());
+  ok("faltando as tabelas novas, o app ainda carrega", carregou === true);
+  ok("e os lançamentos chegaram inteiros",
+    (await p.evaluate(() => lancamentos.length)) === 6);
+  ok("as listas que faltam ficam vazias, não quebradas",
+    (await p.evaluate(() => reservas.length)) === 0 &&
+    (await p.evaluate(() => movimentosReserva.length)) === 0);
+  ok("e o app sabe DIZER quais faltaram",
+    (await p.evaluate(() => faltaATabela("reservas"))) === true &&
+    (await p.evaluate(() => faltaATabela("contas"))) === false);
+
+  await p.evaluate(() => abrirReservas());
+  const semBanco = await texto("#area");
+  ok("a tela de Reservas explica que falta rodar o banco.sql",
+    semBanco.includes("banco.sql") && semBanco.includes("SQL Editor"));
+  ok("e não finge que a pessoa não tem reserva nenhuma",
+    (await p.locator(".reserva-card").count()) === 0 &&
+    !semBanco.includes("Nenhuma reserva ainda"));
+  ok("nem mostra um total de R$ 0,00 como se fosse verdade",
+    (await p.locator(".contas-total").count()) === 0);
+
+  // O resto do app continua inteiro — é o ponto todo da mudança.
+  await p.evaluate(() => voltarInicio());
+  await p.evaluate(() => abrirResumo());
+  ok("e o Resumo abre normalmente do lado", (await p.locator(".saldo").count()) === 1);
+
+  /* SEM O LANÇAMENTO NÃO HÁ APP. Aí não é "falta uma parte", é instalação
+     nova com o banco vazio — e a frase certa é a de sempre. */
+  await abrir(BASE + `window.TABELAS_SEM_BANCO = ["lancamentos"];`);
+  const semNada = await p.evaluate(() => carregarTudo());
+  ok("sem a tabela de lançamentos, carregar falha mesmo", semNada === false);
+  ok("dizendo pra rodar o banco.sql",
+    (await texto(".aviso.erro")).includes("Rode o banco.sql"));
+
+  // Erro que NÃO é tabela faltando continua fatal: mostrar dados pela
+  // metade quando o servidor não respondeu seria pior do que não abrir.
+  await abrir(BASE);
+  await falharProxima("", "Failed to fetch");
+  const semRede = await p.evaluate(() => carregarTudo());
+  ok("sem conexão, carregar continua falhando", semRede === false);
+  ok("com a mensagem de conexão, não a de tabela",
+    (await texto(".aviso.erro")).includes("Sem conexão"));
+
   /* ─── O SALDO É A SOMA DOS MOVIMENTOS ────────────────────────────────
      Nunca um campo no banco. Saldo gravado é um número que pode discordar
      do histórico que o explica, e aí não há como saber qual mentiu. */
