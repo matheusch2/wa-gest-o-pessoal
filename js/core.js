@@ -9,7 +9,7 @@
    index.html. Serve pra uma pergunta que já custou tempo: "o defeito que
    você está vendo é do código de agora, ou o celular ainda está com o
    app velho em cache?" — sem isso, a resposta é chute. */
-const VERSAO_APP = "2026-11-06 · 46";
+const VERSAO_APP = "2026-11-06 · 47";
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -455,6 +455,51 @@ function aindaVaiSairDoMes(mesRef) {
 
   linhas.sort((a, b) => b.falta - a.falta);
   return { linhas, total: Math.round(linhas.reduce((s, x) => s + x.falta, 0) * 100) / 100 };
+}
+
+/* ═══ DINHEIRO QUE MUDA DE LUGAR NÃO É GASTO ══════════════════════════
+   Três coisas saem da conta sem ser despesa, e as três são a mesma ideia:
+   o dinheiro continua sendo seu, só mudou de bolso.
+
+     GUARDADO    o fechamento do mês levou a sobra pra fora da conta
+     RESERVA     você guardou na emergência, na viagem
+     SALDO       a rolagem de um mês pro outro
+
+   E do outro lado, duas entradas que não são renda: o saldo que veio do
+   mês passado e o resgate de uma reserva. Dinheiro que já era seu.
+
+   ISTO MORAVA SÓ NO RELATÓRIOS, e foi assim que o defeito nasceu: as
+   Reservas chegaram, eu descontei o "Guardado" lá e esqueci do Resumo —
+   que passou a mostrar "Guardado 38%" na rosca do "para onde foi o
+   dinheiro", com o mesmo título do bloco do Relatórios que dizia outra
+   coisa. Duas telas, uma pergunta, dois números.
+
+   Agora o conceito mora aqui, e quem precisa dele pergunta. Uma regra
+   em dois lugares é uma regra que vai divergir.
+
+   SEMPRE POR ID, nunca pela categoria escrita no lançamento: "Guardado"
+   é texto livre, e quem criar uma categoria com esse nome à mão não pode
+   ver os próprios gastos sumirem das telas. */
+
+function idsDeFechamento() {
+  const ids = new Set();
+  for (const f of fechamentos) {
+    if (f.lancamento_levado_id) ids.add(f.lancamento_levado_id);
+    if (f.lancamento_guardado_id) ids.add(f.lancamento_guardado_id);
+  }
+  return ids;
+}
+
+function idsDeReserva() {
+  return new Set(movimentosReserva.map(m => m.lancamento_id).filter(Boolean));
+}
+
+// Os lançamentos que não são gasto nem renda — só dinheiro trocando de
+// lugar. É esta a lista que o Resumo e os Relatórios compartilham.
+function idsQueNaoSaoGasto() {
+  const ids = idsDeFechamento();
+  for (const id of idsDeReserva()) ids.add(id);
+  return ids;
 }
 
 /* ═══ NAVEGAÇÃO ═══════════════════════════════════════════════════════ */

@@ -34,14 +34,10 @@
 //
 // Por id, e não pelo nome da categoria: quem criar uma categoria chamada
 // "Saldo" à mão não pode ver os próprios lançamentos sumirem do relatório.
-function _idsDeFechamento() {
-  const ids = new Set();
-  for (const f of fechamentos) {
-    if (f.lancamento_levado_id) ids.add(f.lancamento_levado_id);
-    if (f.lancamento_guardado_id) ids.add(f.lancamento_guardado_id);
-  }
-  return ids;
-}
+// Moram no core.js: o Resumo precisa das mesmas, e uma regra em dois
+// lugares é uma regra que vai divergir — foi assim que o "Guardado"
+// virou 38% da rosca do Resumo enquanto sumia daqui.
+const _idsDeFechamento = idsDeFechamento;
 
 // Os lançamentos que nasceram de um movimento de reserva, por id. Mesma
 // natureza dos de cima e pelo mesmo motivo: guardar R$ 500 na reserva de
@@ -51,9 +47,7 @@ function _idsDeFechamento() {
 // Por id, nunca pela categoria escrita no lançamento — "Guardado" é texto
 // livre, e quem criar uma categoria com esse nome à mão não pode ver os
 // próprios gastos sumirem daqui.
-function _idsDeReserva() {
-  return new Set(movimentosReserva.map(m => m.lancamento_id).filter(Boolean));
-}
+const _idsDeReserva = idsDeReserva;
 
 const _cent = v => Math.round(Number(v || 0) * 100) / 100;
 

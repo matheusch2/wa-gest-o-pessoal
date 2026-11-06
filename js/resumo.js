@@ -56,12 +56,25 @@ function desenharResumo(filtro) {
   // Contas em aberto olham o mês inteiro, não só até hoje.
   const vencidas = contas.filter(c => !c.pago && c.vencimento < _hojeLocal());
 
-  // Gastos por categoria, do maior para o menor — é a pergunta que a
-  // pessoa realmente faz: "para onde foi meu dinheiro?"
+  /* O QUE SAIU DA CONTA, POR CATEGORIA — e repare no título: é "saiu",
+     não "gastou". A rosca soma as MESMAS saídas do card acima, porque
+     esta tela é o extrato e dois números que não fecham na mesma tela é o
+     pior defeito deste app.
+
+     Mas nem tudo que sai é gasto. Guardar R$ 500 na reserva saiu da
+     conta e continua sendo seu — e durante um tempo isso apareceu aqui
+     como "Guardado 38%", numa rosca intitulada "para onde foi o
+     dinheiro", enquanto os Relatórios diziam outra coisa com o MESMO
+     título. Agora a rosca continua fechando e a tela diz, embaixo, o que
+     dali não foi gasto. */
+  const naoEhGasto = idsQueNaoSaoGasto();
   const porCat = {};
+  let mudouDeLugar = 0;
   doMes.filter(l => l.tipo === "saida").forEach(l => {
     porCat[l.categoria] = (porCat[l.categoria] || 0) + Number(l.valor);
+    if (naoEhGasto.has(l.id)) mudouDeLugar += Number(l.valor);
   });
+  mudouDeLugar = Math.round(mudouDeLugar * 100) / 100;
   const ranking = Object.entries(porCat).sort((a, b) => b[1] - a[1]);
 
   area.innerHTML = `
@@ -156,13 +169,19 @@ function desenharResumo(filtro) {
           <div class="lista">${aSair.linhas.map(_linhaDoQueVaiSair).join("")}</div>
         </div>` : ""}
 
+      <!-- "O QUE SAIU DA CONTA", e não "para onde foi o dinheiro": este
+           bloco tinha o mesmo título do bloco dos Relatórios e respondia
+           outra coisa. Lá é comportamento — o que você gastou, cartão
+           incluído. Aqui é extrato — o que saiu da conta, guardado
+           incluído. Dois números certos; o errado era chamar os dois pelo
+           mesmo nome. -->
       <div class="bloco resumo-secao">
-        <div class="bloco-topo"><h2>Para onde foi o dinheiro</h2></div>
+        <div class="bloco-topo"><h2>O que saiu da conta</h2></div>
         ${ranking.length ? `
           <div class="resumo-grafico-layout">
             <div class="grafico resumo-grafico">
               <canvas id="canvas-cat"></canvas>
-              <div class="resumo-grafico-total"><small>Total gasto</small><strong>${moeda(saidas)}</strong></div>
+              <div class="resumo-grafico-total"><small>Saiu da conta</small><strong>${moeda(saidas)}</strong></div>
             </div>
             <div class="resumo-ranking">
               ${ranking.slice(0, 6).map(([cat, v]) => `
@@ -173,6 +192,11 @@ function desenharResumo(filtro) {
                 </div>`).join("")}
             </div>
           </div>` : `<p class="vazio">Nenhuma saída lançada neste mês.</p>`}
+        ${mudouDeLugar >= 0.005 ? `
+          <p class="resumo-nao-gasto">
+            Destes, <b>${moeda(mudouDeLugar)}</b> você guardou — saiu da conta,
+            mas continua sendo seu. Os Relatórios não contam isso como gasto.
+          </p>` : ""}
       </div>
 
       <div class="bloco resumo-secao">
