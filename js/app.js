@@ -196,3 +196,67 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (session) await iniciarSessao(session.user);
   else telaLogin("entrar");
 });
+
+/* ═══ O APP VELHO QUE NÃO SABIA QUE ERA VELHO ═════════════════════════
+   O ?v=N de cada arquivo resolve o cache do JS e do CSS. Só que ele mora
+   DENTRO do index.html — e o index.html não tem versão nenhuma. Quando o
+   celular serve o index do cache, ele continua pedindo relatorios.js?v=14
+   e nunca descobre que existe um ?v=15: os números novos estão dentro do
+   arquivo que não atualizou.
+
+   No navegador comum isso se resolve com um recarregar. Num app
+   adicionado à tela inicial do iPhone, não: o WebKit segura o index por
+   dias, e a pessoa fica olhando uma versão antiga sem nenhum sinal de que
+   é antiga — que é o pior jeito de um defeito já corrigido continuar
+   aparecendo.
+
+   Então o app passa a perguntar. O versao.json é um arquivo de uma linha,
+   buscado com no-store e com a hora na URL pra não haver cache possível.
+   Se o que o servidor diz não bate com o que está compilado aqui, este
+   index é velho — e aí ele se recarrega sozinho.
+
+   A TRAVA CONTRA O LAÇO INFINITO é obrigatória. Se os dois números
+   discordarem por engano meu (esqueci de subir um dos dois), sem trava o
+   app recarregaria pra sempre e ficaria inutilizável. Com ela, tenta uma
+   vez por sessão; se ainda discordar depois do recarregamento, desiste e
+   avisa por escrito. Preferir um aviso a um laço é o mínimo num app que
+   a pessoa abre pra ver quanto tem na conta. */
+
+const _CHAVE_RECARGA = "wa-recarregou-por-versao";
+
+async function conferirVersao() {
+  let doServidor;
+  try {
+    const r = await fetch("versao.json?t=" + Date.now(), { cache: "no-store" });
+    if (!r.ok) return;
+    doServidor = (await r.json()).versao;
+  } catch (e) {
+    // Sem internet, ou o arquivo ainda não subiu: não é problema nenhum.
+    // O app funciona igual — ele só não confere a versão desta vez.
+    return;
+  }
+
+  if (!doServidor || doServidor === VERSAO_APP) {
+    sessionStorage.removeItem(_CHAVE_RECARGA);
+    return;
+  }
+
+  if (sessionStorage.getItem(_CHAVE_RECARGA)) {
+    // Já recarregou e continua diferente: o problema não é cache. Avisar
+    // é melhor do que recarregar de novo pra sempre.
+    avisar("Há uma versão nova (" + doServidor + "). Feche e abra o app.", "erro");
+    return;
+  }
+
+  try { sessionStorage.setItem(_CHAVE_RECARGA, "1"); } catch (e) {}
+  _recarregarApp();
+}
+
+// Uma função só pra isto porque location.reload() não dá pra trocar num
+// teste — e o caminho que RECARREGA é justamente o que precisa ser
+// conferido sem recarregar a página do teste junto.
+function _recarregarApp() { location.reload(); }
+
+// Depois de tudo pronto, e sem travar nada: a conferência é o extra, a
+// tela é o que importa. Se ela demorar ou falhar, ninguém percebe.
+window.addEventListener("load", () => setTimeout(conferirVersao, 1200));

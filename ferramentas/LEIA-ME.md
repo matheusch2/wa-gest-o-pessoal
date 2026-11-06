@@ -54,6 +54,21 @@ sair no mês — contas, fatura e metas. São assuntos diferentes que o
 português junta na mesma palavra, e foi por isso que a função do core
 deixou de se chamar `reservasDoMes` e virou `aindaVaiSairDoMes`.
 
+## Selar a versão
+
+    node ferramentas/selar-versao.js
+
+Copia o `VERSAO_APP` do `js/core.js` pro `versao.json`. **Rode isto toda
+vez que subir a versão**, antes de commitar.
+
+O app compara os dois pra descobrir que o `index.html` que o celular
+serviu é velho — o `?v=N` de cada arquivo mora dentro do index, e o index
+não tem versão nenhuma, então um index em cache nunca descobre que existe
+um `?v=` novo. Num app adicionado à tela inicial do iPhone isso dura dias.
+
+A suíte `versao` trava os dois números juntos: se você esquecer de selar,
+ela acusa.
+
 **Suíte nova = arquivo novo em `ferramentas/testes/`.** O `rodar.js` acha
 sozinho — arquivo que começa com `_` é apoio e fica de fora.
 

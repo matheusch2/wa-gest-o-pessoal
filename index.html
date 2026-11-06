@@ -15,6 +15,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="google" content="notranslate">
+  <!-- Pede ao navegador pra reconferir o index antes de servir o dele.
+       Não é garantia (o WebKit ignora quando bem entende, e é por isso
+       que existe o conferirVersao() no app.js), mas encurta a janela. -->
+  <meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#0f3b5c">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -244,6 +248,6 @@
   <script defer src="js/reservas.js?v=3"></script>
   <script defer src="js/negocio.js?v=1"></script>
   <script defer src="js/embreve.js?v=8"></script>
-  <script defer src="js/app.js?v=6"></script>
+  <script defer src="js/app.js?v=7"></script>
 </body>
 </html>
