@@ -200,6 +200,105 @@ module.exports = () => suite("Relatórios", async ({ p, ok, abrir, texto, valor,
   const proj2 = await p.evaluate(() => _comprometidoPorMes("2026-09", 6));
   ok("mês com a conta já criada usa o valor dela, uma vez só", proj2[0].fixas === 1300);
 
+  /* ─── O DIA A DIA ────────────────────────────────────────────────────
+     O buraco que o dono do app achou: a projeção mostrava parcela,
+     assinatura e conta fixa, e deixava de fora mercado e gasolina — que
+     saem todo mês e são a parte que mais pesa em muita casa.
+
+     A fonte é a META OBRIGATÓRIA, não uma média do que foi gasto. Média é
+     chute sobre o passado, e esta seção promete que não é chute. A meta
+     obrigatória é um número que a própria pessoa escreveu dizendo "isto
+     vai sair de todo jeito" — do mesmo jeito que o Resumo já a trata. */
+  await abrir(CENARIO + `;
+    metas = [{ id:"m1", categoria:"Mercado", valor:900, reservar:true }];
+    contas = []; comprasCartao = [];
+    abrirRelatorios();`);
+  const comMeta = await p.evaluate(() => _comprometidoPorMes("2026-09", 6));
+  ok("a meta obrigatória vira dia a dia em todo mês projetado",
+    comMeta.every(x => x.diaADia === 900));
+  ok("e entra no total do mês", comMeta[0].total === 900);
+
+  // Meta opcional NÃO entra: ela não promete que o dinheiro vai sair, só
+  // avisa quando passa. É a mesma regra do Resumo.
+  await abrir(CENARIO + `;
+    metas = [{ id:"m1", categoria:"Lazer", valor:300, reservar:false }];
+    contas = []; comprasCartao = [];
+    abrirRelatorios();`);
+  ok("meta opcional não vira compromisso",
+    (await p.evaluate(() => _comprometidoPorMes("2026-09", 6)))[0].diaADia === 0);
+
+  /* NÃO CONTAR O MESMO DINHEIRO DUAS VEZES. Uma meta "Casa" de R$ 1.400
+     com o aluguel de R$ 1.200 já dentro da barra como conta fixa não pode
+     somar R$ 1.400 por cima: o mês apareceria pedindo R$ 1.200 a mais do
+     que pede. É a mesma regra que o Resumo usa. */
+  await abrir(CENARIO + `;
+    metas = [{ id:"m1", categoria:"Casa", valor:1400, reservar:true }];
+    contas = [{ id:"alu", nome:"Aluguel", valor:1200, vencimento:"2026-09-05",
+                pago:false, categoria:"Casa", recorrente:true }];
+    comprasCartao = [];
+    abrirRelatorios();`);
+  const comAluguel = await p.evaluate(() => _comprometidoPorMes("2026-09", 6));
+  ok("a conta fixa abate a meta da mesma categoria", comAluguel[0].diaADia === 200);
+  ok("e o aluguel continua inteiro na faixa dele", comAluguel[0].fixas === 1200);
+  ok("então o mês pede 1.400, não 2.600", comAluguel[0].total === 1400);
+
+  // Conta fixa MAIOR que a meta não vira dia a dia negativo: o que
+  // excede já está na barra como conta fixa.
+  await abrir(CENARIO + `;
+    metas = [{ id:"m1", categoria:"Casa", valor:500, reservar:true }];
+    contas = [{ id:"alu", nome:"Aluguel", valor:1200, vencimento:"2026-09-05",
+                pago:false, categoria:"Casa", recorrente:true }];
+    comprasCartao = [];
+    abrirRelatorios();`);
+  const estourou = await p.evaluate(() => _comprometidoPorMes("2026-09", 6));
+  ok("conta fixa maior que a meta não gera dia a dia negativo",
+    estourou[0].diaADia === 0 && estourou[0].total === 1200);
+
+  /* A ASSINATURA ABATE, A PARCELA NÃO, e os dois lados têm motivo.
+     _compraNoMes() conta a assinatura em TODO mês em que ela corre, então
+     ela já ocupa a meta da categoria todo mês. A compra parcelada ela
+     conta só no mês da COMPRA — a escolha de gastar aconteceu lá atrás,
+     e a parcela que cai em março não consome a meta de março. */
+  await abrir(CENARIO + `;
+    metas = [{ id:"m1", categoria:"Casa", valor:500, reservar:true }];
+    contas = [];
+    cartoes = [{ id:"k1", nome:"Nubank", banco:"nubank", dia_fechamento:1, dia_vencimento:10 }];
+    comprasCartao = [{ id:"net", cartao_id:"k1", descricao:"Internet", valor:120,
+                       parcelas:1, data:"2026-05-14", categoria:"Casa",
+                       recorrente:true, fim:null }];
+    abrirRelatorios();`);
+  const comAssinatura = await p.evaluate(() => _comprometidoPorMes("2026-09", 6));
+  ok("a assinatura abate a meta da categoria dela", comAssinatura[0].diaADia === 380);
+  ok("e continua inteira na faixa das assinaturas", comAssinatura[0].assinaturas === 120);
+  ok("o mês pede os 500 da meta, não 620", comAssinatura[0].total === 500);
+
+  await abrir(CENARIO + `;
+    metas = [{ id:"m1", categoria:"Lazer", valor:500, reservar:true }];
+    contas = [];
+    cartoes = [{ id:"k1", nome:"Nubank", banco:"nubank", dia_fechamento:1, dia_vencimento:10 }];
+    comprasCartao = [{ id:"ten", cartao_id:"k1", descricao:"Tênis", valor:1200,
+                       parcelas:6, data:"2026-09-05", categoria:"Lazer",
+                       recorrente:false, fim:null }];
+    abrirRelatorios();`);
+  const comParcela = await p.evaluate(() => _comprometidoPorMes("2026-09", 6));
+  ok("a parcela NÃO abate a meta, porque não ocupa o mês em que cai",
+    comParcela[0].diaADia === 500);
+  ok("e a parcela segue na faixa dela", comParcela[0].parcelas === 200);
+
+  // Enquanto não houver meta obrigatória, a tela responde a pergunta que
+  // ela mesma provoca — e a linha some sozinha quando a primeira nascer.
+  await abrir(CENARIO + `;
+    metas = []; contas = [{ id:"alu", nome:"Aluguel", valor:1200,
+      vencimento:"2026-09-05", pago:false, categoria:"Casa", recorrente:true }];
+    abrirRelatorios();`);
+  ok("sem meta obrigatória, a tela diz por que o mercado não está lá",
+    (await p.locator(".rel-falta").count()) === 1);
+  await abrir(CENARIO + `;
+    metas = [{ id:"m1", categoria:"Mercado", valor:900, reservar:true }];
+    abrirRelatorios();`);
+  ok("e a linha some quando a primeira meta existe",
+    (await p.locator(".rel-falta").count()) === 0);
+
   /* ─── Sem o Chart.js, nenhum número some ─────────────────────────────
      A biblioteca vem de um CDN. O desenho é o extra; a frase é o
      conteúdo. */
@@ -232,7 +331,7 @@ module.exports = () => suite("Relatórios", async ({ p, ok, abrir, texto, valor,
   }, sel);
 
   const selos = await naProjecao(".rel-legenda-item .rel-cat-ponto");
-  ok("cada faixa da projeção tem um marcador na legenda", selos.length === 3);
+  ok("cada faixa da projeção tem um marcador na legenda", selos.length === 4);
   ok("e ele tem tamanho de verdade na tela",
     selos.every(s => s.l >= 8 && s.a >= 8));
   ok("quadrado, porque representa uma faixa da barra",
@@ -241,7 +340,7 @@ module.exports = () => suite("Relatórios", async ({ p, ok, abrir, texto, valor,
   // Cada faixa tem a SUA cor. Três marcadores iguais seriam pior do que
   // marcador nenhum: a legenda deixaria de ligar nome a faixa.
   ok("e cada um com a cor da faixa dele",
-    new Set(selos.map(s => s.cor)).size === 3);
+    new Set(selos.map(s => s.cor)).size === 4);
 
   // O parágrafo saiu a pedido do dono do app: o gráfico fala por si, e a
   // legenda logo acima já carrega os três valores.

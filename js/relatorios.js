@@ -188,6 +188,14 @@ function _gastoMedioMensal(quantos) {
      PARCELAS      já foram contratadas. Não tem o que fazer: vão cair.
      ASSINATURAS   caem até você cancelar. Dá pra desfazer hoje.
      CONTAS FIXAS  aluguel, energia, internet. Vão vir de todo jeito.
+     DIA A DIA     mercado, gasolina, farmácia. Não têm boleto nem data,
+                   mas saem todo mês — e eram o buraco desta tela.
+
+   O DIA A DIA VEM DAS METAS MARCADAS COMO OBRIGATÓRIAS, e não de uma
+   média do que foi gasto. A diferença importa: média é chute sobre o
+   passado, e esta seção promete que não é chute. A meta obrigatória é um
+   número que a própria pessoa escreveu dizendo "isto vai sair de todo
+   jeito" — e é exatamente assim que o Resumo já a trata.
 
    Tudo pelo mês em que o dinheiro SAI: o cartão pelo vencimento da
    fatura, a conta pelo vencimento dela. É a mesma régua da reserva do
@@ -196,7 +204,17 @@ function _gastoMedioMensal(quantos) {
 
 function _comprometidoPorMes(mesRef, quantos) {
   const meses = Array.from({ length: quantos }, (_, i) => mesVizinho(mesRef, i + 1));
-  const linhas = meses.map(m => ({ mes: m, parcelas: 0, assinaturas: 0, fixas: 0 }));
+  const linhas = meses.map(m => ({ mes: m, parcelas: 0, assinaturas: 0, fixas: 0, diaADia: 0,
+                                   porCategoria: {} }));
+
+  // O que já foi contado numa categoria, pra meta daquela categoria não
+  // contar o mesmo dinheiro de novo. É a mesma regra que o Resumo usa em
+  // aindaVaiSairDoMes(), e usar outra aqui faria as duas telas
+  // discordarem sobre o mesmo mês.
+  const somarNaCategoria = (l, cat, v) => {
+    const nome = cat || "Outros";
+    l.porCategoria[nome] = _cent((l.porCategoria[nome] || 0) + v);
+  };
   const porMes = Object.fromEntries(linhas.map(l => [l.mes, l]));
 
   /* AS FATURAS SÃO VARRIDAS PELO MÊS DELAS, não a partir da que está
@@ -214,8 +232,23 @@ function _comprometidoPorMes(mesRef, quantos) {
       const alvo = porMes[venc];
       if (!alvo) continue;
       for (const item of _parcelasDaFatura(cartao, mesFatura)) {
-        if (item.tipo === "parcelada") alvo.parcelas = _cent(alvo.parcelas + item.valor);
-        else if (item.tipo === "assinatura") alvo.assinaturas = _cent(alvo.assinaturas + item.valor);
+        if (item.tipo === "parcelada") {
+          /* A PARCELA NÃO ABATE A META, e isto não é descuido. As Metas
+             contam a compra no cartão no mês em que ela foi FEITA, não
+             nos meses em que as parcelas caem — a escolha de gastar
+             aconteceu lá atrás. Então a parcela que cai em março não
+             consome a meta de março, e descontá-la aqui encolheria o dia
+             a dia de um mês que ela não ocupa. */
+          alvo.parcelas = _cent(alvo.parcelas + item.valor);
+        } else if (item.tipo === "assinatura") {
+          /* A ASSINATURA ABATE, pelo motivo espelhado: _compraNoMes() a
+             conta em TODO mês em que ela corre, então ela já ocupa a meta
+             da categoria dela todo mês. Sem descontar, uma assinatura de
+             internet dentro de uma meta "Casa" obrigatória apareceria
+             duas vezes na mesma barra. */
+          alvo.assinaturas = _cent(alvo.assinaturas + item.valor);
+          somarNaCategoria(alvo, item.compra.categoria, item.valor);
+        }
       }
     }
   }
@@ -238,14 +271,36 @@ function _comprometidoPorMes(mesRef, quantos) {
   for (const l of linhas) {
     for (const c of contas) {
       if (c.pago || mesDe(c.vencimento) !== l.mes) continue;
-      if (c.recorrente) l.fixas = _cent(l.fixas + Number(c.valor));
-      else if (_parteDoCarne(c.nome)) l.parcelas = _cent(l.parcelas + Number(c.valor));
+      if (c.recorrente) {
+        l.fixas = _cent(l.fixas + Number(c.valor));
+        somarNaCategoria(l, c.categoria, Number(c.valor));
+      } else if (_parteDoCarne(c.nome)) {
+        l.parcelas = _cent(l.parcelas + Number(c.valor));
+      }
     }
     for (const [nome, c] of fixas) {
       const jaTem = contas.some(x => x.nome === nome && mesDe(x.vencimento) === l.mes);
-      if (!jaTem) l.fixas = _cent(l.fixas + Number(c.valor));
+      if (!jaTem) {
+        l.fixas = _cent(l.fixas + Number(c.valor));
+        somarNaCategoria(l, c.categoria, Number(c.valor));
+      }
     }
-    l.total = _cent(l.parcelas + l.assinaturas + l.fixas);
+
+    /* O DIA A DIA: o que a meta obrigatória prevê, MENOS o que já foi
+       contado naquela categoria por uma conta fixa ou assinatura.
+
+       Sem esse desconto, uma meta "Casa" de R$ 1.400 somaria inteira com
+       o aluguel de R$ 1.200 que já está na barra como conta fixa — e o
+       mês apareceria com R$ 1.200 a mais do que ele pede. É o mesmo
+       cuidado que o Resumo toma, e tomá-lo com régua diferente faria as
+       duas telas brigarem. */
+    for (const m of metas) {
+      if (!m.reservar) continue;
+      const falta = Number(m.valor) - (l.porCategoria[m.categoria] || 0);
+      if (falta >= 0.005) l.diaADia = _cent(l.diaADia + falta);
+    }
+
+    l.total = _cent(l.parcelas + l.assinaturas + l.fixas + l.diaADia);
   }
 
   return linhas;
@@ -280,7 +335,7 @@ function _coresDoGrafico() {
 // escuro também, onde a marca já é azul-claro: o roxo entra no lugar do
 // azul-céu, que ficaria colado nela.
 function _coresDaProjecao() {
-  return [_corDoTema("--marca-txt"), _corDoTema("--dourado"), "#8b5cf6"];
+  return [_corDoTema("--marca-txt"), _corDoTema("--dourado"), "#8b5cf6", "#0d9488"];
 }
 
 // Os eixos e as grades seguem o tema: no escuro, o cinza-claro do Chart.js
@@ -357,6 +412,8 @@ async function _desenharGraficosDoRelatorio(dados) {
             backgroundColor: _coresDaProjecao()[1], borderRadius: 3 },
           { label: "Contas fixas", data: dados.projecao.map(x => x.fixas),
             backgroundColor: _coresDaProjecao()[2], borderRadius: 3 },
+          { label: "Dia a dia", data: dados.projecao.map(x => x.diaADia),
+            backgroundColor: _coresDaProjecao()[3], borderRadius: 3 },
         ],
       },
       options: Object.assign({}, comum, { scales: _eixos(true),
@@ -584,7 +641,18 @@ function desenharRelatorios() {
           ${legenda(proj[0], "Parcelas", _cent(projecao.reduce((s, x) => s + x.parcelas, 0)))}
           ${legenda(proj[1], "Assinaturas", _cent(projecao.reduce((s, x) => s + x.assinaturas, 0)))}
           ${legenda(proj[2], "Contas fixas", _cent(projecao.reduce((s, x) => s + x.fixas, 0)))}
+          ${legenda(proj[3], "Dia a dia", _cent(projecao.reduce((s, x) => s + x.diaADia, 0)))}
         </div>
+        <!-- Esta linha só aparece enquanto o dia a dia está vazio, e ela
+             some sozinha no dia em que a primeira meta obrigatória for
+             criada. É a resposta pra "por que o mercado não está aqui?",
+             que é a primeira pergunta que esta tela provoca. -->
+        ${projecao.every(x => x.diaADia < 0.005) ? `
+          <p class="rel-falta">
+            Mercado, gasolina e farmácia não entram porque ainda não têm meta
+            obrigatória. Crie uma em <b>Metas de gastos</b> e elas passam a
+            contar aqui.
+          </p>` : ""}
       </div>` : ""}
 
     ${ajustes.length ? `
