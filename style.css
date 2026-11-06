@@ -2380,3 +2380,36 @@ body.escuro .resumo-secao .item-icone.entrada { background: #17372d; }
   color: var(--fraco);
 }
 .resumo-nao-gasto b { color: var(--texto); font-weight: 800; }
+
+/* ─── 28. ASSINATURAS ────────────────────────────────────────────────────
+   Elas entram em toda fatura futura — e isso está certo, vão cair se
+   ninguém cancelar. O que esta tela acrescenta é a diferença que importa
+   num aperto: parcela já foi contratada, assinatura para quando você
+   quiser. */
+
+/* O link dentro do card escuro do total. Discreto, mas tocável: é a
+   única coisa acionável de um mês futuro. */
+.contas-total-link {
+  display: inline-block !important;
+  margin-top: 9px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.14);
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.contas-total-link:active { background: rgba(255,255,255,.24); }
+
+/* O valor por mês em cima, o acumulado embaixo: o de cima é o que ela
+   cobra, o de baixo é o que ela já cobrou — e é o de baixo que faz
+   alguém cancelar. */
+.assina-valores { text-align: right; }
+.assina-valores small {
+  display: block;
+  margin-top: 2px;
+  font-size: 10.5px;
+  color: var(--fraco);
+  white-space: nowrap;
+}
+.assina-marca svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 2; }

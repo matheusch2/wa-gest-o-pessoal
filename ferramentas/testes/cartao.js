@@ -341,4 +341,96 @@ module.exports = () => suite("Cartão e fatura", async ({ p, ok, abrir, chamadas
   ok("que é a do mês seguinte à compra, porque o cartão fecha antes dela",
     (await p.evaluate(() => _mesDoBaralho)) === "2026-02");
 
+
+  /* ─── O QUE DÁ PRA CANCELAR ──────────────────────────────────────────
+     As assinaturas entram em TODA fatura futura, e isso está certo: elas
+     vão cair se ninguém cancelar. Mas elas não são parcela — parcela já
+     foi contratada, assinatura para quando você quiser —, e tratar as
+     duas igual escondia a única pergunta acionável de um mês futuro:
+     "quanto disso eu consigo desligar hoje?" */
+  const ASSINA = `
+    lancamentos = []; contas = []; metas = []; fechamentos = [];
+    cartoes = [{ id:"k1", nome:"Nubank", banco:"nubank", dia_fechamento:1, dia_vencimento:10 },
+               { id:"k2", nome:"Inter",  banco:"inter",  dia_fechamento:5, dia_vencimento:15 }];
+    comprasCartao = [
+      { id:"n", cartao_id:"k1", descricao:"Netflix", valor:50, parcelas:1,
+        data:"2026-05-14", categoria:"Lazer", recorrente:true, fim:null },
+      { id:"a", cartao_id:"k2", descricao:"Zumba", valor:120, parcelas:1,
+        data:"2026-08-10", categoria:"Saúde", recorrente:true, fim:null },
+      { id:"t", cartao_id:"k1", descricao:"Tênis", valor:1200, parcelas:6,
+        data:"2026-10-05", categoria:"Lazer", recorrente:false, fim:null }];
+    pagamentosFatura = []; _cartaoPrincipal = null;
+  `;
+
+  await abrir(ASSINA + "; abrirAssinaturas();");
+  ok("a tela lista só as assinaturas, não as parcelas",
+    (await p.locator(".assina-item").count()) === 2 &&
+    !(await texto(".lista")).includes("Tênis"));
+
+  /* O NÚMERO GRANDE É O DO ANO. R$ 170 por mês não faz ninguém abrir a
+     lista; R$ 2.040 por ano faz. É o mesmo dinheiro, dito do jeito que
+     provoca a decisão. */
+  ok("o número grande é o custo anual",
+    valor(await texto(".contas-total strong")) === 2040);
+  ok("com o mensal e a contagem embaixo",
+    (await texto(".contas-total small")).includes("170,00") &&
+    (await texto(".contas-total small")).includes("2 assinaturas"));
+
+  // A ordem INTEIRA, e com a mais cara sendo a ÚLTIMA do alfabeto: do
+  // contrário a conferência passaria com o código ordenando por nome.
+  ok("a mais cara vem primeiro, que é por onde se começa a cortar",
+    JSON.stringify(await p.evaluate(() =>
+      [...document.querySelectorAll(".assina-item .item-txt strong")].map(e => e.textContent.trim())))
+    === JSON.stringify(["Zumba", "Netflix"]));
+
+  /* QUANTO ELA JÁ CUSTOU é o número que faz cancelar: a mensalidade
+     parece pequena até somar os meses que correram. */
+  ok("cada uma mostra quanto já custou até aqui",
+    (await texto(".assina-valores")).includes("até aqui"));
+
+  // Assinatura cancelada não é assinatura ativa — o 'fim' é o último mês
+  // cobrado, e passado ele ela sai da conta.
+  await abrir(ASSINA + `
+    comprasCartao = comprasCartao.map(c =>
+      c.id === "a" ? Object.assign({}, c, { fim: "2026-09-01" }) : c);
+    abrirAssinaturas();`);
+  ok("assinatura já cancelada não entra na conta",
+    (await p.locator(".assina-item").count()) === 1 &&
+    valor(await texto(".contas-total strong")) === 600);
+
+  await abrir(`
+    lancamentos=[]; contas=[]; metas=[]; fechamentos=[];
+    cartoes=[]; comprasCartao=[]; pagamentosFatura=[];
+    abrirAssinaturas();`);
+  ok("sem assinatura nenhuma, a tela ensina como criar uma",
+    (await p.locator(".assina-item").count()) === 0 &&
+    (await texto("#area")).includes("Assinatura"));
+
+  /* ─── O ATALHO NO BARALHO ────────────────────────────────────────────
+     Num mês futuro, a única coisa acionável da tela é saber quanto
+     daquele número dá pra desligar. */
+  await abrir(ASSINA + "; abrirCartoes(); trocarMesDoBaralho(2);");
+  const atalho = await texto(".contas-total-link");
+  ok("o baralho diz quanto do mês é assinatura", atalho.includes("assinaturas"));
+  ok("com o valor somado dos dois cartões", valor(atalho) === 170);
+
+  // E ele bate com o que a tela de assinaturas diz por mês: dois números
+  // pra mesma coisa em telas diferentes é o defeito de sempre.
+  await p.evaluate(() => abrirAssinaturas());
+  // O helper valor() limpa tudo que não é dígito: em "R$ 170,00 por mês ·
+  // 2 assinaturas" ele levava o 2 junto. Aqui só a primeira moeda serve.
+  const mensal = (await texto(".contas-total small")).match(/R\$\s*[\d.]+,\d{2}/)[0];
+  ok("e esse valor bate com o mensal da tela de assinaturas", valor(mensal) === 170);
+
+  // Mês sem assinatura nenhuma não ganha o atalho: botão que aparece
+  // sempre é botão que ninguém lê.
+  await abrir(`
+    lancamentos=[]; contas=[]; metas=[]; fechamentos=[];
+    cartoes=[{ id:"k", nome:"Só parcela", banco:"nubank", dia_fechamento:1, dia_vencimento:10 }];
+    comprasCartao=[{ id:"t", cartao_id:"k", descricao:"TV", valor:600, parcelas:6,
+                     data:"2026-10-05", categoria:"Casa", recorrente:false, fim:null }];
+    pagamentosFatura=[]; _cartaoPrincipal=null; abrirCartoes();`);
+  ok("mês sem assinatura não ganha o atalho",
+    (await p.locator(".contas-total-link").count()) === 0);
+
 });

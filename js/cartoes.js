@@ -327,6 +327,8 @@ function desenharCartoes() {
   const totalGeral = fila.reduce((soma, x) => soma + x.s.restante, 0);
   const devendo = fila.filter(x => x.s.restante >= 0.005).length;
   const comFatura = fila.filter(x => !x.semFatura).length;
+  const assinaturasDoMes = _centavos(fila.reduce(
+    (t, x) => t + _assinaturasNaFatura(x.c, x.mes), 0));
   const ehMesCorrente = mesVisivel === mesDe(_hojeLocal());
   const ehFuturo = mesVisivel > mesDe(_hojeLocal());
 
@@ -383,6 +385,15 @@ function desenharCartoes() {
       ${atrasado >= 0.005
         ? `<small class="alerta">Mais ${moeda(atrasado)} vencidos em meses anteriores</small>`
         : ""}
+      <!-- QUANTO DAQUILO DÁ PRA DESLIGAR. A assinatura entra na fatura
+           futura e isso está certo — ela vai cair se ninguém cancelar.
+           Mas ela não é parcela: parcela já foi contratada, assinatura
+           para quando você quiser. Num mês futuro, essa diferença é a
+           única coisa acionável da tela. -->
+      ${assinaturasDoMes >= 0.005 && comFatura ? `
+        <small class="contas-total-link" onclick="event.stopPropagation(); abrirAssinaturas()">
+          ${moeda(assinaturasDoMes)} são assinaturas — dá pra cancelar ›
+        </small>` : ""}
     </div>
 
     <button class="botao" onclick="abrirNovoCartao()">
@@ -396,6 +407,125 @@ function desenharCartoes() {
       : `<div class="bloco" style="margin-top:14px"><p class="vazio">Cadastre seu primeiro cartão pra acompanhar as faturas.</p></div>`}
 
     <button class="botao-fraco" onclick="voltarInicio()">Voltar</button>
+  `;
+}
+
+/* ═══ O QUE DÁ PRA CANCELAR ═══════════════════════════════════════════
+   As assinaturas entram em TODA fatura futura, e isso está certo: elas
+   vão cair se ninguém cancelar. Mas elas não são a mesma coisa que uma
+   parcela, e tratar as duas igual esconde a única pergunta que importa
+   num aperto — "quanto disso eu consigo desligar hoje?".
+
+   Uma parcela já foi contratada: não tem o que fazer, vai cair. Uma
+   assinatura cai até você cancelar. O dono do app apontou isso olhando a
+   projeção: "numa crise financeira eu simplesmente cancelo as
+   assinaturas".
+
+   Então o app passa a dizer o número. Não escondendo a assinatura das
+   contas — ela vai cair mesmo —, mas somando à parte o que é cancelável.
+
+   O ANO IMPORTA MAIS QUE O MÊS. R$ 55,90 por mês não assusta ninguém;
+   R$ 670,80 por ano faz a pessoa abrir a lista e olhar uma por uma. É o
+   mesmo valor, dito do jeito que provoca a decisão. */
+
+function _assinaturasAtivas() {
+  const hoje = mesDe(_hojeLocal());
+  return comprasCartao
+    .filter(c => c.recorrente && (!c.fim || mesDe(c.fim) >= hoje))
+    .map(c => {
+      const cartao = cartoes.find(k => k.id === c.cartao_id);
+      return { c, cartao, b: cartao ? _banco(cartao.banco) : null,
+               valor: Number(c.valor), desde: mesDe(c.data),
+               meses: Math.max(1, _diffMeses(mesDe(c.data), hoje) + 1) };
+    })
+    .filter(x => x.cartao)
+    .sort((a, b) => b.valor - a.valor || a.c.descricao.localeCompare(b.c.descricao, "pt-BR"));
+}
+
+function _totalDasAssinaturas() {
+  return _centavos(_assinaturasAtivas().reduce((s, x) => s + x.valor, 0));
+}
+
+// Quanto das assinaturas cai numa fatura de um mês. Serve pro baralho
+// dizer, num mês futuro, quanto daquele número é cancelável.
+function _assinaturasNaFatura(cartao, mesRef) {
+  if (!mesRef) return 0;
+  return _centavos(_parcelasDaFatura(cartao, mesRef)
+    .filter(i => i.tipo === "assinatura")
+    .reduce((s, i) => s + i.valor, 0));
+}
+
+const _ICO_REPETE = `<svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="17 2 21 6 17 10"/><path d="M3 12V9a3 3 0 0 1 3-3h15"/><polyline points="7 22 3 18 7 14"/><path d="M21 12v3a3 3 0 0 1-3 3H3"/></svg>`;
+
+function abrirAssinaturas() { abrirTela(desenharAssinaturas); }
+
+function desenharAssinaturas() {
+  destruirGrafico();
+
+  const lista = _assinaturasAtivas();
+  const porMes = _totalDasAssinaturas();
+
+  const uma = ({ c, cartao, b, valor, desde, meses }) => `
+    <div class="item assina-item" onclick="abrirCartao('${cartao.id}')" style="cursor:pointer">
+      <!-- A cor é a do banco, e o ícone é o mesmo cartão do resto do app:
+           o 🔁 dentro de um quadrado roxo parecia erro de montagem. -->
+      <div class="item-icone assina-marca" style="background:${b.cor};color:${b.texto}">${_ICO_CARTAO}</div>
+      <div class="item-txt">
+        <strong>${esc(c.descricao)}</strong>
+        <small>${esc(cartao.nome)} · ${meses === 1 ? "primeiro mês" : "há " + meses + " meses"}</small>
+      </div>
+      <div class="assina-valores">
+        <span class="item-valor saida">${moeda(valor)}</span>
+        <!-- Quanto ela JÁ custou. É o número que faz alguém cancelar: a
+             mensalidade parece pequena até somar os meses que correram. -->
+        <small>${moeda(_centavos(valor * meses))} até aqui</small>
+      </div>
+    </div>`;
+
+  document.getElementById("area").innerHTML = `
+    <section class="lancamento-tela" style="--cor-tipo:var(--marca-txt)">
+      <div class="lancamento-cabecalho">
+        <span class="lancamento-cabecalho-icone">${_ICO_REPETE}</span>
+        <span class="lancamento-caption">Crédito</span>
+        <h2>Assinaturas</h2>
+      </div>
+    </section>
+
+    <!-- O NÚMERO GRANDE É O DO ANO, não o do mês. R$ 55,90 por mês não
+         faz ninguém abrir a lista; R$ 670,80 por ano faz. É o mesmo
+         dinheiro, dito do jeito que provoca a decisão. -->
+    <div class="contas-total">
+      <span>Suas assinaturas custam por ano</span>
+      <strong>${moeda(_centavos(porMes * 12))}</strong>
+      <small>${!lista.length
+        ? "Nenhuma assinatura ativa"
+        : `${moeda(porMes)} por mês · ${lista.length} ${lista.length > 1 ? "assinaturas" : "assinatura"}`}</small>
+    </div>
+
+    ${lista.length ? `
+      <div class="bloco">
+        <div class="bloco-topo">
+          <h2>O que está correndo</h2>
+          <span class="rel-conta">por mês</span>
+        </div>
+        <div class="lista">${lista.map(uma).join("")}</div>
+        <!-- A frase existe pra uma pergunta que a projeção provoca e não
+             respondia: numa aperto, o que dá pra desligar? -->
+        <p class="rel-rodape">
+          Diferente das parcelas, estas <b>param quando você cancelar</b> — é
+          o que dá pra cortar num aperto. Toque numa pra abrir o cartão dela.
+        </p>
+      </div>`
+      : `<div class="bloco" style="margin-top:14px">
+           <p class="vazio">Nenhuma assinatura cadastrada.</p>
+           <p class="cartao-dica" style="margin:0">
+             Netflix, Spotify, academia, nuvem. Cadastre pelo cartão, em
+             "Nova compra", escolhendo o tipo <b>Assinatura</b> — assim elas
+             entram sozinhas em toda fatura, até você cancelar.
+           </p>
+         </div>`}
+
+    <button class="botao-fraco" onclick="voltarTela()">Voltar</button>
   `;
 }
 
