@@ -2162,6 +2162,20 @@ body.escuro .resumo-secao .item-icone.entrada { background: #17372d; }
 .rel-legenda-item { display: flex; align-items: center; gap: 7px; font-size: 11.5px; color: var(--fraco); }
 .rel-legenda-item strong { font-size: 11.5px; color: var(--texto); font-variant-numeric: tabular-nums; }
 
+/* O MARCADOR DA LEGENDA. Ele existia no HTML desde sempre e nunca
+   apareceu: o tamanho estava em '.rel-cat .rel-cat-ponto', preso ao
+   '.rel-cat', e aqui o elemento vive dentro de '.rel-legenda-item' — logo
+   nascia com zero de largura e zero de altura.
+
+   Quadrado porque representa uma faixa da barra, com os mesmos 3px de
+   canto que o Chart.js desenha nelas. */
+.rel-legenda-item .rel-cat-ponto {
+  width: 11px;
+  height: 11px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
 /* A frase embaixo do gráfico é o conteúdo, não a legenda dele: se o
    Chart.js não baixar, é ela que ainda responde a pergunta da seção. */
 .rel-rodape {

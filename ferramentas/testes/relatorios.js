@@ -208,10 +208,46 @@ module.exports = () => suite("Relatórios", async ({ p, ok, abrir, texto, valor,
                 pago:false, categoria:"Casa", recorrente:true }];
     abrirRelatorios();`);
   const semGrafico = await texto("#area");
-  ok("o total comprometido está escrito, não só desenhado", /já têm dono/.test(semGrafico));
+  // O parágrafo "dos próximos 6 meses..." saiu da tela a pedido do dono
+  // do app. O que ele garantia continua garantido pela legenda, que
+  // carrega os três valores por escrito — e pelo total no cabeçalho.
+  ok("o total comprometido está escrito, não só desenhado",
+    /Parcelas/.test(semGrafico) && /Assinaturas/.test(semGrafico) &&
+    /Contas fixas/.test(semGrafico));
   ok("a média mensal também", /por mês, em média/.test(semGrafico));
   ok("as categorias continuam com valor", (await p.locator(".rel-cat-valor").count()) > 0);
   ok("e nenhum gráfico foi criado", (await p.evaluate(() => graficos.length)) === 0);
+
+  /* A LEGENDA PRECISA DE MARCADOR VISÍVEL. Os quadradinhos existiam no
+     HTML e nasciam com zero por zero: o tamanho morava numa regra presa
+     ao '.rel-cat', e na legenda o elemento vive noutro pai. Resultado:
+     três nomes e três valores sem ligação nenhuma com as três faixas da
+     barra, e a pessoa tendo que adivinhar qual cor era qual. */
+  const naProjecao = (sel) => p.evaluate((s) => {
+    const bloco = document.getElementById("rel-canvas-proj")?.closest(".bloco");
+    return [...(bloco ? bloco.querySelectorAll(s) : [])]
+      .map(e => ({ cor: getComputedStyle(e).backgroundColor,
+                   l: e.getBoundingClientRect().width,
+                   a: e.getBoundingClientRect().height }));
+  }, sel);
+
+  const selos = await naProjecao(".rel-legenda-item .rel-cat-ponto");
+  ok("cada faixa da projeção tem um marcador na legenda", selos.length === 3);
+  ok("e ele tem tamanho de verdade na tela",
+    selos.every(s => s.l >= 8 && s.a >= 8));
+  ok("quadrado, porque representa uma faixa da barra",
+    selos.every(s => Math.abs(s.l - s.a) < 1.5));
+
+  // Cada faixa tem a SUA cor. Três marcadores iguais seriam pior do que
+  // marcador nenhum: a legenda deixaria de ligar nome a faixa.
+  ok("e cada um com a cor da faixa dele",
+    new Set(selos.map(s => s.cor)).size === 3);
+
+  // O parágrafo saiu a pedido do dono do app: o gráfico fala por si, e a
+  // legenda logo acima já carrega os três valores.
+  ok("o parágrafo embaixo da projeção saiu",
+    !/já têm dono/.test(await texto("#area")) &&
+    !/não é chute/.test(await texto("#area")));
 
   if (!temChart) {
     console.log("  --    (chart.js não instalado: os desenhos não foram conferidos)");

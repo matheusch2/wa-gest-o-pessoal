@@ -449,6 +449,14 @@ function desenharRelatorios() {
   const mediaGasto = tempo.length
     ? _cent(tempo.reduce((s, x) => s + x.gastou, 0) / tempo.length) : 0;
 
+  /* A LEGENDA PRECISAVA DE UM MARCADOR, e ela tinha um que nunca
+     apareceu: o quadradinho herdava tamanho de '.rel-cat .rel-cat-ponto',
+     e fora de um '.rel-cat' ele nascia com zero por zero. Três nomes e
+     três valores sem nenhuma ligação visível com as três faixas da barra
+     — a pessoa tinha que adivinhar qual cor era qual.
+
+     Quadrado, e não bolinha: ele representa uma FAIXA DA BARRA, e barra
+     é retângulo. O mesmo arredondamento de 3px das barras do gráfico. */
   const legenda = (cor, nome, valor) => `
     <div class="rel-legenda-item">
       <span class="rel-cat-ponto" style="background:${cor}"></span>
@@ -577,12 +585,6 @@ function desenharRelatorios() {
           ${legenda(proj[1], "Assinaturas", _cent(projecao.reduce((s, x) => s + x.assinaturas, 0)))}
           ${legenda(proj[2], "Contas fixas", _cent(projecao.reduce((s, x) => s + x.fixas, 0)))}
         </div>
-        <p class="rel-rodape">
-          Dos próximos 6 meses, <b>${_vlr(totalProjetado)}</b> já têm dono — o mês
-          mais pesado é <b>${soNomeDoMes(projecao.reduce((a, b) => (b.total > a.total ? b : a)).mes)}</b>,
-          com ${_vlr(Math.max(...projecao.map(x => x.total)))}. Isto não é chute:
-          é o que já está cadastrado.
-        </p>
       </div>` : ""}
 
     ${ajustes.length ? `
