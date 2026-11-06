@@ -186,4 +186,159 @@ module.exports = () => suite("Cartão e fatura", async ({ p, ok, abrir, chamadas
   ok("grava só o abatimento", c2.every(x => x.tabela === "pagamentos_fatura"));
   ok("e sem lançamento ligado a ele",
     [].concat(c2[0].dados).every(d => d.lancamento_id === null));
+
+  /* ─── O BARALHO INTEIRO NUM MÊS SÓ ───────────────────────────────────
+     A tela mostrava, de cada cartão, a fatura DELE — e cada cartão fecha
+     num dia diferente, então vários cartões podiam estar mostrando meses
+     diferentes ao mesmo tempo. Dava pra saber quanto cada um deve; não
+     dava pra responder "quanto eu pago em março?", que é a pergunta que
+     faz alguém com nove cartões abrir esta tela. */
+  const mesDeHoje = await p.evaluate(() => mesDe(_hojeLocal()));
+
+  const DOIS = `
+    lancamentos = []; contas = []; metas = []; fechamentos = [];
+    cartoes = [
+      { id:"ka", nome:"Cedo", banco:"nubank", dia_fechamento:3, dia_vencimento:10 },
+      { id:"kb", nome:"Tarde", banco:"inter", dia_fechamento:25, dia_vencimento:5 },
+    ];
+    comprasCartao = [
+      { id:"ca", cartao_id:"ka", descricao:"TV", valor:1200, parcelas:6,
+        data:"2026-09-05", categoria:"Casa", recorrente:false, fim:null },
+      { id:"cb", cartao_id:"kb", descricao:"Sofá", valor:900, parcelas:8,
+        data:"2026-09-05", categoria:"Casa", recorrente:false, fim:null },
+      // À vista, e só em dezembro: é ela que faz dezembro ter um total
+      // diferente de todos os outros meses.
+      { id:"cv", cartao_id:"ka", descricao:"Presente", valor:777, parcelas:1,
+        data:"2026-12-02", categoria:"Lazer", recorrente:false, fim:null },
+    ];
+    pagamentosFatura = []; _cartaoPrincipal = null;
+  `;
+
+  await abrir(DOIS + "; abrirCartoes();");
+  ok("a tela de cartões ganhou o navegador de mês",
+    (await p.locator(".bloco .pilula").count()) === 2);
+
+  // Os dois cartões aparecem no MESMO mês, cada um com a fatura dele
+  // naquele mês. É isso que permite comparar.
+  const fila = await p.evaluate(() => _filaDeCartoes("2027-01").map(x => ({
+    nome: x.c.nome, mes: x.mes, total: x.s.total, semFatura: x.semFatura })));
+  ok("num mês dado, todo cartão responde por aquele mês",
+    fila.every(x => x.mes === "2027-01"));
+  ok("e cada um com o valor da parcela dele naquele mês",
+    fila.find(x => x.nome === "Cedo").total === 200 &&
+    fila.find(x => x.nome === "Tarde").total === 112.5);
+
+  /* O TOTAL DO TOPO SOMA O QUE ESTÁ NA TELA. Dois números que não fecham
+     na mesma tela é o pior defeito de um app de dinheiro, e aqui ele
+     cabia: bastaria o topo continuar somando "tudo em aberto" enquanto os
+     cartões mostram um mês só. */
+  await abrir(DOIS + "; abrirCartoes(); trocarMesDoBaralho(2);");
+  const topo = valor(await texto(".contas-total strong"));
+  const naTela = await p.evaluate(() =>
+    [...document.querySelectorAll(".cartao-card-baixo > div:first-child strong")]
+      .map(e => Number(e.textContent.replace(/[^\d,]/g, "").replace(/\./g, "").replace(",", ".")))
+      .filter(n => !isNaN(n)));
+  const soma = naTela.reduce((a, b) => a + b, 0);
+  ok("o total do topo é a soma dos cartões mostrados",
+    Math.round(topo * 100) === Math.round(soma * 100));
+  // E o mês tem que ser um em que esse número NÃO coincide com o total
+  // em aberto de cada cartão — senão a conferência acima passaria mesmo
+  // com o topo somando a coisa errada.
+  const emAberto = await p.evaluate(() =>
+    cartoes.reduce((t, c) => t + _situacaoFatura(c, _faturaAoAbrir(c)).restante, 0));
+  ok("num mês que não coincide com o total em aberto, pra conferência valer",
+    Math.round(topo * 100) !== Math.round(emAberto * 100));
+
+  /* FATURA PAGA PELA METADE MOSTRA O QUE FALTA, não o total. O cartão
+     que já recebeu R$ 100 de uma fatura de R$ 312,50 deve R$ 212,50 — e
+     é esse número que tem que estar no card E dentro do total do topo.
+     Mostrar o total cheio ali faria o topo (que soma o restante) deixar
+     de bater com os cartões, que é o defeito que mais dói neste app. */
+  await abrir(DOIS + `
+    abrirCartoes(); trocarMesDoBaralho(2);
+    pagamentosFatura = [{ id:"pg", cartao_id:"ka", mes_ref:_mesDoBaralho,
+                          tipo:"pago", valor:100, pago_em:"2026-12-20",
+                          lancamento_id:null, compra_id:null }];
+    desenharCartoes();`);
+  const parcial = await p.evaluate(() =>
+    [...document.querySelectorAll(".cartao-card-baixo > div:first-child strong")]
+      .map(e => e.textContent.trim()));
+  ok("o cartão pago pela metade mostra o que FALTA",
+    parcial.some(t => t.includes("877,00")));
+  ok("e não o total da fatura", !parcial.some(t => t.includes("977,00")));
+  const topoParcial = valor(await texto(".contas-total strong"));
+  const somaParcial = parcial
+    .map(t => Number(t.replace(/[^\d,]/g, "").replace(/\./g, "").replace(",", ".")))
+    .filter(n => !isNaN(n)).reduce((a, b) => a + b, 0);
+  ok("e o topo continua batendo com os cartões",
+    Math.round(topoParcial * 100) === Math.round(somaParcial * 100));
+
+  /* UM CARTÃO SEM FATURA NAQUELE MÊS não some da tela nem mostra R$ 0,00
+     como se fosse uma fatura zerada: ele diz que não tem fatura. */
+  await abrir(DOIS + "; abrirCartoes(); trocarMesDoBaralho(24);");
+  ok("mês sem fatura nenhuma é dito com essas palavras",
+    (await texto(".contas-total small")).includes("Nenhuma fatura"));
+  ok("e os cartões continuam na tela, dizendo que não têm fatura",
+    (await p.locator(".cartao-card").count()) === 2 &&
+    (await texto(".cartao-baralho")).includes("Sem fatura neste mês"));
+
+  /* MÊS FUTURO NÃO TEM "EM ABERTO". Nada foi pago porque nada venceu —
+     "2 de 2 faturas em aberto" num mês que não chegou soa como duas
+     contas atrasadas, e não é isso. */
+  await abrir(DOIS + "; abrirCartoes(); trocarMesDoBaralho(2);");
+  const futuro = await texto(".contas-total small");
+  ok("mês futuro conta faturas, não faturas em aberto",
+    !futuro.includes("em aberto") && /2 faturas/.test(futuro));
+  ok("e o mês mostrado é mesmo futuro",
+    (await p.evaluate(() => _mesDoBaralho)) > mesDeHoje);
+  ok("e o rótulo do topo diz de que mês ele está falando",
+    (await texto(".contas-total span")).toLowerCase().includes("total de"));
+
+  /* O QUE VENCEU E NÃO FOI PAGO NÃO PODE SUMIR ao mudar de mês. O topo
+     soma só o mês da tela — tem que somar — mas uma fatura vencida
+     continua existindo, e esconder isso é pior do que nunca ter
+     mostrado. */
+  await abrir(`
+    lancamentos = []; contas = []; metas = []; fechamentos = [];
+    cartoes = [{ id:"k", nome:"Velho", banco:"nubank", dia_fechamento:1, dia_vencimento:10 }];
+    comprasCartao = [{ id:"c", cartao_id:"k", descricao:"Antiga", valor:500, parcelas:1,
+                       data:"2026-01-05", categoria:"Casa", recorrente:false, fim:null }];
+    pagamentosFatura = []; _cartaoPrincipal = null;
+    abrirCartoes(); trocarMesDoBaralho(6);`);
+  ok("fatura vencida de outro mês aparece em linha à parte",
+    (await texto(".contas-total .alerta")).includes("vencidos em meses anteriores"));
+  ok("com o valor dela", valor(await texto(".contas-total .alerta")) === 500);
+
+  /* TOCAR NUM CARTÃO ABRE A FATURA DAQUELE MÊS. Tocar num cartão que diz
+     "fatura de março, R$ 400" e cair em novembro seria a tela se
+     contradizendo no mesmo toque. */
+  await abrir(DOIS + "; abrirCartoes(); trocarMesDoBaralho(2);");
+  const mesNaTela = await p.evaluate(() => _mesDoBaralho);
+  await p.evaluate(() => abrirCartao("ka"));
+  ok("tocar no cartão abre a fatura do mês que estava na tela",
+    (await p.evaluate(() => _faturaMes)) === mesNaTela);
+
+  /* O MÊS É RECALCULADO A CADA ABERTURA. Sem isto, quem foi ver março,
+     voltou pro menu e entrou de novo cairia em março — e no mês seguinte
+     cairia num março que já passou, sem ter pedido nada disso. */
+  await abrir(DOIS + "; abrirCartoes(); trocarMesDoBaralho(5);");
+  await p.evaluate(() => { voltarInicio(); abrirCartoes(); });
+  ok("sair e voltar devolve o baralho pro mês de hoje",
+    (await p.evaluate(() => _mesDoBaralho)) === await p.evaluate(() => _mesInicialDoBaralho()));
+
+  /* E ELE ABRE NO QUE ESTÁ VENCIDO, não no calendário: quem tem conta
+     atrasada quer ver a atrasada. É a mesma regra que cada cartão usava
+     sozinho, subida um nível. */
+  await abrir(`
+    lancamentos = []; contas = []; metas = []; fechamentos = [];
+    cartoes = [{ id:"k", nome:"Velho", banco:"nubank", dia_fechamento:1, dia_vencimento:10 }];
+    comprasCartao = [{ id:"c", cartao_id:"k", descricao:"Antiga", valor:500, parcelas:1,
+                       data:"2026-01-05", categoria:"Casa", recorrente:false, fim:null }];
+    pagamentosFatura = []; _cartaoPrincipal = null; abrirCartoes();`);
+  ok("o baralho abre na fatura mais antiga que ainda está em aberto",
+    (await p.evaluate(() => _mesDoBaralho)) ===
+    (await p.evaluate(() => _mesVisivelDaFatura(cartoes[0], _faturaAoAbrir(cartoes[0])))));
+  ok("que é a do mês seguinte à compra, porque o cartão fecha antes dela",
+    (await p.evaluate(() => _mesDoBaralho)) === "2026-02");
+
 });

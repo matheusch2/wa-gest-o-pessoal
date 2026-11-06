@@ -54,12 +54,22 @@ sair no mês — contas, fatura e metas. São assuntos diferentes que o
 português junta na mesma palavra, e foi por isso que a função do core
 deixou de se chamar `reservasDoMes` e virou `aindaVaiSairDoMes`.
 
-## Selar a versão
+## Subir a versão
 
-    node ferramentas/selar-versao.js
+    node ferramentas/subir-versao.js
 
-Copia o `VERSAO_APP` do `js/core.js` pro `versao.json`. **Rode isto toda
-vez que subir a versão**, antes de commitar.
+Incrementa o `VERSAO_APP` do `js/core.js` e sela o `versao.json` de uma
+vez. **É este que você roda** ao preparar uma entrega — junto com os
+`?v=N` dos arquivos que mudaram, no `index.html`.
+
+Ele existe porque eu já esqueci: num commit subi os `?v=N` e deixei o
+`VERSAO_APP` parado, e a tela de Ajustes passou a mostrar a versão
+anterior enquanto o código era o novo — exatamente a confusão que o
+`VERSAO_APP` existe pra evitar. Dois passos que sempre andam juntos viram
+um.
+
+O `ferramentas/selar-versao.js` só copia, sem incrementar: serve pra
+consertar um `versao.json` fora de sincronia.
 
 O app compara os dois pra descobrir que o `index.html` que o celular
 serviu é velho — o `?v=N` de cada arquivo mora dentro do index, e o index

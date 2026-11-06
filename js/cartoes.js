@@ -172,7 +172,11 @@ function _mesFaturaAberta(cartao) {
 
 const _ICO_CARTAO = `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="4" width="22" height="16" rx="3"/><line x1="1" y1="10" x2="23" y2="10"/><line x1="5" y1="15" x2="9" y2="15"/></svg>`;
 
-function abrirCartoes() { abrirTela(desenharCartoes); }
+/* O MÊS É RECALCULADO A CADA ABERTURA. Sem isto, quem foi ver março,
+   voltou pro menu e entrou de novo cairia em março — e no mês seguinte
+   cairia num março que já passou, sem ter pedido nada disso. O baralho
+   abre sempre no que importa hoje. */
+function abrirCartoes() { _mesDoBaralho = null; abrirTela(desenharCartoes); }
 
 /* O BARALHO.
    Com sete cartões, um embaixo do outro em tamanho inteiro, a tela vira
@@ -195,23 +199,65 @@ function abrirCartoes() { abrirTela(desenharCartoes); }
 
 let _cartaoPrincipal = null;
 
-// Tudo que a tela precisa saber de cada cartão, calculado uma vez só. A
-// fatura é a MESMA que abre ao tocar nele — lista e tela de dentro
-// falando de meses diferentes faz a pessoa desconfiar do número, com razão.
-function _filaDeCartoes() {
+/* ═══ O BARALHO INTEIRO NUM MÊS SÓ ════════════════════════════════════
+   A tela mostrava, de cada cartão, a fatura DELE — e cada cartão fecha
+   num dia diferente, então nove cartões podiam estar mostrando meses
+   diferentes ao mesmo tempo. Dava pra saber quanto cada um deve; não dava
+   pra responder "quanto eu pago em março?", que é a pergunta que faz
+   alguém com nove cartões abrir esta tela.
+
+   Agora o baralho inteiro anda junto. Um mês de cada vez, todos os
+   cartões naquele mês. */
+
+let _mesDoBaralho = null;
+
+/* ONDE O BARALHO ABRE. É a mesma regra que cada cartão usava sozinho,
+   subida um nível: a fatura mais antiga que ainda está em aberto, e só na
+   falta dela o mês corrente. Abrir no que está vencido é mais útil do que
+   abrir no calendário — quem tem conta atrasada quer ver a atrasada. */
+function _mesInicialDoBaralho() {
+  const hoje = mesDe(_hojeLocal());
+  let maisAntigo = null;
+  for (const c of cartoes) {
+    const visivel = _mesVisivelDaFatura(c, _faturaAoAbrir(c));
+    if (visivel >= hoje) continue;
+    if (_situacaoFatura(c, _faturaAoAbrir(c)).restante < 0.005) continue;
+    if (!maisAntigo || visivel < maisAntigo) maisAntigo = visivel;
+  }
+  return maisAntigo || hoje;
+}
+
+/* Tudo que a tela precisa saber de cada cartão NAQUELE MÊS, calculado uma
+   vez só. A fatura é a MESMA que abre ao tocar nele — lista e tela de
+   dentro falando de meses diferentes faz a pessoa desconfiar do número,
+   com razão.
+
+   'mes' é nulo quando aquele cartão não tem fatura no mês escolhido: o
+   Neon pulou novembro na mudança de ciclo, e um cartão novo não tem
+   fatura nos meses antes de existir. */
+function _filaDeCartoes(mesVisivel) {
+  const vazia = { pagamentos: [], total: 0, pago: 0, restante: 0, quitada: false, parcial: false };
   return cartoes.map(c => {
-    const mes = _faturaAoAbrir(c);
+    const mes = _mesInternoDaFatura(c, mesVisivel);
     return {
-      c, mes,
+      c, mes, mesVisivel,
       b: _banco(c.banco),
-      s: _situacaoFatura(c, mes),
-      venc: _vencimentoDaFatura(mes, c.dia_fechamento, c.dia_vencimento),
-      aberta: mes === _mesFaturaAberta(c),
+      s: mes ? _situacaoFatura(c, mes) : vazia,
+      venc: mes ? _vencimentoDaFatura(mes, c.dia_fechamento, c.dia_vencimento) : null,
+      aberta: mes !== null && mes === _mesFaturaAberta(c),
+      semFatura: mes === null || _situacaoFatura(c, mes).total < 0.005,
     };
   }).sort((x, y) =>
+    // Quem deve primeiro, depois quem tem fatura, depois por vencimento.
     (x.s.restante >= 0.005 ? 0 : 1) - (y.s.restante >= 0.005 ? 0 : 1) ||
-    x.venc.localeCompare(y.venc) ||
+    (x.semFatura ? 1 : 0) - (y.semFatura ? 1 : 0) ||
+    String(x.venc || "9").localeCompare(String(y.venc || "9")) ||
     x.c.nome.localeCompare(y.c.nome, "pt-BR"));
+}
+
+function trocarMesDoBaralho(passo) {
+  _mesDoBaralho = _somaMes(_mesDoBaralho || _mesInicialDoBaralho(), passo);
+  desenharCartoes();
 }
 
 /* Trocar o cartão da frente NÃO redesenha a tela. É de propósito: com
@@ -232,7 +278,9 @@ function escolherCartao(id) {
 function desenharCartoes() {
   destruirGrafico();
 
-  const fila = _filaDeCartoes();
+  if (!_mesDoBaralho) _mesDoBaralho = _mesInicialDoBaralho();
+  const mesVisivel = _mesDoBaralho;
+  const fila = _filaDeCartoes(mesVisivel);
 
   // O cartão da frente se perde quando ele é excluído ou quando a tela
   // abre pela primeira vez. Aí vale a ordem: o mais urgente.
@@ -240,7 +288,7 @@ function desenharCartoes() {
     _cartaoPrincipal = fila.length ? fila[0].c.id : null;
   }
 
-  const umCartao = ({ c, b, s, venc, mes, aberta }, i) => {
+  const umCartao = ({ c, b, s, venc, mes, aberta, semFatura }, i) => {
     const valor = s.quitada ? s.pago : s.parcial ? s.restante : s.total;
     return `
       <button class="cartao-card${c.id === _cartaoPrincipal ? " aberto" : ""}"
@@ -250,19 +298,22 @@ function desenharCartoes() {
           <span class="cartao-card-banco">${esc(b.nome)}</span>
           <!-- Só aparece com o cartão fechado: na tirinha, o nome do banco
                sozinho não diz o que a pessoa veio ver. -->
-          <span class="cartao-card-resumo">${s.quitada ? "paga" : moeda(valor)}</span>
+          <span class="cartao-card-resumo">${semFatura ? "—" : s.quitada ? "paga" : moeda(valor)}</span>
           ${_ICO_CARTAO}
         </div>
         <span class="cartao-card-nome">${esc(c.nome)}</span>
         <div class="cartao-card-baixo">
           <div>
-            <small>${s.parcial ? "Falta pagar" : aberta ? "Fatura atual" : "Fatura de " + soNomeDoMes(_mesVisivelDaFatura(c, mes))}</small>
-            <strong>${moeda(valor)}</strong>
+            <small>${semFatura
+              ? "Sem fatura neste mês"
+              : s.parcial ? "Falta pagar" : aberta ? "Fatura atual" : "Fatura"}</small>
+            <strong>${semFatura ? "—" : moeda(valor)}</strong>
           </div>
           <div class="cartao-card-venc">
-            ${s.quitada
-              ? `<span class="cartao-card-selo">${_ICO_CONFERE} Paga</span>`
-              : `<small>Vence</small><strong>${dataBR(venc)}</strong>`}
+            ${semFatura ? ""
+              : s.quitada
+                ? `<span class="cartao-card-selo">${_ICO_CONFERE} Paga</span>`
+                : `<small>Vence</small><strong>${dataBR(venc)}</strong>`}
           </div>
         </div>
       </button>`;
@@ -275,6 +326,23 @@ function desenharCartoes() {
      dinheiro do que dois números que não fecham na mesma tela. */
   const totalGeral = fila.reduce((soma, x) => soma + x.s.restante, 0);
   const devendo = fila.filter(x => x.s.restante >= 0.005).length;
+  const comFatura = fila.filter(x => !x.semFatura).length;
+  const ehMesCorrente = mesVisivel === mesDe(_hojeLocal());
+  const ehFuturo = mesVisivel > mesDe(_hojeLocal());
+
+  /* O QUE FICOU PRA TRÁS NÃO PODE SUMIR. O topo soma só o mês que está na
+     tela — tem que somar, senão não bate com os cartões embaixo. Mas uma
+     fatura vencida em outro mês continua existindo, e um app que a
+     esconde ao mudar de mês é pior do que um que nunca a mostrou. Então
+     ela aparece numa linha à parte, com o valor e o caminho. */
+  let atrasado = 0;
+  for (const c of cartoes) {
+    for (const m of _mesesComFatura(c)) {
+      if (_mesVisivelDaFatura(c, m) >= mesVisivel) continue;
+      if (_vencimentoDaFatura(m, c.dia_fechamento, c.dia_vencimento) >= _hojeLocal()) continue;
+      atrasado = _centavos(atrasado + _situacaoFatura(c, m).restante);
+    }
+  }
 
   document.getElementById("area").innerHTML = `
     <section class="lancamento-tela" style="--cor-tipo:var(--marca-txt)">
@@ -285,17 +353,36 @@ function desenharCartoes() {
       </div>
     </section>
 
+    ${cartoes.length ? `
+      <div class="bloco" style="padding:11px">
+        <div class="bloco-topo" style="margin:0">
+          <button class="pilula" onclick="trocarMesDoBaralho(-1)" aria-label="Mês anterior">‹</button>
+          <strong style="font-size:14.5px">${mesPorExtenso(mesVisivel)}</strong>
+          <button class="pilula" onclick="trocarMesDoBaralho(1)" aria-label="Próximo mês">›</button>
+        </div>
+      </div>` : ""}
+
     <div class="contas-total">
       <!-- "em aberto" = não pago, que é o que o número diz. "Abertas" dava
            a entender a fatura que ainda está juntando compras, e agora nem
-           sempre é dela que se trata. -->
-      <span>Total em aberto</span>
+           sempre é dela que se trata.
+
+           Em mês futuro nada foi pago ainda, então "em aberto" não
+           acrescenta nada: ali a pergunta é "quanto vou pagar". -->
+      <span>${ehMesCorrente || !comFatura ? "Total em aberto" : "Total de " + soNomeDoMes(mesVisivel)}</span>
       <strong>${moeda(totalGeral)}</strong>
       <small>${!fila.length
         ? "Nenhum cartão ainda"
-        : devendo
-          ? `${devendo} de ${fila.length} ${fila.length > 1 ? "faturas em aberto" : "fatura em aberto"}`
-          : `${fila.length} ${fila.length > 1 ? "cartões, tudo pago" : "cartão, tudo pago"}`}</small>
+        : !comFatura
+          ? `Nenhuma fatura em ${soNomeDoMes(mesVisivel)}`
+          : ehFuturo
+            ? `${comFatura} ${comFatura > 1 ? "faturas" : "fatura"} neste mês`
+            : devendo
+              ? `${devendo} de ${comFatura} ${comFatura > 1 ? "faturas em aberto" : "fatura em aberto"}`
+              : `${comFatura} ${comFatura > 1 ? "faturas pagas" : "fatura paga"}`}</small>
+      ${atrasado >= 0.005
+        ? `<small class="alerta">Mais ${moeda(atrasado)} vencidos em meses anteriores</small>`
+        : ""}
     </div>
 
     <button class="botao" onclick="abrirNovoCartao()">
@@ -414,10 +501,15 @@ async function salvarCartao(botao) {
 // Mês visível na tela; o Neon usa o mês real da fatura do banco.
 let _faturaMes = null;
 
+/* ABRE NO MÊS QUE O BARALHO ESTAVA MOSTRANDO. Tocar num cartão que diz
+   "fatura de março, R$ 400" e cair em novembro seria a tela se
+   contradizendo no mesmo toque. Só quando se chega aqui por fora do
+   baralho (o baralho nunca foi aberto) vale a regra antiga: a fatura mais
+   antiga em aberto daquele cartão. */
 function abrirCartao(id) {
   const c = cartoes.find(x => x.id === id);
   if (!c) { erro("Cartão não encontrado."); return; }
-  _faturaMes = _mesVisivelDaFatura(c, _faturaAoAbrir(c));
+  _faturaMes = _mesDoBaralho || _mesVisivelDaFatura(c, _faturaAoAbrir(c));
   abrirTela(() => desenharCartao(id));
 }
 
