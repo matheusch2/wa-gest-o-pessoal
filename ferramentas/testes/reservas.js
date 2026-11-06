@@ -60,12 +60,12 @@ module.exports = () => suite("Reservas e investimentos", async ({ p, ok, abrir, 
   /* ─── OS DOIS BOTÕES NOVOS ───────────────────────────────────────── */
   await abrir(BASE + "; voltarInicio();");
   const nomes = (await p.locator("#menu .menu-botao").allTextContents()).map(t => t.trim());
-  ok("o menu tem nove botões", nomes.length === 9);
+  ok("o menu tem dez botões", nomes.length === 10);
   ok("um deles é 'Reservas'", nomes.includes("Reservas"));
   ok("outro é 'Investimentos'", nomes.includes("Investimentos"));
   ok("e o resto continua lá",
     ["Resumo do mês", "Lançar", "Contas a pagar", "Histórico", "Cartão",
-     "Metas de gastos", "Relatórios"].every(n => nomes.includes(n)));
+     "Metas de gastos", "Relatórios", "Meu negócio"].every(n => nomes.includes(n)));
 
   await p.click("#menu .menu-botao:has-text('Investimentos')");
   ok("Investimentos abre e se declara em construção",
@@ -73,6 +73,18 @@ module.exports = () => suite("Reservas e investimentos", async ({ p, ok, abrir, 
     (await texto("h2")).includes("Investimentos"));
   ok("e aponta pras Reservas, que já funcionam",
     (await texto(".em-breve-txt")).includes("Reservas"));
+
+  await p.evaluate(() => voltarInicio());
+  await p.click("#menu .menu-botao:has-text('Meu negócio')");
+  ok("Meu negócio também abre, em construção",
+    (await p.locator(".em-breve-selo").count()) === 1 &&
+    (await texto("h2")).includes("Meu negócio"));
+  // A decisão que vai moldar a tela inteira já está escrita nela: o que
+  // entra na conta da pessoa é a RETIRADA, não o faturamento do negócio.
+  // Misturar os dois inflaria a sobra pessoal com dinheiro que não é de
+  // gastar, e é mais barato acertar isso antes de existir dado.
+  ok("e já diz onde passa a linha entre negócio e pessoa",
+    (await texto(".em-breve-txt")).includes("retirada"));
 
   /* ─── A TABELA QUE FALTA NÃO DERRUBA O APP ───────────────────────────
      Estrago de verdade, e grave: as Reservas trouxeram duas tabelas
