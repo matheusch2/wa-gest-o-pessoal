@@ -48,20 +48,28 @@ module.exports = () => suite("Relatórios", async ({ p, ok, abrir, texto, valor,
      20 nem a fatura do cartão — e num mês correndo, "sobrou" faz ler como
      dinheiro livre. O número do "quanto posso gastar" é o do Resumo. */
   await abrir(CENARIO + `; mesAtual = mesDe(_hojeLocal()); abrirRelatorios();`);
-  ok("mês que ainda está correndo diz 'Até agora'",
-    /Até agora/.test(await texto(".fatura-resumo")));
+  ok("mês correndo diz o que o número É: o que resta da renda",
+    /Resta da renda/.test(await texto(".fatura-resumo")));
   ok("e não promete que sobrou", !/Sobrou|Faltou/.test(await texto(".fatura-resumo")));
+  // "Até agora" dizia QUANDO e não dizia O QUÊ — o dono do app olhou a
+  // tela e perguntou qual era o indicador. Rótulo que não se explica
+  // sozinho não serve numa tela de dinheiro.
+  ok("e não volta pro rótulo que não explicava nada",
+    !/Até agora/.test(await texto(".fatura-resumo")));
 
-  // Correndo, o valor leva sinal: "Até agora R$ 500" escondendo um saldo
-  // negativo seria a mesma mentira com outro nome.
+  // Gastando mais do que entrou, a PALAVRA carrega o sinal e o valor vai
+  // positivo: "Passou da renda R$ 500" se lê de primeira.
   await abrir(`
     lancamentos = [{ id:"s", tipo:"saida", valor:500, data:_hojeLocal(),
                      categoria:"Mercado", descricao:"Feira" }];
     comprasCartao = []; cartoes = []; contas = []; metas = [];
     pagamentosFatura = []; fechamentos = []; entradasFixas = [];
     mesAtual = mesDe(_hojeLocal()); abrirRelatorios();`);
-  ok("saldo negativo aparece com o sinal",
-    /−R\$ 500,00/.test(await texto(".fatura-resumo")));
+  ok("estourar a renda é dito com palavra, não com sinal de menos",
+    /Passou da renda/.test(await texto(".fatura-resumo")));
+  ok("e o valor vai positivo, porque a palavra já diz o sentido",
+    /R\$ 500,00/.test(await texto(".fatura-resumo")) &&
+    !/−/.test(await texto(".fatura-resumo")));
   ok("e a caixa fica vermelha",
     (await p.locator(".fatura-resumo .destaque-ruim").count()) === 1);
 

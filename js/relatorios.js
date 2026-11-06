@@ -439,9 +439,27 @@ function _corrido(mesRef) {
   return mesRef >= mesDe(_hojeLocal());
 }
 
+/* O RÓTULO DESTA CAIXA JÁ TROCOU DUAS VEZES, e as duas por bom motivo.
+
+   Era "Sobrou". Num mês ainda correndo isso lê como dinheiro livre, e
+   não é: a caixa é entrou menos custou, e ela não desconta a conta que
+   vence dia 20 nem a fatura do cartão. O número do "quanto posso gastar"
+   é o do Resumo, não este.
+
+   Virou "Até agora", que não promete nada — e aí foi longe demais: o
+   dono do app olhou e perguntou "qual é esse indicador?". "Até agora" diz
+   QUANDO, mas não diz O QUÊ. Se quem conhece cada número do app não sabe
+   o que ele é, ninguém sabe.
+
+   Agora diz a conta: o que RESTA DA RENDA que entrou. Nomeia o número
+   sem prometer que ele está livre, e fecha de olho com a caixa do lado
+   ("Entrou") e com o número grande lá em cima ("O mês custou"). */
 function _rotuloDaSobra(mesRef, sobrou) {
-  if (_corrido(mesRef)) return "Até agora";
-  return sobrou >= 0 ? "Sobrou" : "Faltou";
+  if (!_corrido(mesRef)) return sobrou >= 0 ? "Sobrou" : "Faltou";
+  // No mês correndo a PALAVRA carrega o sinal, e o valor vai positivo:
+  // "Passou da renda R$ 500" se lê de primeira, "Resta da renda −R$ 500"
+  // obriga a pessoa a interpretar um menos pra entender que é o oposto.
+  return sobrou >= 0 ? "Resta da renda" : "Passou da renda";
 }
 
 const _ICO_BARRAS = `<svg viewBox="0 0 24 24" aria-hidden="true"><line x1="4" y1="20" x2="4" y2="10"/><line x1="10" y1="20" x2="10" y2="4"/><line x1="16" y1="20" x2="16" y2="13"/><line x1="22" y1="20" x2="22" y2="7"/></svg>`;
@@ -590,9 +608,7 @@ function desenharRelatorios() {
       <div><small>Entrou</small><strong>${moeda(r.entrou)}</strong></div>
       <div class="${r.vazio ? "" : r.sobrou >= 0 ? "destaque" : "destaque-ruim"}">
         <small>${_rotuloDaSobra(mesAtual, r.sobrou)}</small>
-        <strong>${_corrido(mesAtual) && r.sobrou < 0
-          ? "−" + moeda(-r.sobrou)
-          : moeda(Math.abs(r.sobrou))}</strong>
+        <strong>${moeda(Math.abs(r.sobrou))}</strong>
       </div>
     </div>
 
