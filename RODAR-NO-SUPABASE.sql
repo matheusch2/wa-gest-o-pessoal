@@ -1,4 +1,4 @@
--- WA FINANÇAS — atualização do banco para as Reservas.
+-- WA FINANÇAS — atualização do banco (Reservas e Meu negócio).
 -- Cole TUDO isto no Supabase: Project → SQL Editor → New query → Run.
 -- Tudo aqui é "if not exists": rodar duas vezes não estraga nada.
 -- ═══ RESERVAS ═════════════════════════════════════════════════════════
@@ -110,3 +110,96 @@ create policy "cada um guarda só nas próprias reservas"
   on movimentos_reserva for insert with check (auth.uid() = user_id);
 create policy "cada um desfaz só os próprios movimentos de reserva"
   on movimentos_reserva for delete using (auth.uid() = user_id);
+
+-- ═══ MEU NEGÓCIO ══════════════════════════════════════════════════════
+-- O NEGÓCIO É OUTRO BOLSO. O que ele fatura não é renda de quem o toca:
+-- renda dela é a RETIRADA, o que sai do negócio e cai na conta pessoal.
+--
+-- Isto não é um sistema de gestão do negócio — é a interface dele com o
+-- seu dinheiro. Viveiro, agendamento, estoque e nota fiscal não entram
+-- aqui: aqui entram os quatro números que todo negócio pequeno tem, do
+-- barbeiro ao produtor rural.
+--
+-- 'tipo' escolhe o modelo do ramo. Ele só semeia as categorias e troca as
+-- palavras da tela — a estrutura é a mesma pra todos, e é isso que faz
+-- um cliente novo não custar uma linha de código.
+--
+-- 'unidade' é opcional e é o que destrava o ticket médio: "serviço",
+-- "galão", "corte", "kg". Sem ela o negócio funciona igual.
+create table if not exists negocios (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid not null references auth.users(id) on delete cascade,
+  nome       text not null,
+  tipo       text not null default 'servico',
+  unidade    text,
+  created_at timestamptz not null default now()
+);
+
+create unique index if not exists negocios_user_nome_key on negocios (user_id, nome);
+
+alter table negocios enable row level security;
+
+create policy "cada um vê só os próprios negócios"
+  on negocios for select using (auth.uid() = user_id);
+create policy "cada um cria só os próprios negócios"
+  on negocios for insert with check (auth.uid() = user_id);
+create policy "cada um muda só os próprios negócios"
+  on negocios for update using (auth.uid() = user_id);
+create policy "cada um apaga só os próprios negócios"
+  on negocios for delete using (auth.uid() = user_id);
+
+-- ═══ MOVIMENTOS DO NEGÓCIO ════════════════════════════════════════════
+-- Os três movimentos que qualquer negócio tem:
+--
+--   faturamento  o que o negócio recebeu       NÃO toca o extrato pessoal
+--   custo        o que ele gastou pra receber  NÃO toca o extrato pessoal
+--   retirada     o que saiu dele pra você      VIRA ENTRADA no extrato
+--
+-- Os dois primeiros ficam dentro do negócio de propósito. Se virassem
+-- lançamento pessoal, a sobra do Resumo seria inflada por dinheiro que
+-- não é de gastar — e o relatório diria que a pessoa ganhou o que a
+-- empresa faturou. Quem fatura R$ 20.000 e tem R$ 14.000 de custo não
+-- ganhou R$ 20.000; ganhou o que tirou.
+--
+-- A retirada é o contrário: ela É renda pessoal, e por isso cria o
+-- lançamento e conta normalmente no Resumo e nos Relatórios, sem
+-- nenhuma exceção. É a única porta entre os dois bolsos, e ela tem que
+-- ser estreita e visível.
+create table if not exists movimentos_negocio (
+  id            uuid primary key default gen_random_uuid(),
+  user_id       uuid not null references auth.users(id) on delete cascade,
+  negocio_id    uuid not null references negocios(id) on delete cascade,
+  tipo          text not null check (tipo in ('faturamento', 'custo', 'retirada')),
+  valor         numeric(12,2) not null check (valor > 0),
+  data          date not null,
+  categoria     text,
+  descricao     text,
+
+  -- Quantas unidades esta linha representa: 8 serviços, 40 galões, 12
+  -- cortes. Opcional, e é ela que permite dizer o ticket médio.
+  quantidade    numeric(12,2) check (quantidade > 0),
+
+  -- Preenchido SÓ na retirada, que é a única que nasce com um lançamento
+  -- do lado de fora. Apagado pelo Histórico, aqui vira nulo e a retirada
+  -- continua valendo: ela saiu do negócio de qualquer jeito.
+  lancamento_id uuid references lancamentos(id) on delete set null,
+
+  chave_envio   text not null,
+  created_at    timestamptz not null default now()
+);
+
+create unique index if not exists movimentos_negocio_chave_envio_key
+  on movimentos_negocio (chave_envio);
+create index if not exists movimentos_negocio_negocio_data_idx
+  on movimentos_negocio (negocio_id, data);
+
+alter table movimentos_negocio enable row level security;
+
+create policy "cada um vê só os próprios movimentos de negócio"
+  on movimentos_negocio for select using (auth.uid() = user_id);
+create policy "cada um lança só nos próprios negócios"
+  on movimentos_negocio for insert with check (auth.uid() = user_id);
+create policy "cada um muda só os próprios movimentos de negócio"
+  on movimentos_negocio for update using (auth.uid() = user_id);
+create policy "cada um apaga só os próprios movimentos de negócio"
+  on movimentos_negocio for delete using (auth.uid() = user_id);

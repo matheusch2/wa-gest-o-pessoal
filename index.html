@@ -84,7 +84,7 @@
   <link rel="preconnect" href="https://efewoxdgfcgkodtqbqsz.supabase.co" crossorigin>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 
-  <link rel="stylesheet" href="style.css?v=70">
+  <link rel="stylesheet" href="style.css?v=71">
 
   <!-- defer: baixa em paralelo e só executa depois da página montada, em
        ordem. Sem ele, cada script trava a leitura do HTML no meio.
@@ -221,12 +221,14 @@
                        fechamento.js, de quem ele toma as contas emprestadas
          reservas.js   dinheiro guardado fora da conta — depois de
                        relatorios.js, de quem ele toma o gasto médio do mês
+         negocio.js    o negócio e os quatro números dele; só a retirada
+                       atravessa pro dinheiro pessoal
          embreve.js    telas ainda por construir
          app.js        a partida: sessão, erros de carga, relógio
 
        O ?v=N no fim de cada um existe pra o celular não servir a versão
        velha do cache. Mexeu no arquivo, sobe o número. -->
-  <script defer src="js/core.js?v=44"></script>
+  <script defer src="js/core.js?v=45"></script>
   <script defer src="js/categorias.js?v=2"></script>
   <script defer src="js/auth.js?v=2"></script>
   <script defer src="js/resumo.js?v=17"></script>
@@ -240,7 +242,8 @@
   <script defer src="js/fechamento.js?v=4"></script>
   <script defer src="js/relatorios.js?v=13"></script>
   <script defer src="js/reservas.js?v=3"></script>
-  <script defer src="js/embreve.js?v=7"></script>
+  <script defer src="js/negocio.js?v=1"></script>
+  <script defer src="js/embreve.js?v=8"></script>
   <script defer src="js/app.js?v=6"></script>
 </body>
 </html>

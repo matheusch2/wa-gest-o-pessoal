@@ -62,6 +62,12 @@ document.addEventListener("DOMContentLoaded", () => {
     { id:"mr2", reserva_id:"r1", tipo:"guardar", valor:500, data:"2026-08-30", lancamento_id:"g2" },
     { id:"mr3", reserva_id:"r2", tipo:"guardar", valor:300, data:"2026-09-02", lancamento_id:"g3" },
   ];
+  negocios = [{ id:"n1", nome:"WA Aqua", tipo:"servico", unidade:"serviço" }];
+  movimentosNegocio = [
+    { id:"mn1", negocio_id:"n1", tipo:"faturamento", valor:4200, data:"2026-09-08", categoria:"Mensalidade", descricao:"Mensalidades", quantidade:6 },
+    { id:"mn2", negocio_id:"n1", tipo:"custo", valor:380, data:"2026-09-09", categoria:"Ferramentas e sistemas", descricao:"Hospedagem" },
+    { id:"mn3", negocio_id:"n1", tipo:"retirada", valor:2500, data:"2026-09-10", descricao:"Pró-labore", lancamento_id:"ret1" },
+  ];
   document.getElementById("area-login").remove();
   document.getElementById("menu").style.display = "grid";
   window.__pronto = true;

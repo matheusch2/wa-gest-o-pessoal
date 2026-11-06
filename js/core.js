@@ -9,7 +9,7 @@
    index.html. Serve pra uma pergunta que já custou tempo: "o defeito que
    você está vendo é do código de agora, ou o celular ainda está com o
    app velho em cache?" — sem isso, a resposta é chute. */
-const VERSAO_APP = "2026-11-06 · 42";
+const VERSAO_APP = "2026-11-06 · 43";
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -25,6 +25,8 @@ let fechamentos = [];
 let entradasFixas = [];
 let reservas = [];
 let movimentosReserva = [];
+let negocios = [];
+let movimentosNegocio = [];
 let mesAtual = "";   // "2026-08" — mês que o Resumo e o Histórico estão mostrando
 let grafico = null;
 
@@ -239,6 +241,8 @@ async function carregarTudo(jaPediuCrachaNovo) {
     ["entradas_fixas",     sb.from("entradas_fixas").select("*").order("dia", { ascending: true })],
     ["reservas",           sb.from("reservas").select("*").order("nome", { ascending: true })],
     ["movimentos_reserva", sb.from("movimentos_reserva").select("*").order("data", { ascending: false })],
+    ["negocios",           sb.from("negocios").select("*").order("nome", { ascending: true })],
+    ["movimentos_negocio", sb.from("movimentos_negocio").select("*").order("data", { ascending: false })],
   ];
 
   const respostas = await Promise.all(pedidos.map(([, q]) => _comPrazo(q)));
@@ -295,6 +299,8 @@ async function carregarTudo(jaPediuCrachaNovo) {
   entradasFixas    = dados("entradas_fixas");
   reservas         = dados("reservas");
   movimentosReserva = dados("movimentos_reserva");
+  negocios          = dados("negocios");
+  movimentosNegocio = dados("movimentos_negocio");
 
   // Primeira vez: semeia as categorias para a pessoa não começar do zero.
   // Com a tabela faltando não há onde semear, e insistir só daria outro

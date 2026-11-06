@@ -2308,3 +2308,33 @@ body.escuro .resumo-secao .item-icone.entrada { background: #17372d; }
 /* Editar e excluir ficam no pé da tela da reserva, não no alto: o alto é
    do saldo, e o saldo é o motivo de alguém abrir esta tela. */
 .reserva-rodape { display: flex; justify-content: center; gap: 8px; margin: 4px 0 0; }
+
+/* ─── 27. MEU NEGÓCIO ────────────────────────────────────────────────────
+   Quatro números e uma regra: só a retirada atravessa pro dinheiro
+   pessoal. O desenho segue o das outras telas de propósito — o que é
+   novo aqui é a separação, não o visual. */
+
+/* Entrou e saiu dividem a linha: são o par do dia a dia, e empilhados
+   ocupariam a altura de duas decisões pra uma só. */
+.negocio-botoes { display: flex; gap: 10px; margin: 0 0 12px; }
+.negocio-botoes .botao { margin-top: 0; }
+
+/* A retirada fica em bloco separado porque ela é de outra natureza: é a
+   única que sai do negócio e entra na sua conta. No meio das outras
+   duas, pareceria mais um lançamento do negócio. */
+.negocio-retirada .bloco-topo strong {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--marca-txt);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Mês em que o negócio deu prejuízo: o mesmo lugar, o aviso trocado de
+   cor. Mesma solução do fechamento de mês no vermelho. */
+.contas-total.ruim { background: linear-gradient(115deg, #7a2531, #a3323f); }
+
+/* A lista de custos reaproveita o desenho das categorias do relatório,
+   MENOS a grade: lá são quatro colunas porque existe uma bolinha de cor
+   por categoria, e aqui não existe. Sem esta linha, o nome caía na coluna
+   da bolinha e "Ferramentas e sistemas" aparecia como "F". */
+.negocio-custos .rel-cat { grid-template-columns: minmax(0, 1fr) auto auto; }

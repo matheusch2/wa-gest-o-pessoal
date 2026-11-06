@@ -8,8 +8,8 @@
  * e ela some daqui.
  *
  * Cartão, Metas de gastos e Relatórios já saíram: viraram js/cartoes.js,
- * js/metas.js e js/relatorios.js. Faltam Meu plano (em Ajustes),
- * Investimentos e Meu negócio (os dois no menu).
+ * js/metas.js e js/relatorios.js. Meu negócio acabou de sair também:
+ * virou js/negocio.js. Faltam Meu plano (em Ajustes) e Investimentos.
  */
 
 function _telaEmBreve(caption, titulo, icone, texto) {
@@ -61,30 +61,4 @@ function abrirInvestimentos() {
      tem guardado na reserva.<br><br>
      Enquanto isso, use as <b>Reservas</b>: elas já contam o dinheiro que
      está fora da conta corrente sem chamá-lo de gasto.`));
-}
-
-const _ICO_LOJA = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9.5 4.6 4.6A1 1 0 0 1 5.5 4h13a1 1 0 0 1 .9.6L21 9.5"/><path d="M3 9.5h18"/><path d="M4.5 9.5V20h15V9.5"/><path d="M9.5 20v-5.5h5V20"/></svg>`;
-
-/* MEU NEGÓCIO: O WA AQUA DENTRO DAS FINANÇAS PESSOAIS.
-   Botão antes de tela, e aqui o motivo é outro — não falta dado de fora,
-   falta decidir uma coisa que muda tudo o que vem depois: onde passa a
-   linha entre o dinheiro do negócio e o dinheiro da pessoa.
-
-   É a decisão que não dá pra adiar pro meio do caminho. Faturamento do
-   negócio entrando como "entrada" no Resumo quebraria as duas contas de
-   uma vez: a sobra pessoal ficaria inflada por dinheiro que não é de
-   gastar, e os Relatórios diriam que a pessoa ganhou o que a empresa
-   faturou. O que é renda pessoal é a RETIRADA — o que sai do negócio e
-   entra na conta dela.
-
-   Por isso o botão abre com a pergunta escrita em vez de uma tela meia
-   pronta: o lugar de errar isso é antes de existir dado, não depois. */
-function abrirMeuNegocio() {
-  abrirTela(() => _telaEmBreve("WA Aqua", "Meu negócio", _ICO_LOJA,
-    `Aqui vai ficar a gestão do <b>WA Aqua</b> dentro das suas finanças —
-     o que o negócio fatura, o que ele custa e o que sobra dele, separado
-     do seu dinheiro pessoal.<br><br>
-     Separado de propósito: o que entra na sua conta é a <b>retirada</b>,
-     não o faturamento. Misturar os dois inflaria a sua sobra com dinheiro
-     que não é de gastar.`));
 }

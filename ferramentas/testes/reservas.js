@@ -74,17 +74,6 @@ module.exports = () => suite("Reservas e investimentos", async ({ p, ok, abrir, 
   ok("e aponta pras Reservas, que já funcionam",
     (await texto(".em-breve-txt")).includes("Reservas"));
 
-  await p.evaluate(() => voltarInicio());
-  await p.click("#menu .menu-botao:has-text('Meu negócio')");
-  ok("Meu negócio também abre, em construção",
-    (await p.locator(".em-breve-selo").count()) === 1 &&
-    (await texto("h2")).includes("Meu negócio"));
-  // A decisão que vai moldar a tela inteira já está escrita nela: o que
-  // entra na conta da pessoa é a RETIRADA, não o faturamento do negócio.
-  // Misturar os dois inflaria a sobra pessoal com dinheiro que não é de
-  // gastar, e é mais barato acertar isso antes de existir dado.
-  ok("e já diz onde passa a linha entre negócio e pessoa",
-    (await texto(".em-breve-txt")).includes("retirada"));
 
   /* ─── A TABELA QUE FALTA NÃO DERRUBA O APP ───────────────────────────
      Estrago de verdade, e grave: as Reservas trouxeram duas tabelas
