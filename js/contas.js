@@ -112,7 +112,7 @@ function _agruparCarnes(lista) {
       // A que vence primeiro entre as não pagas é a que representa o carnê
       // na lista — é a próxima que a pessoa vai ter na mão.
       proxima: abertas[0] || null,
-      falta: abertas.reduce((s, x) => s + Number(x.valor), 0),
+      falta: abertas.reduce((s, x) => s + faltaDaConta(x), 0),
       pagas: g.parcelas.length - abertas.length,
     });
   });
@@ -173,22 +173,28 @@ function desenharContas() {
 
   const linha = (c) => {
     const dias = Math.round((_parseDataLocal(c.vencimento) - _parseDataLocal(hoje)) / 86400000);
+    const parcial = contaParcial(c);
     const estado = c.pago ? "paga" : dias < 0 ? "vencida" : dias <= 5 ? "vencendo" : "";
     const quando = c.pago ? "Paga em " + dataBR(c.pago_em || c.vencimento)
                  : dias < 0 ? `Venceu há ${Math.abs(dias)} dia${Math.abs(dias) > 1 ? "s" : ""}`
                  : dias === 0 ? "Vence hoje"
                  : `Vence em ${dias} dia${dias > 1 ? "s" : ""}`;
+    /* PAGA PELA METADE MOSTRA O QUE FALTA, com o já pago do lado. O
+       valor cheio sozinho esconderia que parte já saiu; o que falta
+       sozinho esconderia o tamanho da conta. */
     return `
-      <div class="conta-item ${estado}" id="conta-${c.id}">
-        <div class="conta-ico">${c.pago ? "✓" : c.recorrente ? "🔁" : "📄"}</div>
+      <div class="conta-item ${estado}${parcial ? " parcial" : ""}" id="conta-${c.id}">
+        <div class="conta-ico">${c.pago ? "✓" : parcial ? "◐" : c.recorrente ? "🔁" : "📄"}</div>
         <div class="conta-nome">${esc(c.nome)}</div>
-        <div class="conta-valor">${moeda(c.valor)}</div>
+        <div class="conta-valor">${moeda(parcial ? faltaDaConta(c) : c.valor)}</div>
         <div class="conta-prazo">
           <span class="conta-chip ${estado}">${quando}</span>
-          ${c.categoria ? `<span class="conta-cat">${esc(c.categoria)}</span>` : ""}
+          ${parcial
+            ? `<span class="conta-cat parcial">${moeda(c.valor_pago)} de ${moeda(c.valor)} pagos</span>`
+            : c.categoria ? `<span class="conta-cat">${esc(c.categoria)}</span>` : ""}
         </div>
         <div class="conta-acao">
-          ${c.pago ? "" : `<button class="botao-pagar" onclick="pagarConta(this, '${c.id}')">Pagar</button>`}
+          ${c.pago ? "" : `<button class="botao-pagar" onclick="abrirPagarConta('${c.id}')">${parcial ? "Pagar o resto" : "Pagar"}</button>`}
           <!-- O × vale pra conta paga E pra conta em aberto. Antes só a
                paga tinha: quem cadastrasse uma conta errada precisava
                PAGAR a conta errada pra depois poder apagá-la. -->
@@ -316,19 +322,23 @@ function desenharCarne(base) {
 
   const linhas = g.parcelas.map(c => {
     const dias = Math.round((_parseDataLocal(c.vencimento) - _parseDataLocal(hoje)) / 86400000);
+    const parcial = contaParcial(c);
     const estado = c.pago ? "paga" : dias < 0 ? "vencida" : dias <= 5 ? "vencendo" : "";
     const quando = c.pago ? "Paga em " + dataBR(c.pago_em || c.vencimento)
                  : dias < 0 ? `Venceu há ${Math.abs(dias)} dia${Math.abs(dias) > 1 ? "s" : ""}`
                  : dias === 0 ? "Vence hoje"
                  : `Vence ${dataBR(c.vencimento)}`;
     return `
-      <div class="conta-item ${estado}" id="conta-${c.id}">
-        <div class="conta-ico">${c.pago ? "✓" : "📄"}</div>
+      <div class="conta-item ${estado}${parcial ? " parcial" : ""}" id="conta-${c.id}">
+        <div class="conta-ico">${c.pago ? "✓" : parcial ? "◐" : "📄"}</div>
         <div class="conta-nome">Boleto <span class="carne-pilula">${c.i}/${g.n}</span></div>
-        <div class="conta-valor">${moeda(c.valor)}</div>
-        <div class="conta-prazo"><span class="conta-chip ${estado}">${quando}</span></div>
+        <div class="conta-valor">${moeda(parcial ? faltaDaConta(c) : c.valor)}</div>
+        <div class="conta-prazo">
+          <span class="conta-chip ${estado}">${quando}</span>
+          ${parcial ? `<span class="conta-cat parcial">${moeda(c.valor_pago)} pagos</span>` : ""}
+        </div>
         <div class="conta-acao">
-          ${c.pago ? "" : `<button class="botao-pagar" onclick="pagarConta(this, '${c.id}')">Pagar</button>`}
+          ${c.pago ? "" : `<button class="botao-pagar" onclick="abrirPagarConta('${c.id}')">${parcial ? "Pagar o resto" : "Pagar"}</button>`}
           <button class="item-x" onclick="pedirExcluirConta('${c.id}')" aria-label="Excluir">×</button>
         </div>
       </div>`;
@@ -686,29 +696,128 @@ async function salvarConta(botao, chave) {
   voltarTela();
 }
 
-async function pagarConta(botao, id) {
+/* ═══ PAGAR NEM SEMPRE É PAGAR O VALOR DA CONTA ═══════════════════════
+   O botão "Pagar" quitava pelo valor cadastrado, sempre. Isso cobre o
+   caso comum e erra nos três que mais acontecem com boleto:
+
+     ATRASADO   veio juros: a conta pedia 600, você pagou 640
+     ADIANTADO  veio desconto: pagou 580
+     NEGOCIADO  pagou parte, ficou devendo o resto
+
+   Nos dois primeiros o extrato ficava errado — o lançamento saía com o
+   valor do boleto, não com o que de fato saiu da conta, e aí o Resumo
+   deixava de bater com o banco. No terceiro não havia como registrar.
+
+   Agora o toque abre uma tela com o valor já preenchido com o que falta.
+   Quem vai pagar o valor cheio confirma e pronto: um toque a mais que
+   antes, e é o preço de os outros três casos existirem. */
+
+function abrirPagarConta(id) {
+  const c = contas.find(x => x.id === id);
+  if (!c) { erro("Conta não encontrada."); return; }
+  abrirTela(() => _desenharPagarConta(id));
+}
+
+function _desenharPagarConta(id) {
+  destruirGrafico();
+  const c = contas.find(x => x.id === id);
+  if (!c) { voltarTela(); return; }
+
+  const falta = faltaDaConta(c);
+  const jaPago = Number(c.valor_pago || 0);
+  const icoData = `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`;
+  const icoBoleto = `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="7" y1="8" x2="17" y2="8"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="7" y1="16" x2="13" y2="16"/></svg>`;
+
+  document.getElementById("area").innerHTML = `
+    <section class="lancamento-tela" style="--cor-tipo:var(--marca-txt)">
+    <div class="lancamento-cabecalho">
+      <span class="lancamento-cabecalho-icone">${icoBoleto}</span>
+      <span class="lancamento-caption">${esc(c.nome)}</span>
+      <h2>Pagar</h2>
+    </div>
+
+    <div class="fatura-resumo">
+      <div><small>A conta pede</small><strong>${moeda(c.valor)}</strong></div>
+      ${jaPago >= 0.005
+        ? `<div><small>Já pago</small><strong>${moeda(jaPago)}</strong></div>
+           <div class="destaque"><small>Falta</small><strong>${moeda(falta)}</strong></div>`
+        : ""}
+    </div>
+
+    <div class="lancamento-form">
+      <div class="campo">
+        <label for="pc-valor">Quanto você pagou</label>
+        <div class="lancamento-valor">
+          <span>R$</span>
+          <input type="text" inputmode="decimal" id="pc-valor" autocomplete="off"
+                 value="${falta.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}">
+        </div>
+      </div>
+
+      <div class="campo lancamento-campo-data" style="margin-bottom:0">
+        <div class="campo-label">${icoData}<label for="pc-data">Quando</label></div>
+        <input type="date" id="pc-data" value="${_hojeLocal()}">
+      </div>
+
+      <!-- O VALOR VEM PREENCHIDO COM O QUE FALTA, que é o caso comum:
+           quem vai pagar o boleto inteiro só confirma. Mexer nele é pros
+           outros três casos, e a dica diz quais são — sem ela, ninguém
+           descobre que dá pra mudar. -->
+      <p class="cartao-dica">
+        Já vem com o valor que falta. Mude se pagou <b>a mais</b> (juros por
+        atraso), <b>a menos</b> (desconto) ou só <b>uma parte</b> — o que
+        sobrar continua devendo.
+      </p>
+    </div>
+
+    <button class="botao" onclick="salvarPagamentoDaConta(this, '${id}')">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+      Confirmar pagamento
+    </button>
+    <button class="botao-fraco lancamento-voltar" onclick="voltarTela()">Voltar</button>
+    </section>`;
+}
+
+async function salvarPagamentoDaConta(botao, id) {
   if (botao?.disabled) return;
   const c = contas.find(x => x.id === id);
-  if (!c) return;
+  if (!c) { erro("Conta não encontrada."); return; }
+
+  const valor = parseMoedaBR(document.getElementById("pc-valor").value);
+  const data = document.getElementById("pc-data").value;
+  if (valor === null || valor <= 0) { erro("Informe um valor maior que zero."); return; }
+  if (!data) { erro("Escolha a data."); return; }
 
   const solta = travar(botao, "...");
-  const hoje = _hojeLocal();
-  const { error } = await sb.from("contas").update({ pago: true, pago_em: hoje }).eq("id", id);
+
+  // ACUMULA: pagar R$ 200 hoje e R$ 400 depois soma 600 e quita. E a
+  // conta só fica quitada quando o pago alcança o valor — meio centavo
+  // de folga, igual à fatura, pra parcela quebrada não dever R$ 0,00
+  // pra sempre.
+  const somado = Math.round((Number(c.valor_pago || 0) + valor) * 100) / 100;
+  const quitou = somado >= Number(c.valor) - 0.005;
+
+  const { data: atualizada, error } = await sb.from("contas")
+    .update({ valor_pago: somado, pago: quitou, pago_em: quitou ? data : null })
+    .eq("id", id).eq("user_id", usuario.id)
+    .select().single();
   if (error) { solta(); erro("Erro: " + error.message); return; }
+  contas = contas.map(x => (x.id === id ? atualizada : x));
 
-  c.pago = true; c.pago_em = hoje;
-
-  // Pagar uma conta é dinheiro saindo. Sem isto o Resumo mostraria um saldo
-  // que não existe — as contas ficariam num mundo à parte do extrato.
+  /* O LANÇAMENTO É DO QUE SAIU, não do que a conta pedia. Era aqui que
+     o extrato errava quando havia juros ou desconto: o Resumo mostrava
+     o valor do boleto e o banco mostrava outro. */
   const chave = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random());
   const { data: lanc } = await sb.from("lancamentos").insert({
-    user_id: usuario.id, tipo: "saida", valor: c.valor, data: hoje,
+    user_id: usuario.id, tipo: "saida", valor, data,
     categoria: c.categoria || "Contas", descricao: c.nome, chave_envio: chave,
   }).select().single();
-  if (lanc) { lancamentos.unshift(lanc); lancamentos.sort((a, b) => b.data.localeCompare(a.data)); }
+  if (lanc) { lancamentos.unshift(lanc); lancamentos.sort((a, b) => String(b.data).localeCompare(String(a.data))); }
 
-  // Conta que repete: já deixa a do mês que vem cadastrada.
-  if (c.recorrente) {
+  // Conta que repete só gera a do mês seguinte quando QUITA. Gerar na
+  // primeira parcela de um pagamento dividido encheria a lista de contas
+  // futuras a cada pedaço pago.
+  if (quitou && c.recorrente) {
     const prox = proximoMesMesmoDia(c.vencimento);
     const { data: nova } = await sb.from("contas").insert({
       user_id: usuario.id, nome: c.nome, valor: c.valor, vencimento: prox,
@@ -718,8 +827,10 @@ async function pagarConta(botao, id) {
     if (nova) contas.push(nova);
   }
 
-  ok("Conta paga e lançada como saída!");
-  desenharContas();
+  ok(quitou
+    ? "Conta paga e lançada como saída!"
+    : `${moeda(valor)} pagos. Ainda faltam ${moeda(faltaDaConta(atualizada))}.`);
+  voltarTela();
 }
 
 // Dia 31 em mês de 30 vira o último dia do mês, e não dia 1º do seguinte.

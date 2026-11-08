@@ -424,7 +424,14 @@ body.escuro .item.vencida { border-color: #5c2d3d; background: #331d24; }
 .conta-ico { grid-area: ico; width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; font-size: 13px; background: var(--marca-cl); }
 .conta-nome { grid-area: nome; font-size: 14px; font-weight: 700; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .conta-valor { grid-area: valor; font-size: 14px; font-weight: 800; line-height: 1.25; white-space: nowrap; font-variant-numeric: tabular-nums; color: var(--saida); }
-.conta-prazo { grid-area: prazo; display: flex; align-items: center; gap: 5px; min-width: 0; }
+.conta-prazo {
+  grid-area: prazo;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 5px;
+  min-width: 0;
+}
 .conta-acao { grid-area: acao; display: flex; align-items: center; }
 
 /* O prazo vira etiqueta colorida: o estado da conta se lê pela forma e
@@ -2413,3 +2420,13 @@ body.escuro .resumo-secao .item-icone.entrada { background: #17372d; }
   white-space: nowrap;
 }
 .assina-marca svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 2; }
+
+/* Conta paga pela metade. A borda âmbar a separa da vencida (vermelha) e
+   da que está só esperando o vencimento: ela não está atrasada nem
+   resolvida — está no meio, e isso é um estado próprio. */
+.conta-item.parcial { border-left-color: var(--aviso); }
+.conta-cat.parcial {
+  background: color-mix(in srgb, var(--aviso) 16%, transparent);
+  color: var(--aviso);
+  font-weight: 700;
+}

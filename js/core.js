@@ -9,7 +9,7 @@
    index.html. Serve pra uma pergunta que já custou tempo: "o defeito que
    você está vendo é do código de agora, ou o celular ainda está com o
    app velho em cache?" — sem isso, a resposta é chute. */
-const VERSAO_APP = "2026-11-06 · 49";
+const VERSAO_APP = "2026-11-08 · 50";
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -382,9 +382,16 @@ function aindaVaiSairDoMes(mesRef) {
 
   for (const c of contas) {
     if (c.pago || mesDe(c.vencimento) !== mesRef) continue;
+    // RESERVA SÓ O QUE FALTA. A conta de R$ 600 com R$ 200 já pagos
+    // ainda tira R$ 400 do mês, não R$ 600 — contar o valor cheio faria
+    // a sobra do Resumo ficar menor do que a verdade, e o dinheiro já
+    // pago seria descontado duas vezes: uma na saída do extrato, outra
+    // aqui.
+    const falta = faltaDaConta(c);
+    if (falta < 0.005) continue;
     linhas.push({
       tipo: "conta", nome: c.nome, categoria: c.categoria || "",
-      previsto: Number(c.valor), gasto: 0, falta: Number(c.valor),
+      previsto: Number(c.valor), gasto: Number(c.valor_pago || 0), falta,
       vencimento: c.vencimento,
     });
   }
@@ -455,6 +462,22 @@ function aindaVaiSairDoMes(mesRef) {
 
   linhas.sort((a, b) => b.falta - a.falta);
   return { linhas, total: Math.round(linhas.reduce((s, x) => s + x.falta, 0) * 100) / 100 };
+}
+
+/* ═══ O QUE AINDA FALTA DE UMA CONTA ══════════════════════════════════
+   Uma conta nem sempre é paga pelo valor que ela pede. Pagou atrasado,
+   veio juros; pagou adiantado, veio desconto; negociou, pagou parte. O
+   que ela ainda cobra é o valor menos o que já foi pago, nunca negativo
+   — quem pagou R$ 640 num boleto de R$ 600 não tem R$ 40 a receber.
+
+   Mora no core porque três telas perguntam isso: a lista de contas, o
+   carnê e a reserva do Resumo. Uma regra em dois lugares diverge. */
+function faltaDaConta(c) {
+  return Math.max(0, Math.round((Number(c.valor) - Number(c.valor_pago || 0)) * 100) / 100);
+}
+
+function contaParcial(c) {
+  return !c.pago && Number(c.valor_pago || 0) >= 0.005;
 }
 
 /* ═══ DINHEIRO QUE MUDA DE LUGAR NÃO É GASTO ══════════════════════════

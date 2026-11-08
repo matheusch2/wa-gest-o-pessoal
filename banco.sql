@@ -54,6 +54,28 @@ create table if not exists contas (
   created_at   timestamptz not null default now()
 );
 
+-- QUANTO FOI PAGO, que nem sempre é quanto a conta pedia.
+--
+-- Três situações, e as três caem aqui:
+--   pagou atrasado   → com juros, R$ 640 num boleto de R$ 600
+--   pagou adiantado  → com desconto
+--   negociou e pagou parte → fica devendo o resto
+--
+-- É acumulado: pagar R$ 200 hoje e R$ 400 na semana que vem soma 600 e
+-- quita. Cada pagamento vira um lançamento no extrato, porque cada um
+-- tirou dinheiro da conta no dia em que aconteceu.
+--
+-- 'pago' continua sendo a verdade sobre "esta conta está quitada?" — o
+-- app inteiro já pergunta isso a ele. O que muda é quem o liga: agora
+-- ele só é verdadeiro quando o pago alcança o valor.
+alter table contas
+  add column if not exists valor_pago numeric(12,2) not null default 0
+  check (valor_pago >= 0);
+
+-- As contas já quitadas antes desta coluna existir foram pagas pelo valor
+-- cheio: é o que 'pago = true' significava até aqui.
+update contas set valor_pago = valor where pago = true and valor_pago = 0;
+
 create unique index if not exists contas_chave_envio_key on contas (chave_envio);
 create index if not exists contas_user_vencimento_idx on contas (user_id, vencimento);
 

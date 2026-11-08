@@ -226,7 +226,13 @@ function _linhaDoQueVaiSair(r) {
   }[r.tipo];
 
   const detalhe =
-    r.tipo === "conta" ? "Vence " + dataBR(r.vencimento)
+    // A conta paga pela metade diz a metade que falta e o total do lado —
+    // a MESMA frase da fatura, que já tinha esse caso. Sem isto, o
+    // número da direita ficava menor que a conta sem explicar por quê.
+    r.tipo === "conta"
+      ? (r.gasto > 0
+          ? `${moeda(r.gasto)} de ${moeda(r.previsto)} já pagos`
+          : "Vence " + dataBR(r.vencimento))
     : r.tipo === "fatura"
       // Fatura paga pela metade mostra a metade que falta, com o total do
       // lado: o número da direita ficaria menor que a fatura sem explicação.

@@ -1,6 +1,11 @@
--- WA FINANÇAS — atualização do banco (Reservas e Meu negócio).
+-- WA FINANÇAS — atualização do banco.
 -- Cole TUDO isto no Supabase: Project → SQL Editor → New query → Run.
 -- Tudo aqui é "if not exists": rodar duas vezes não estraga nada.
+
+-- Pagamento parcial de conta (esta linha é nova):
+alter table contas add column if not exists valor_pago numeric(12,2) not null default 0 check (valor_pago >= 0);
+update contas set valor_pago = valor where pago = true and valor_pago = 0;
+
 -- ═══ RESERVAS ═════════════════════════════════════════════════════════
 -- Dinheiro que saiu da conta corrente mas CONTINUA SENDO SEU. É a única
 -- categoria de dinheiro do app que não é nem entrada nem gasto, e é por
