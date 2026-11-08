@@ -573,3 +573,47 @@ create policy "cada um muda só os próprios movimentos de negócio"
   on movimentos_negocio for update using (auth.uid() = user_id);
 create policy "cada um apaga só os próprios movimentos de negócio"
   on movimentos_negocio for delete using (auth.uid() = user_id);
+
+
+-- ═══ CONFERÊNCIA DE SALDO ═════════════════════════════════════════════
+-- A ÂNCORA QUE FALTAVA.
+--
+-- O app somava lançamentos a partir do zero: o "saldo do mês" era
+-- entradas menos saídas DAQUELE mês. Quem já tinha R$ 3.000 na conta
+-- quando começou a usar nunca viu esses R$ 3.000 em lugar nenhum.
+--
+-- Aqui a pessoa diz: "no dia 8 de novembro eu tinha R$ 3.240 na conta".
+-- Isso é um FATO, e é a única coisa guardada. A partir dele o app sabe
+-- quanto ela tem hoje — o saldo informado mais o que se moveu desde
+-- então — e sabe comparar: na conferência seguinte, a diferença entre o
+-- que o app esperava e o que o banco mostra é o que ficou sem lançar.
+--
+-- A DIFERENÇA NÃO É GUARDADA, de propósito. Ela é recalculada sempre, e
+-- isso é o que faz ela SUMIR quando a pessoa encontra o lançamento
+-- esquecido e o cadastra. Diferença gravada ficaria apontando um erro
+-- que já foi corrigido.
+create table if not exists conferencias (
+  id              uuid primary key default gen_random_uuid(),
+  user_id         uuid not null references auth.users(id) on delete cascade,
+  data            date not null,
+  saldo_informado numeric(12,2) not null,
+  observacao      text,
+  created_at      timestamptz not null default now()
+);
+
+-- Uma conferência por dia. Duas no mesmo dia com valores diferentes
+-- tornariam ambígua a pergunta "quanto eu tinha naquele dia?", e é essa
+-- pergunta que ancora todo o resto.
+create unique index if not exists conferencias_user_data_key
+  on conferencias (user_id, data);
+
+alter table conferencias enable row level security;
+
+create policy "cada um vê só as próprias conferências"
+  on conferencias for select using (auth.uid() = user_id);
+create policy "cada um confere só o próprio saldo"
+  on conferencias for insert with check (auth.uid() = user_id);
+create policy "cada um corrige só as próprias conferências"
+  on conferencias for update using (auth.uid() = user_id);
+create policy "cada um apaga só as próprias conferências"
+  on conferencias for delete using (auth.uid() = user_id);

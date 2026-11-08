@@ -60,12 +60,12 @@ module.exports = () => suite("Reservas e investimentos", async ({ p, ok, abrir, 
   /* ─── OS DOIS BOTÕES NOVOS ───────────────────────────────────────── */
   await abrir(BASE + "; voltarInicio();");
   const nomes = (await p.locator("#menu .menu-botao").allTextContents()).map(t => t.trim());
-  ok("o menu tem dez botões", nomes.length === 10);
+  ok("o menu tem onze botões", nomes.length === 11);
   ok("um deles é 'Reservas'", nomes.includes("Reservas"));
   ok("outro é 'Investimentos'", nomes.includes("Investimentos"));
   ok("e o resto continua lá",
     ["Resumo do mês", "Lançar", "Contas a pagar", "Histórico", "Cartão",
-     "Metas de gastos", "Relatórios", "Meu negócio"].every(n => nomes.includes(n)));
+     "Metas de gastos", "Relatórios", "Meu negócio", "Balanço"].every(n => nomes.includes(n)));
 
   await p.click("#menu .menu-botao:has-text('Investimentos')");
   ok("Investimentos abre e se declara em construção",

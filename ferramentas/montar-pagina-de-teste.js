@@ -68,6 +68,20 @@ document.addEventListener("DOMContentLoaded", () => {
     { id:"mn2", negocio_id:"n1", tipo:"custo", valor:380, data:"2026-09-09", categoria:"Ferramentas e sistemas", descricao:"Hospedagem" },
     { id:"mn3", negocio_id:"n1", tipo:"retirada", valor:2500, data:"2026-09-10", descricao:"Pró-labore", lancamento_id:"ret1" },
   ];
+  /* BALANÇO: duas conferências, e a última com furo DE PROPÓSITO. Com as
+     duas batendo, a tela esconde o bloco do achado — e o bloco do achado
+     é o motivo da tela existir. As datas saem de hoje porque "quanto você
+     tem" é sempre pergunta sobre hoje, não sobre o mês que o Resumo está
+     mostrando. */
+  const _diasAtras = (n) => {
+    const d = new Date(); d.setDate(d.getDate() - n);
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0")
+                           + "-" + String(d.getDate()).padStart(2, "0");
+  };
+  conferencias = [
+    { id:"cf1", data:_diasAtras(40), saldo_informado:1500 },
+    { id:"cf2", data:_diasAtras(5),  saldo_informado:1180 },
+  ];
   document.getElementById("area-login").remove();
   document.getElementById("menu").style.display = "grid";
   window.__pronto = true;

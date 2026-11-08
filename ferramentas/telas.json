@@ -1,1 +1,494 @@
-[["Menu","voltarInicio()"],["Resumo","desenharResumo(null)"],["Resumo filtrado","abrirResumo(); abrirResumoFiltrado(\"saida\")"],["Resumo mes fechado","mesAtual=\"2026-08\"; abrirResumo()"],["Lancar saida","abrirLancar(\"saida\")"],["Lancar entrada","abrirLancar(\"entrada\")"],["Editar lancamento","abrirResumo(); abrirEdicaoLancamento(\"s1\",\"resumo\")"],["Excluir lancamento","abrirResumo(); pedirExcluirLancamento(\"s1\",\"resumo\")"],["Contas","abrirContas()"],["Contas pagas","abrirContas(); filtrarContas(\"pagos\")"],["Nova conta","abrirContas(); abrirNovaConta()"],["Historico","abrirHistorico()"],["Ajustes","abrirAjustes()"],["Cartoes","abrirCartoes()"],["Novo cartao","abrirNovoCartao()"],["Fatura","abrirCartao(\"k1\")"],["Nova compra","abrirNovaCompra(\"k1\")"],["Pagar fatura","abrirCartao(\"k1\"); abrirPagarFatura(\"k1\",\"2026-10\")"],["Jogar saldo","abrirCartao(\"k1\"); pedirJogarSaldo(\"k1\",\"2026-10\")"],["Metas","abrirMetas()"],["Nova meta","abrirNovaMeta()"],["Editar meta","abrirEdicaoMeta(\"m3\")"],["Excluir meta","abrirMetas(); pedirExcluirMeta(\"m3\")"],["Fechar mes","mesAtual=\"2026-08\"; abrirFechamento(\"2026-08\")"],["Mes fechado","mesAtual=\"2026-08\"; fechamentos=[{id:\"f\",mes_ref:\"2026-08\",sobra:257,levado:257,guardado:0}]; abrirResumo()"],["Meu plano","abrirMeuPlano()"],["Login","document.body.insertAdjacentHTML(\"beforeend\", '<div id=\"area-login\"></div>'); telaLogin(\"entrar\")"],["Criar conta","document.body.insertAdjacentHTML(\"beforeend\", '<div id=\"area-login\"></div>'); telaLogin(\"criar\")"],["Sem dados","telaSemDados()"],["Carregando","telaCarregando()"],["Contas vencidas","contas.push({id:\"cv\",nome:\"IPTU\",valor:300,vencimento:\"2026-08-01\",pago:false,categoria:\"Casa\"}); abrirContas(); filtrarContas(\"vencidos\")"],["Contas vencendo","contas.push({id:\"cx\",nome:\"Celular\",valor:60,vencimento:_hojeLocal(),pago:false}); abrirContas(); filtrarContas(\"vencendo\")"],["Recuperar senha","document.body.insertAdjacentHTML(\"beforeend\", '<div id=\"area-login\"></div>'); telaLogin(\"esqueci\")"],["Nova senha","document.body.insertAdjacentHTML(\"beforeend\", '<div id=\"area-login\"></div>'); telaLogin(\"nova\")"],["Aviso ok","ok(\"Salvo!\"); erro(\"Deu ruim\")"],["Fatura paga","pagamentosFatura=[{id:\"q\",cartao_id:\"k1\",mes_ref:\"2026-10\",tipo:\"pago\",valor:100,pago_em:\"2026-09-06\",lancamento_id:\"x\"},{id:\"q2\",cartao_id:\"k1\",mes_ref:\"2026-10\",tipo:\"saldo\",valor:1000,pago_em:\"2026-09-06\",compra_id:\"y\"}]; abrirCartao(\"k1\")"],["Meta dentro","metas=[{id:\"z\",categoria:\"Educação\",valor:5000,reservar:true}]; abrirMetas()"],["Erro relogio","ultimoErroCarga={message:\"JWT issued at future\"}; telaSemDados()"],["Nova categoria no campo","abrirNovaMeta(); document.getElementById(\"mt-cat\").value=\"__nova\"; aoEscolherCategoria(\"mt-cat\",\"saida\",\"_previaGastoDaMeta\")"],["Meta sem categoria livre","metas = categorias.filter(c=>c.tipo===\"saida\").map((c,i)=>({id:\"x\"+i,categoria:c.nome,valor:100,reservar:true})); abrirNovaMeta()"],["Contas · Fixos","contas.push({id:\"f1\",nome:\"Aluguel\",valor:1200,vencimento:\"2026-07-05\",pago:true,recorrente:true,categoria:\"Casa\"}); abrirContas(); filtrarContas(\"fixos\")"],["Saídas com cartão","mesAtual=\"2026-09\"; abrirResumo(); abrirResumoFiltrado(\"saida\")"],["Lançar entrada · fixas","abrirLancar(\"entrada\")"],["Nova entrada fixa","abrirNovaEntradaFixa()"],["Entrada fixa · sem nenhuma","entradasFixas = []; abrirLancar(\"entrada\")"],["Nova categoria no .dois","entradasFixas=[]; abrirLancar(\"entrada\"); document.getElementById(\"lc-cat\").value=\"__nova\"; aoEscolherCategoria(\"lc-cat\",\"entrada\",null)"],["Aparência","abrirAparencia()"],["Meus dados","abrirMeusDados()"],["Trocar a senha","abrirTrocarSenha()"],["Cartão com faturas antigas","cartoes=[{id:\"cx\",nome:\"Nubank\",banco:\"nubank\",dia_fechamento:1,dia_vencimento:10}]; comprasCartao=[{id:\"px\",cartao_id:\"cx\",descricao:\"TV\",valor:1000,parcelas:10,data:\"2026-06-01\",categoria:\"Casa\"}]; pagamentosFatura=[]; abrirCartao(\"cx\")"],["Relatórios","abrirRelatorios()"],["Ajustes · Meu plano","abrirAjustes(); abrirMeuPlano()"],["Nova conta · tipo","abrirContas(); abrirNovaConta(); document.querySelector('input[value=\"boleto\"]').click()"],["Nova conta · carnê","abrirContas(); abrirNovaConta(); document.querySelector('input[value=\"boleto\"]').click(); document.getElementById(\"ct-valor\").value=\"250,00\"; document.getElementById(\"ct-parcelas\").value=\"6\"; _previaBoletos()"],["Contas · carnê agrupado","contas=[{id:\"cz\",nome:\"Energia\",valor:180,vencimento:_hojeLocal(),pago:false,categoria:\"Casa\",recorrente:true}]; for(let i=1;i<=26;i++) contas.push({id:\"mm\"+i,nome:\"Moto (\"+i+\"/26)\",valor:600,vencimento:_vencimentoDaParcela(\"2026-09-15\",i-1),pago:i===1,pago_em:i===1?\"2026-09-15\":null,categoria:\"Transporte\",recorrente:false}); abrirContas()"],["Carnê aberto","contas=[{id:\"cz\",nome:\"Energia\",valor:180,vencimento:_hojeLocal(),pago:false,categoria:\"Casa\",recorrente:true}]; for(let i=1;i<=26;i++) contas.push({id:\"mm\"+i,nome:\"Moto (\"+i+\"/26)\",valor:600,vencimento:_vencimentoDaParcela(\"2026-09-15\",i-1),pago:i===1,pago_em:i===1?\"2026-09-15\":null,categoria:\"Transporte\",recorrente:false}); abrirCarne(\"Moto\")"],["Carnê · excluir","contas=[{id:\"cz\",nome:\"Energia\",valor:180,vencimento:_hojeLocal(),pago:false,categoria:\"Casa\",recorrente:true}]; for(let i=1;i<=26;i++) contas.push({id:\"mm\"+i,nome:\"Moto (\"+i+\"/26)\",valor:600,vencimento:_vencimentoDaParcela(\"2026-09-15\",i-1),pago:i===1,pago_em:i===1?\"2026-09-15\":null,categoria:\"Transporte\",recorrente:false}); abrirCarne(\"Moto\"); pedirExcluirCarne(\"Moto\")"],["Carnê · editar","contas=[{id:\"cz\",nome:\"Energia\",valor:180,vencimento:_hojeLocal(),pago:false,categoria:\"Casa\",recorrente:true}]; for(let i=1;i<=26;i++) contas.push({id:\"mm\"+i,nome:\"Moto (\"+i+\"/26)\",valor:600,vencimento:_vencimentoDaParcela(\"2026-09-15\",i-1),pago:i===1,pago_em:i===1?\"2026-09-15\":null,categoria:\"Transporte\",recorrente:false}); abrirEdicaoCarne(\"Moto\")"],["Relatórios · saldo trazido","lancamentos.push({id:\"sal\",tipo:\"entrada\",valor:257,data:\"2026-09-01\",categoria:\"Saldo\",descricao:\"Saldo de agosto\"}); fechamentos=[{id:\"f8\",mes_ref:\"2026-08\",sobra:357,levado:257,guardado:100,lancamento_levado_id:\"sal\",lancamento_guardado_id:\"grd\"}]; abrirRelatorios()"],["Relatórios · guardado","lancamentos.push({id:\"grd\",tipo:\"saida\",valor:100,data:\"2026-08-31\",categoria:\"Guardado\",descricao:\"Guardado de agosto\"}); fechamentos=[{id:\"f8\",mes_ref:\"2026-08\",sobra:357,levado:257,guardado:100,lancamento_levado_id:\"sal\",lancamento_guardado_id:\"grd\"}]; mesAtual=\"2026-08\"; abrirRelatorios()"],["Relatórios · mês sem nada","mesAtual=\"2026-12\"; abrirRelatorios()"],["Resumo · fatura reservada","mesAtual=\"2026-10\"; abrirResumo()"],["Nova compra · tipo","abrirNovaCompra(\"k1\"); document.querySelector(\"input[value=\\u0027assinatura\\u0027]\").click(); document.getElementById(\"cp-valor\").value=\"39,90\"; _previaParcelas()"],["Fatura · com assinatura","comprasCartao.push({id:\"net\",cartao_id:\"k1\",descricao:\"Netflix\",valor:39.90,parcelas:1,data:\"2026-06-14\",categoria:\"Lazer\",recorrente:true,fim:null}); abrirCartao(\"k1\"); _faturaMes=\"2026-10\"; desenharCartao(\"k1\")"],["Assinatura · cancelar","comprasCartao.push({id:\"net\",cartao_id:\"k1\",descricao:\"Netflix\",valor:39.90,parcelas:1,data:\"2026-06-14\",categoria:\"Lazer\",recorrente:true,fim:null}); abrirCartao(\"k1\"); _faturaMes=\"2026-10\"; desenharCartao(\"k1\"); pedirExcluirCompra(\"net\",\"k1\")"],["Assinatura · excluir de vez","comprasCartao.push({id:\"net\",cartao_id:\"k1\",descricao:\"Netflix\",valor:39.90,parcelas:1,data:\"2026-06-14\",categoria:\"Lazer\",recorrente:true,fim:null}); abrirCartao(\"k1\"); _faturaMes=\"2026-10\"; desenharCartao(\"k1\"); pedirApagarAssinatura(\"net\",\"k1\")"],["Relatórios · gráficos","lancamentos=[];comprasCartao=[];fechamentos=[];metas=[{id:\"m1\",categoria:\"Mercado\",valor:800,reservar:true}];const mk={\"2026-05\":900,\"2026-06\":1100,\"2026-07\":700,\"2026-08\":950};Object.keys(mk).forEach((m,i)=>{lancamentos.push({id:\"e\"+i,tipo:\"entrada\",valor:3000,data:m+\"-01\",categoria:\"Salário\",descricao:\"Salário\"});lancamentos.push({id:\"s\"+i,tipo:\"saida\",valor:mk[m],data:m+\"-10\",categoria:\"Mercado\",descricao:\"Feira\"});});lancamentos.push({id:\"e9\",tipo:\"entrada\",valor:3000,data:\"2026-09-01\",categoria:\"Salário\",descricao:\"Salário\"});lancamentos.push({id:\"s9\",tipo:\"saida\",valor:1500,data:\"2026-09-05\",categoria:\"Mercado\",descricao:\"Feira\"});; cartoes=[{id:\"k1\",nome:\"Nubank\",banco:\"nubank\",dia_fechamento:1,dia_vencimento:10}]; comprasCartao=[{id:\"ten\",cartao_id:\"k1\",descricao:\"Tênis\",valor:1200,parcelas:6,data:\"2026-09-05\",categoria:\"Lazer\",recorrente:false,fim:null},{id:\"net\",cartao_id:\"k1\",descricao:\"Netflix\",valor:39.90,parcelas:1,data:\"2026-05-14\",categoria:\"Lazer\",recorrente:true,fim:null}]; contas=[{id:\"alu\",nome:\"Aluguel\",valor:1200,vencimento:\"2026-09-05\",pago:false,categoria:\"Casa\",recorrente:true}]; for(let i=1;i<=8;i++) contas.push({id:\"mm\"+i,nome:\"Moto (\"+i+\"/8)\",valor:600,vencimento:_vencimentoDaParcela(\"2026-10-15\",i-1),pago:false,categoria:\"Transporte\",recorrente:false}); abrirRelatorios()"],["Cartões · baralho","cartoes=[\"bb\",\"inter\",\"neon\",\"nubank\",\"c6\",\"picpay\",\"itau\"].map((b,i)=>({id:\"k\"+i,nome:\"Cartão \"+i,banco:b,dia_fechamento:1,dia_vencimento:10+i})); comprasCartao=cartoes.map((c,i)=>({id:\"c\"+i,cartao_id:c.id,descricao:\"Compras\",valor:100*(i+1),parcelas:1,data:\"2026-09-20\",categoria:\"Outros\",recorrente:false,fim:null})); pagamentosFatura=[]; mesAtual=\"2026-10\"; _cartaoPrincipal=null; abrirCartoes()"],["Cartões · outro à frente","cartoes=[\"bb\",\"inter\",\"neon\",\"nubank\",\"c6\",\"picpay\",\"itau\"].map((b,i)=>({id:\"k\"+i,nome:\"Cartão \"+i,banco:b,dia_fechamento:1,dia_vencimento:10+i})); comprasCartao=cartoes.map((c,i)=>({id:\"c\"+i,cartao_id:c.id,descricao:\"Compras\",valor:100*(i+1),parcelas:1,data:\"2026-09-20\",categoria:\"Outros\",recorrente:false,fim:null})); pagamentosFatura=[]; mesAtual=\"2026-10\"; _cartaoPrincipal=null; abrirCartoes(); escolherCartao(\"k3\")"],["Entradas · com prazo e extra","entradasFixas=[{id:\"f1\",nome:\"Salário Sabrina\",valor:2500,dia:5,categoria:\"Salário\",inicio:null,fim:null},{id:\"f2\",nome:\"Salário audy\",valor:1600,dia:1,categoria:\"Salário\",inicio:null,fim:\"2026-12-01\"},{id:\"f3\",nome:\"13º\",valor:3000,dia:20,categoria:\"Extra\",inicio:\"2026-12-01\",fim:\"2026-12-01\"}]; mesAtual=mesDe(_hojeLocal()); abrirLancar(\"entrada\")"],["Entrada · editar prazo","entradasFixas=[{id:\"f1\",nome:\"Salário Sabrina\",valor:2500,dia:5,categoria:\"Salário\",inicio:null,fim:null},{id:\"f2\",nome:\"Salário audy\",valor:1600,dia:1,categoria:\"Salário\",inicio:null,fim:\"2026-12-01\"},{id:\"f3\",nome:\"13º\",valor:3000,dia:20,categoria:\"Extra\",inicio:\"2026-12-01\",fim:\"2026-12-01\"}]; mesAtual=mesDe(_hojeLocal()); abrirEdicaoEntradaFixa(\"f2\")"],["Entrada · só num mês","entradasFixas=[{id:\"f1\",nome:\"Salário Sabrina\",valor:2500,dia:5,categoria:\"Salário\",inicio:null,fim:null},{id:\"f2\",nome:\"Salário audy\",valor:1600,dia:1,categoria:\"Salário\",inicio:null,fim:\"2026-12-01\"},{id:\"f3\",nome:\"13º\",valor:3000,dia:20,categoria:\"Extra\",inicio:\"2026-12-01\",fim:\"2026-12-01\"}]; mesAtual=mesDe(_hojeLocal()); abrirNovaEntradaFixa(); document.querySelector(\"input[value=\\u0027unica\\u0027]\").click()"],["Editar · categoria apagada","lancamentos=[{id:\"l1\",tipo:\"saida\",valor:90,data:\"2026-10-05\",categoria:\"Lazer\",descricao:\"Cinema\"}]; categorias=categorias.filter(c=>c.nome!==\"Lazer\"); abrirEdicaoLancamento(\"l1\",\"resumo\")"],["Lançar · escolha","abrirLancarEscolha()"],["Reservas","abrirReservas()"],["Reservas · nenhuma","reservas=[]; movimentosReserva=[]; abrirReservas()"],["Reservas · objetivo alcançado","movimentosReserva.push({id:\"mx\",reserva_id:\"r1\",tipo:\"guardar\",valor:7000,data:\"2026-09-01\",lancamento_id:null}); abrirReservas()"],["Reserva · uma","abrirReserva(\"r1\")"],["Reserva · sem objetivo","abrirReserva(\"r2\")"],["Reserva · vazia","reservas.push({id:\"r3\",nome:\"Obra\",objetivo:20000,tipo:\"objetivo\"}); abrirReserva(\"r3\")"],["Nova reserva","reservas=[]; movimentosReserva=[]; abrirNovaReserva()"],["Nova reserva · sem média","lancamentos=[]; comprasCartao=[]; abrirNovaReserva()"],["Editar reserva","abrirEdicaoReserva(\"r1\")"],["Reserva · excluir","abrirReserva(\"r1\"); pedirExcluirReserva(\"r1\")"],["Guardar na reserva","abrirReserva(\"r1\"); abrirGuardar(\"r1\")"],["Resgatar da reserva","abrirReserva(\"r1\"); abrirResgatar(\"r1\")"],["Reserva · desfazer movimento","abrirReserva(\"r1\"); pedirDesfazerMovimento(\"mr1\")"],["Investimentos","abrirInvestimentos()"],["Relatórios · reserva","lancamentos.push({id:\"gg\",tipo:\"saida\",valor:500,data:\"2026-09-11\",categoria:\"Guardado\",descricao:\"Guardado: Emergência\"},{id:\"rr\",tipo:\"entrada\",valor:120,data:\"2026-09-12\",categoria:\"Resgate\",descricao:\"Resgate: Viagem\"}); movimentosReserva=[{id:\"m1\",reserva_id:\"r1\",tipo:\"guardar\",valor:500,data:\"2026-09-11\",lancamento_id:\"gg\"},{id:\"m2\",reserva_id:\"r2\",tipo:\"resgatar\",valor:120,data:\"2026-09-12\",lancamento_id:\"rr\"}]; abrirRelatorios()"],["Reservas · sem as tabelas","tabelasFaltando = [\"reservas\",\"movimentos_reserva\"]; abrirReservas()"],["Nova reserva · tipo objetivo","reservas=[]; movimentosReserva=[]; abrirNovaReserva(); document.querySelector(\"input[value=\\u0027objetivo\\u0027]\").click()"],["Nova reserva · já tem emergência","abrirNovaReserva()"],["Reservas · sem emergência","reservas=[{id:\"r2\",nome:\"Viagem\",objetivo:4000,tipo:\"objetivo\"}]; movimentosReserva=[{id:\"m9\",reserva_id:\"r2\",tipo:\"guardar\",valor:4000,data:\"2026-09-05\",lancamento_id:\"g9\"}]; abrirReservas()"],["Meu negócio","mesAtual=\"2026-09\"; abrirMeuNegocio()"],["Negócio · sem cadastro","negocios=[]; movimentosNegocio=[]; abrirMeuNegocio()"],["Negócio · cadastrar","negocios=[]; abrirNovoNegocio()"],["Negócio · entrou","mesAtual=\"2026-09\"; abrirMeuNegocio(); abrirMovimentoNegocio(\"faturamento\")"],["Negócio · saiu","mesAtual=\"2026-09\"; abrirMeuNegocio(); abrirMovimentoNegocio(\"custo\")"],["Negócio · retirada","mesAtual=\"2026-09\"; abrirMeuNegocio(); abrirMovimentoNegocio(\"retirada\")"],["Negócio · prejuízo","movimentosNegocio=[{id:\"x\",negocio_id:\"n1\",tipo:\"faturamento\",valor:500,data:\"2026-09-08\"},{id:\"y\",negocio_id:\"n1\",tipo:\"custo\",valor:1200,data:\"2026-09-09\"}]; mesAtual=\"2026-09\"; abrirMeuNegocio()"],["Negócio · editar","abrirEdicaoNegocio()"],["Negócio · sem as tabelas","tabelasFaltando=[\"negocios\",\"movimentos_negocio\"]; abrirMeuNegocio()"],["Relatórios · sem meta obrigatória","metas=[{id:\"m\",categoria:\"Lazer\",valor:300,reservar:false}]; abrirRelatorios()"],["Cartões · mês futuro","cartoes=[\"bb\",\"inter\",\"nubank\",\"c6\"].map((b,i)=>({id:\"k\"+i,nome:\"Cartão \"+i,banco:b,dia_fechamento:1+i*3,dia_vencimento:10+i})); comprasCartao=cartoes.map((c,i)=>({id:\"c\"+i,cartao_id:c.id,descricao:\"Compra\",valor:600+i*200,parcelas:6,data:\"2026-10-05\",categoria:\"Casa\",recorrente:false,fim:null})); pagamentosFatura=[]; _cartaoPrincipal=null; abrirCartoes(); trocarMesDoBaralho(3)"],["Cartões · mês sem fatura","_cartaoPrincipal=null; abrirCartoes(); trocarMesDoBaralho(30)"],["Resumo · com guardado","lancamentos.push({id:\"grd\",tipo:\"saida\",valor:500,data:\"2026-09-11\",categoria:\"Guardado\",descricao:\"Guardado: Emergência\"}); movimentosReserva=[{id:\"m\",reserva_id:\"r1\",tipo:\"guardar\",valor:500,data:\"2026-09-11\",lancamento_id:\"grd\"}]; abrirResumo()"],["Assinaturas","comprasCartao.push({id:\"n\",cartao_id:\"k1\",descricao:\"Netflix\",valor:55.90,parcelas:1,data:\"2025-03-14\",categoria:\"Lazer\",recorrente:true,fim:null},{id:\"sp\",cartao_id:\"k1\",descricao:\"Spotify\",valor:34.90,parcelas:1,data:\"2026-02-14\",categoria:\"Lazer\",recorrente:true,fim:null}); abrirAssinaturas()"],["Assinaturas · nenhuma","comprasCartao=comprasCartao.filter(c=>!c.recorrente); abrirAssinaturas()"],["Pagar conta","contas=[{id:\"b\",nome:\"Boleto da moto\",valor:600,valor_pago:0,vencimento:\"2026-09-15\",pago:false,categoria:\"Transporte\",recorrente:false}]; abrirContas(); abrirPagarConta(\"b\")"],["Pagar conta · já tem parte paga","contas=[{id:\"b\",nome:\"Boleto da moto\",valor:600,valor_pago:200,vencimento:\"2026-09-15\",pago:false,categoria:\"Transporte\",recorrente:false}]; abrirContas(); abrirPagarConta(\"b\")"],["Contas · uma paga pela metade","contas=[{id:\"b\",nome:\"Boleto da moto\",valor:600,valor_pago:200,vencimento:\"2026-09-15\",pago:false,categoria:\"Transporte\",recorrente:false}]; abrirContas()"],["Editar cartão","cartoes=[{id:\"k1\",nome:\"Nubank\",banco:\"nubank\",dia_fechamento:1,dia_vencimento:10,limite:5000}]; comprasCartao=[{id:\"t\",cartao_id:\"k1\",descricao:\"Tênis\",valor:1800,parcelas:6,data:\"2026-10-05\",categoria:\"Lazer\",recorrente:false,fim:null}]; pagamentosFatura=[]; _cartaoPrincipal=\"k1\"; _faturaMes=null; abrirEdicaoCartao(\"k1\")"],["Cartões · com limite","cartoes=[{id:\"k1\",nome:\"Nubank\",banco:\"nubank\",dia_fechamento:1,dia_vencimento:10,limite:5000}]; comprasCartao=[{id:\"t\",cartao_id:\"k1\",descricao:\"Tênis\",valor:1800,parcelas:6,data:\"2026-10-05\",categoria:\"Lazer\",recorrente:false,fim:null}]; pagamentosFatura=[]; _cartaoPrincipal=\"k1\"; _faturaMes=null; abrirCartoes()"],["Cartão · limite estourado","cartoes=[{id:\"k1\",nome:\"Nubank\",banco:\"nubank\",dia_fechamento:1,dia_vencimento:10,limite:1000}]; comprasCartao=[{id:\"t\",cartao_id:\"k1\",descricao:\"Tênis\",valor:1800,parcelas:6,data:\"2026-10-05\",categoria:\"Lazer\",recorrente:false,fim:null}]; pagamentosFatura=[]; _cartaoPrincipal=\"k1\"; _faturaMes=null; abrirCartao(\"k1\")"]]
+[
+ [
+  "Menu",
+  "voltarInicio()"
+ ],
+ [
+  "Resumo",
+  "desenharResumo(null)"
+ ],
+ [
+  "Resumo filtrado",
+  "abrirResumo(); abrirResumoFiltrado(\"saida\")"
+ ],
+ [
+  "Resumo mes fechado",
+  "mesAtual=\"2026-08\"; abrirResumo()"
+ ],
+ [
+  "Lancar saida",
+  "abrirLancar(\"saida\")"
+ ],
+ [
+  "Lancar entrada",
+  "abrirLancar(\"entrada\")"
+ ],
+ [
+  "Editar lancamento",
+  "abrirResumo(); abrirEdicaoLancamento(\"s1\",\"resumo\")"
+ ],
+ [
+  "Excluir lancamento",
+  "abrirResumo(); pedirExcluirLancamento(\"s1\",\"resumo\")"
+ ],
+ [
+  "Contas",
+  "abrirContas()"
+ ],
+ [
+  "Contas pagas",
+  "abrirContas(); filtrarContas(\"pagos\")"
+ ],
+ [
+  "Nova conta",
+  "abrirContas(); abrirNovaConta()"
+ ],
+ [
+  "Historico",
+  "abrirHistorico()"
+ ],
+ [
+  "Ajustes",
+  "abrirAjustes()"
+ ],
+ [
+  "Cartoes",
+  "abrirCartoes()"
+ ],
+ [
+  "Novo cartao",
+  "abrirNovoCartao()"
+ ],
+ [
+  "Fatura",
+  "abrirCartao(\"k1\")"
+ ],
+ [
+  "Nova compra",
+  "abrirNovaCompra(\"k1\")"
+ ],
+ [
+  "Pagar fatura",
+  "abrirCartao(\"k1\"); abrirPagarFatura(\"k1\",\"2026-10\")"
+ ],
+ [
+  "Jogar saldo",
+  "abrirCartao(\"k1\"); pedirJogarSaldo(\"k1\",\"2026-10\")"
+ ],
+ [
+  "Metas",
+  "abrirMetas()"
+ ],
+ [
+  "Nova meta",
+  "abrirNovaMeta()"
+ ],
+ [
+  "Editar meta",
+  "abrirEdicaoMeta(\"m3\")"
+ ],
+ [
+  "Excluir meta",
+  "abrirMetas(); pedirExcluirMeta(\"m3\")"
+ ],
+ [
+  "Fechar mes",
+  "mesAtual=\"2026-08\"; abrirFechamento(\"2026-08\")"
+ ],
+ [
+  "Mes fechado",
+  "mesAtual=\"2026-08\"; fechamentos=[{id:\"f\",mes_ref:\"2026-08\",sobra:257,levado:257,guardado:0}]; abrirResumo()"
+ ],
+ [
+  "Meu plano",
+  "abrirMeuPlano()"
+ ],
+ [
+  "Login",
+  "document.body.insertAdjacentHTML(\"beforeend\", '<div id=\"area-login\"></div>'); telaLogin(\"entrar\")"
+ ],
+ [
+  "Criar conta",
+  "document.body.insertAdjacentHTML(\"beforeend\", '<div id=\"area-login\"></div>'); telaLogin(\"criar\")"
+ ],
+ [
+  "Sem dados",
+  "telaSemDados()"
+ ],
+ [
+  "Carregando",
+  "telaCarregando()"
+ ],
+ [
+  "Contas vencidas",
+  "contas.push({id:\"cv\",nome:\"IPTU\",valor:300,vencimento:\"2026-08-01\",pago:false,categoria:\"Casa\"}); abrirContas(); filtrarContas(\"vencidos\")"
+ ],
+ [
+  "Contas vencendo",
+  "contas.push({id:\"cx\",nome:\"Celular\",valor:60,vencimento:_hojeLocal(),pago:false}); abrirContas(); filtrarContas(\"vencendo\")"
+ ],
+ [
+  "Recuperar senha",
+  "document.body.insertAdjacentHTML(\"beforeend\", '<div id=\"area-login\"></div>'); telaLogin(\"esqueci\")"
+ ],
+ [
+  "Nova senha",
+  "document.body.insertAdjacentHTML(\"beforeend\", '<div id=\"area-login\"></div>'); telaLogin(\"nova\")"
+ ],
+ [
+  "Aviso ok",
+  "ok(\"Salvo!\"); erro(\"Deu ruim\")"
+ ],
+ [
+  "Fatura paga",
+  "pagamentosFatura=[{id:\"q\",cartao_id:\"k1\",mes_ref:\"2026-10\",tipo:\"pago\",valor:100,pago_em:\"2026-09-06\",lancamento_id:\"x\"},{id:\"q2\",cartao_id:\"k1\",mes_ref:\"2026-10\",tipo:\"saldo\",valor:1000,pago_em:\"2026-09-06\",compra_id:\"y\"}]; abrirCartao(\"k1\")"
+ ],
+ [
+  "Meta dentro",
+  "metas=[{id:\"z\",categoria:\"Educação\",valor:5000,reservar:true}]; abrirMetas()"
+ ],
+ [
+  "Erro relogio",
+  "ultimoErroCarga={message:\"JWT issued at future\"}; telaSemDados()"
+ ],
+ [
+  "Nova categoria no campo",
+  "abrirNovaMeta(); document.getElementById(\"mt-cat\").value=\"__nova\"; aoEscolherCategoria(\"mt-cat\",\"saida\",\"_previaGastoDaMeta\")"
+ ],
+ [
+  "Meta sem categoria livre",
+  "metas = categorias.filter(c=>c.tipo===\"saida\").map((c,i)=>({id:\"x\"+i,categoria:c.nome,valor:100,reservar:true})); abrirNovaMeta()"
+ ],
+ [
+  "Contas · Fixos",
+  "contas.push({id:\"f1\",nome:\"Aluguel\",valor:1200,vencimento:\"2026-07-05\",pago:true,recorrente:true,categoria:\"Casa\"}); abrirContas(); filtrarContas(\"fixos\")"
+ ],
+ [
+  "Saídas com cartão",
+  "mesAtual=\"2026-09\"; abrirResumo(); abrirResumoFiltrado(\"saida\")"
+ ],
+ [
+  "Lançar entrada · fixas",
+  "abrirLancar(\"entrada\")"
+ ],
+ [
+  "Nova entrada fixa",
+  "abrirNovaEntradaFixa()"
+ ],
+ [
+  "Entrada fixa · sem nenhuma",
+  "entradasFixas = []; abrirLancar(\"entrada\")"
+ ],
+ [
+  "Nova categoria no .dois",
+  "entradasFixas=[]; abrirLancar(\"entrada\"); document.getElementById(\"lc-cat\").value=\"__nova\"; aoEscolherCategoria(\"lc-cat\",\"entrada\",null)"
+ ],
+ [
+  "Aparência",
+  "abrirAparencia()"
+ ],
+ [
+  "Meus dados",
+  "abrirMeusDados()"
+ ],
+ [
+  "Trocar a senha",
+  "abrirTrocarSenha()"
+ ],
+ [
+  "Cartão com faturas antigas",
+  "cartoes=[{id:\"cx\",nome:\"Nubank\",banco:\"nubank\",dia_fechamento:1,dia_vencimento:10}]; comprasCartao=[{id:\"px\",cartao_id:\"cx\",descricao:\"TV\",valor:1000,parcelas:10,data:\"2026-06-01\",categoria:\"Casa\"}]; pagamentosFatura=[]; abrirCartao(\"cx\")"
+ ],
+ [
+  "Relatórios",
+  "abrirRelatorios()"
+ ],
+ [
+  "Ajustes · Meu plano",
+  "abrirAjustes(); abrirMeuPlano()"
+ ],
+ [
+  "Nova conta · tipo",
+  "abrirContas(); abrirNovaConta(); document.querySelector('input[value=\"boleto\"]').click()"
+ ],
+ [
+  "Nova conta · carnê",
+  "abrirContas(); abrirNovaConta(); document.querySelector('input[value=\"boleto\"]').click(); document.getElementById(\"ct-valor\").value=\"250,00\"; document.getElementById(\"ct-parcelas\").value=\"6\"; _previaBoletos()"
+ ],
+ [
+  "Contas · carnê agrupado",
+  "contas=[{id:\"cz\",nome:\"Energia\",valor:180,vencimento:_hojeLocal(),pago:false,categoria:\"Casa\",recorrente:true}]; for(let i=1;i<=26;i++) contas.push({id:\"mm\"+i,nome:\"Moto (\"+i+\"/26)\",valor:600,vencimento:_vencimentoDaParcela(\"2026-09-15\",i-1),pago:i===1,pago_em:i===1?\"2026-09-15\":null,categoria:\"Transporte\",recorrente:false}); abrirContas()"
+ ],
+ [
+  "Carnê aberto",
+  "contas=[{id:\"cz\",nome:\"Energia\",valor:180,vencimento:_hojeLocal(),pago:false,categoria:\"Casa\",recorrente:true}]; for(let i=1;i<=26;i++) contas.push({id:\"mm\"+i,nome:\"Moto (\"+i+\"/26)\",valor:600,vencimento:_vencimentoDaParcela(\"2026-09-15\",i-1),pago:i===1,pago_em:i===1?\"2026-09-15\":null,categoria:\"Transporte\",recorrente:false}); abrirCarne(\"Moto\")"
+ ],
+ [
+  "Carnê · excluir",
+  "contas=[{id:\"cz\",nome:\"Energia\",valor:180,vencimento:_hojeLocal(),pago:false,categoria:\"Casa\",recorrente:true}]; for(let i=1;i<=26;i++) contas.push({id:\"mm\"+i,nome:\"Moto (\"+i+\"/26)\",valor:600,vencimento:_vencimentoDaParcela(\"2026-09-15\",i-1),pago:i===1,pago_em:i===1?\"2026-09-15\":null,categoria:\"Transporte\",recorrente:false}); abrirCarne(\"Moto\"); pedirExcluirCarne(\"Moto\")"
+ ],
+ [
+  "Carnê · editar",
+  "contas=[{id:\"cz\",nome:\"Energia\",valor:180,vencimento:_hojeLocal(),pago:false,categoria:\"Casa\",recorrente:true}]; for(let i=1;i<=26;i++) contas.push({id:\"mm\"+i,nome:\"Moto (\"+i+\"/26)\",valor:600,vencimento:_vencimentoDaParcela(\"2026-09-15\",i-1),pago:i===1,pago_em:i===1?\"2026-09-15\":null,categoria:\"Transporte\",recorrente:false}); abrirEdicaoCarne(\"Moto\")"
+ ],
+ [
+  "Relatórios · saldo trazido",
+  "lancamentos.push({id:\"sal\",tipo:\"entrada\",valor:257,data:\"2026-09-01\",categoria:\"Saldo\",descricao:\"Saldo de agosto\"}); fechamentos=[{id:\"f8\",mes_ref:\"2026-08\",sobra:357,levado:257,guardado:100,lancamento_levado_id:\"sal\",lancamento_guardado_id:\"grd\"}]; abrirRelatorios()"
+ ],
+ [
+  "Relatórios · guardado",
+  "lancamentos.push({id:\"grd\",tipo:\"saida\",valor:100,data:\"2026-08-31\",categoria:\"Guardado\",descricao:\"Guardado de agosto\"}); fechamentos=[{id:\"f8\",mes_ref:\"2026-08\",sobra:357,levado:257,guardado:100,lancamento_levado_id:\"sal\",lancamento_guardado_id:\"grd\"}]; mesAtual=\"2026-08\"; abrirRelatorios()"
+ ],
+ [
+  "Relatórios · mês sem nada",
+  "mesAtual=\"2026-12\"; abrirRelatorios()"
+ ],
+ [
+  "Resumo · fatura reservada",
+  "mesAtual=\"2026-10\"; abrirResumo()"
+ ],
+ [
+  "Nova compra · tipo",
+  "abrirNovaCompra(\"k1\"); document.querySelector(\"input[value=\\u0027assinatura\\u0027]\").click(); document.getElementById(\"cp-valor\").value=\"39,90\"; _previaParcelas()"
+ ],
+ [
+  "Fatura · com assinatura",
+  "comprasCartao.push({id:\"net\",cartao_id:\"k1\",descricao:\"Netflix\",valor:39.90,parcelas:1,data:\"2026-06-14\",categoria:\"Lazer\",recorrente:true,fim:null}); abrirCartao(\"k1\"); _faturaMes=\"2026-10\"; desenharCartao(\"k1\")"
+ ],
+ [
+  "Assinatura · cancelar",
+  "comprasCartao.push({id:\"net\",cartao_id:\"k1\",descricao:\"Netflix\",valor:39.90,parcelas:1,data:\"2026-06-14\",categoria:\"Lazer\",recorrente:true,fim:null}); abrirCartao(\"k1\"); _faturaMes=\"2026-10\"; desenharCartao(\"k1\"); pedirExcluirCompra(\"net\",\"k1\")"
+ ],
+ [
+  "Assinatura · excluir de vez",
+  "comprasCartao.push({id:\"net\",cartao_id:\"k1\",descricao:\"Netflix\",valor:39.90,parcelas:1,data:\"2026-06-14\",categoria:\"Lazer\",recorrente:true,fim:null}); abrirCartao(\"k1\"); _faturaMes=\"2026-10\"; desenharCartao(\"k1\"); pedirApagarAssinatura(\"net\",\"k1\")"
+ ],
+ [
+  "Relatórios · gráficos",
+  "lancamentos=[];comprasCartao=[];fechamentos=[];metas=[{id:\"m1\",categoria:\"Mercado\",valor:800,reservar:true}];const mk={\"2026-05\":900,\"2026-06\":1100,\"2026-07\":700,\"2026-08\":950};Object.keys(mk).forEach((m,i)=>{lancamentos.push({id:\"e\"+i,tipo:\"entrada\",valor:3000,data:m+\"-01\",categoria:\"Salário\",descricao:\"Salário\"});lancamentos.push({id:\"s\"+i,tipo:\"saida\",valor:mk[m],data:m+\"-10\",categoria:\"Mercado\",descricao:\"Feira\"});});lancamentos.push({id:\"e9\",tipo:\"entrada\",valor:3000,data:\"2026-09-01\",categoria:\"Salário\",descricao:\"Salário\"});lancamentos.push({id:\"s9\",tipo:\"saida\",valor:1500,data:\"2026-09-05\",categoria:\"Mercado\",descricao:\"Feira\"});; cartoes=[{id:\"k1\",nome:\"Nubank\",banco:\"nubank\",dia_fechamento:1,dia_vencimento:10}]; comprasCartao=[{id:\"ten\",cartao_id:\"k1\",descricao:\"Tênis\",valor:1200,parcelas:6,data:\"2026-09-05\",categoria:\"Lazer\",recorrente:false,fim:null},{id:\"net\",cartao_id:\"k1\",descricao:\"Netflix\",valor:39.90,parcelas:1,data:\"2026-05-14\",categoria:\"Lazer\",recorrente:true,fim:null}]; contas=[{id:\"alu\",nome:\"Aluguel\",valor:1200,vencimento:\"2026-09-05\",pago:false,categoria:\"Casa\",recorrente:true}]; for(let i=1;i<=8;i++) contas.push({id:\"mm\"+i,nome:\"Moto (\"+i+\"/8)\",valor:600,vencimento:_vencimentoDaParcela(\"2026-10-15\",i-1),pago:false,categoria:\"Transporte\",recorrente:false}); abrirRelatorios()"
+ ],
+ [
+  "Cartões · baralho",
+  "cartoes=[\"bb\",\"inter\",\"neon\",\"nubank\",\"c6\",\"picpay\",\"itau\"].map((b,i)=>({id:\"k\"+i,nome:\"Cartão \"+i,banco:b,dia_fechamento:1,dia_vencimento:10+i})); comprasCartao=cartoes.map((c,i)=>({id:\"c\"+i,cartao_id:c.id,descricao:\"Compras\",valor:100*(i+1),parcelas:1,data:\"2026-09-20\",categoria:\"Outros\",recorrente:false,fim:null})); pagamentosFatura=[]; mesAtual=\"2026-10\"; _cartaoPrincipal=null; abrirCartoes()"
+ ],
+ [
+  "Cartões · outro à frente",
+  "cartoes=[\"bb\",\"inter\",\"neon\",\"nubank\",\"c6\",\"picpay\",\"itau\"].map((b,i)=>({id:\"k\"+i,nome:\"Cartão \"+i,banco:b,dia_fechamento:1,dia_vencimento:10+i})); comprasCartao=cartoes.map((c,i)=>({id:\"c\"+i,cartao_id:c.id,descricao:\"Compras\",valor:100*(i+1),parcelas:1,data:\"2026-09-20\",categoria:\"Outros\",recorrente:false,fim:null})); pagamentosFatura=[]; mesAtual=\"2026-10\"; _cartaoPrincipal=null; abrirCartoes(); escolherCartao(\"k3\")"
+ ],
+ [
+  "Entradas · com prazo e extra",
+  "entradasFixas=[{id:\"f1\",nome:\"Salário Sabrina\",valor:2500,dia:5,categoria:\"Salário\",inicio:null,fim:null},{id:\"f2\",nome:\"Salário audy\",valor:1600,dia:1,categoria:\"Salário\",inicio:null,fim:\"2026-12-01\"},{id:\"f3\",nome:\"13º\",valor:3000,dia:20,categoria:\"Extra\",inicio:\"2026-12-01\",fim:\"2026-12-01\"}]; mesAtual=mesDe(_hojeLocal()); abrirLancar(\"entrada\")"
+ ],
+ [
+  "Entrada · editar prazo",
+  "entradasFixas=[{id:\"f1\",nome:\"Salário Sabrina\",valor:2500,dia:5,categoria:\"Salário\",inicio:null,fim:null},{id:\"f2\",nome:\"Salário audy\",valor:1600,dia:1,categoria:\"Salário\",inicio:null,fim:\"2026-12-01\"},{id:\"f3\",nome:\"13º\",valor:3000,dia:20,categoria:\"Extra\",inicio:\"2026-12-01\",fim:\"2026-12-01\"}]; mesAtual=mesDe(_hojeLocal()); abrirEdicaoEntradaFixa(\"f2\")"
+ ],
+ [
+  "Entrada · só num mês",
+  "entradasFixas=[{id:\"f1\",nome:\"Salário Sabrina\",valor:2500,dia:5,categoria:\"Salário\",inicio:null,fim:null},{id:\"f2\",nome:\"Salário audy\",valor:1600,dia:1,categoria:\"Salário\",inicio:null,fim:\"2026-12-01\"},{id:\"f3\",nome:\"13º\",valor:3000,dia:20,categoria:\"Extra\",inicio:\"2026-12-01\",fim:\"2026-12-01\"}]; mesAtual=mesDe(_hojeLocal()); abrirNovaEntradaFixa(); document.querySelector(\"input[value=\\u0027unica\\u0027]\").click()"
+ ],
+ [
+  "Editar · categoria apagada",
+  "lancamentos=[{id:\"l1\",tipo:\"saida\",valor:90,data:\"2026-10-05\",categoria:\"Lazer\",descricao:\"Cinema\"}]; categorias=categorias.filter(c=>c.nome!==\"Lazer\"); abrirEdicaoLancamento(\"l1\",\"resumo\")"
+ ],
+ [
+  "Lançar · escolha",
+  "abrirLancarEscolha()"
+ ],
+ [
+  "Reservas",
+  "abrirReservas()"
+ ],
+ [
+  "Reservas · nenhuma",
+  "reservas=[]; movimentosReserva=[]; abrirReservas()"
+ ],
+ [
+  "Reservas · objetivo alcançado",
+  "movimentosReserva.push({id:\"mx\",reserva_id:\"r1\",tipo:\"guardar\",valor:7000,data:\"2026-09-01\",lancamento_id:null}); abrirReservas()"
+ ],
+ [
+  "Reserva · uma",
+  "abrirReserva(\"r1\")"
+ ],
+ [
+  "Reserva · sem objetivo",
+  "abrirReserva(\"r2\")"
+ ],
+ [
+  "Reserva · vazia",
+  "reservas.push({id:\"r3\",nome:\"Obra\",objetivo:20000,tipo:\"objetivo\"}); abrirReserva(\"r3\")"
+ ],
+ [
+  "Nova reserva",
+  "reservas=[]; movimentosReserva=[]; abrirNovaReserva()"
+ ],
+ [
+  "Nova reserva · sem média",
+  "lancamentos=[]; comprasCartao=[]; abrirNovaReserva()"
+ ],
+ [
+  "Editar reserva",
+  "abrirEdicaoReserva(\"r1\")"
+ ],
+ [
+  "Reserva · excluir",
+  "abrirReserva(\"r1\"); pedirExcluirReserva(\"r1\")"
+ ],
+ [
+  "Guardar na reserva",
+  "abrirReserva(\"r1\"); abrirGuardar(\"r1\")"
+ ],
+ [
+  "Resgatar da reserva",
+  "abrirReserva(\"r1\"); abrirResgatar(\"r1\")"
+ ],
+ [
+  "Reserva · desfazer movimento",
+  "abrirReserva(\"r1\"); pedirDesfazerMovimento(\"mr1\")"
+ ],
+ [
+  "Investimentos",
+  "abrirInvestimentos()"
+ ],
+ [
+  "Relatórios · reserva",
+  "lancamentos.push({id:\"gg\",tipo:\"saida\",valor:500,data:\"2026-09-11\",categoria:\"Guardado\",descricao:\"Guardado: Emergência\"},{id:\"rr\",tipo:\"entrada\",valor:120,data:\"2026-09-12\",categoria:\"Resgate\",descricao:\"Resgate: Viagem\"}); movimentosReserva=[{id:\"m1\",reserva_id:\"r1\",tipo:\"guardar\",valor:500,data:\"2026-09-11\",lancamento_id:\"gg\"},{id:\"m2\",reserva_id:\"r2\",tipo:\"resgatar\",valor:120,data:\"2026-09-12\",lancamento_id:\"rr\"}]; abrirRelatorios()"
+ ],
+ [
+  "Reservas · sem as tabelas",
+  "tabelasFaltando = [\"reservas\",\"movimentos_reserva\"]; abrirReservas()"
+ ],
+ [
+  "Nova reserva · tipo objetivo",
+  "reservas=[]; movimentosReserva=[]; abrirNovaReserva(); document.querySelector(\"input[value=\\u0027objetivo\\u0027]\").click()"
+ ],
+ [
+  "Nova reserva · já tem emergência",
+  "abrirNovaReserva()"
+ ],
+ [
+  "Reservas · sem emergência",
+  "reservas=[{id:\"r2\",nome:\"Viagem\",objetivo:4000,tipo:\"objetivo\"}]; movimentosReserva=[{id:\"m9\",reserva_id:\"r2\",tipo:\"guardar\",valor:4000,data:\"2026-09-05\",lancamento_id:\"g9\"}]; abrirReservas()"
+ ],
+ [
+  "Meu negócio",
+  "mesAtual=\"2026-09\"; abrirMeuNegocio()"
+ ],
+ [
+  "Negócio · sem cadastro",
+  "negocios=[]; movimentosNegocio=[]; abrirMeuNegocio()"
+ ],
+ [
+  "Negócio · cadastrar",
+  "negocios=[]; abrirNovoNegocio()"
+ ],
+ [
+  "Negócio · entrou",
+  "mesAtual=\"2026-09\"; abrirMeuNegocio(); abrirMovimentoNegocio(\"faturamento\")"
+ ],
+ [
+  "Negócio · saiu",
+  "mesAtual=\"2026-09\"; abrirMeuNegocio(); abrirMovimentoNegocio(\"custo\")"
+ ],
+ [
+  "Negócio · retirada",
+  "mesAtual=\"2026-09\"; abrirMeuNegocio(); abrirMovimentoNegocio(\"retirada\")"
+ ],
+ [
+  "Negócio · prejuízo",
+  "movimentosNegocio=[{id:\"x\",negocio_id:\"n1\",tipo:\"faturamento\",valor:500,data:\"2026-09-08\"},{id:\"y\",negocio_id:\"n1\",tipo:\"custo\",valor:1200,data:\"2026-09-09\"}]; mesAtual=\"2026-09\"; abrirMeuNegocio()"
+ ],
+ [
+  "Negócio · editar",
+  "abrirEdicaoNegocio()"
+ ],
+ [
+  "Negócio · sem as tabelas",
+  "tabelasFaltando=[\"negocios\",\"movimentos_negocio\"]; abrirMeuNegocio()"
+ ],
+ [
+  "Relatórios · sem meta obrigatória",
+  "metas=[{id:\"m\",categoria:\"Lazer\",valor:300,reservar:false}]; abrirRelatorios()"
+ ],
+ [
+  "Cartões · mês futuro",
+  "cartoes=[\"bb\",\"inter\",\"nubank\",\"c6\"].map((b,i)=>({id:\"k\"+i,nome:\"Cartão \"+i,banco:b,dia_fechamento:1+i*3,dia_vencimento:10+i})); comprasCartao=cartoes.map((c,i)=>({id:\"c\"+i,cartao_id:c.id,descricao:\"Compra\",valor:600+i*200,parcelas:6,data:\"2026-10-05\",categoria:\"Casa\",recorrente:false,fim:null})); pagamentosFatura=[]; _cartaoPrincipal=null; abrirCartoes(); trocarMesDoBaralho(3)"
+ ],
+ [
+  "Cartões · mês sem fatura",
+  "_cartaoPrincipal=null; abrirCartoes(); trocarMesDoBaralho(30)"
+ ],
+ [
+  "Resumo · com guardado",
+  "lancamentos.push({id:\"grd\",tipo:\"saida\",valor:500,data:\"2026-09-11\",categoria:\"Guardado\",descricao:\"Guardado: Emergência\"}); movimentosReserva=[{id:\"m\",reserva_id:\"r1\",tipo:\"guardar\",valor:500,data:\"2026-09-11\",lancamento_id:\"grd\"}]; abrirResumo()"
+ ],
+ [
+  "Assinaturas",
+  "comprasCartao.push({id:\"n\",cartao_id:\"k1\",descricao:\"Netflix\",valor:55.90,parcelas:1,data:\"2025-03-14\",categoria:\"Lazer\",recorrente:true,fim:null},{id:\"sp\",cartao_id:\"k1\",descricao:\"Spotify\",valor:34.90,parcelas:1,data:\"2026-02-14\",categoria:\"Lazer\",recorrente:true,fim:null}); abrirAssinaturas()"
+ ],
+ [
+  "Assinaturas · nenhuma",
+  "comprasCartao=comprasCartao.filter(c=>!c.recorrente); abrirAssinaturas()"
+ ],
+ [
+  "Pagar conta",
+  "contas=[{id:\"b\",nome:\"Boleto da moto\",valor:600,valor_pago:0,vencimento:\"2026-09-15\",pago:false,categoria:\"Transporte\",recorrente:false}]; abrirContas(); abrirPagarConta(\"b\")"
+ ],
+ [
+  "Pagar conta · já tem parte paga",
+  "contas=[{id:\"b\",nome:\"Boleto da moto\",valor:600,valor_pago:200,vencimento:\"2026-09-15\",pago:false,categoria:\"Transporte\",recorrente:false}]; abrirContas(); abrirPagarConta(\"b\")"
+ ],
+ [
+  "Contas · uma paga pela metade",
+  "contas=[{id:\"b\",nome:\"Boleto da moto\",valor:600,valor_pago:200,vencimento:\"2026-09-15\",pago:false,categoria:\"Transporte\",recorrente:false}]; abrirContas()"
+ ],
+ [
+  "Editar cartão",
+  "cartoes=[{id:\"k1\",nome:\"Nubank\",banco:\"nubank\",dia_fechamento:1,dia_vencimento:10,limite:5000}]; comprasCartao=[{id:\"t\",cartao_id:\"k1\",descricao:\"Tênis\",valor:1800,parcelas:6,data:\"2026-10-05\",categoria:\"Lazer\",recorrente:false,fim:null}]; pagamentosFatura=[]; _cartaoPrincipal=\"k1\"; _faturaMes=null; abrirEdicaoCartao(\"k1\")"
+ ],
+ [
+  "Cartões · com limite",
+  "cartoes=[{id:\"k1\",nome:\"Nubank\",banco:\"nubank\",dia_fechamento:1,dia_vencimento:10,limite:5000}]; comprasCartao=[{id:\"t\",cartao_id:\"k1\",descricao:\"Tênis\",valor:1800,parcelas:6,data:\"2026-10-05\",categoria:\"Lazer\",recorrente:false,fim:null}]; pagamentosFatura=[]; _cartaoPrincipal=\"k1\"; _faturaMes=null; abrirCartoes()"
+ ],
+ [
+  "Cartão · limite estourado",
+  "cartoes=[{id:\"k1\",nome:\"Nubank\",banco:\"nubank\",dia_fechamento:1,dia_vencimento:10,limite:1000}]; comprasCartao=[{id:\"t\",cartao_id:\"k1\",descricao:\"Tênis\",valor:1800,parcelas:6,data:\"2026-10-05\",categoria:\"Lazer\",recorrente:false,fim:null}]; pagamentosFatura=[]; _cartaoPrincipal=\"k1\"; _faturaMes=null; abrirCartao(\"k1\")"
+ ],
+ [
+  "Balanço",
+  "abrirBalanco()"
+ ],
+ [
+  "Balanço · primeira vez",
+  "conferencias=[]; abrirBalanco()"
+ ],
+ [
+  "Balanço · bateu certinho",
+  "conferencias=[{id:'cf1',data:'2026-01-02',saldo_informado:0}]; lancamentos=[]; abrirBalanco()"
+ ],
+ [
+  "Balanço · sobrou dinheiro",
+  "conferencias=[{id:'cf1',data:'2026-01-02',saldo_informado:0},{id:'cf2',data:'2026-01-20',saldo_informado:300}]; lancamentos=[]; abrirBalanco()"
+ ],
+ [
+  "Balanço · falta pra fechar o mês",
+  "conferencias=[{id:'cf1',data:'2026-01-02',saldo_informado:0}]; lancamentos=[]; entradasFixas=[]; contas=[{id:'c9',nome:'Aluguel',valor:1400,vencimento:mesDe(_hojeLocal())+'-28',pago:false,categoria:'Casa'}]; abrirBalanco()"
+ ],
+ [
+  "Conferir o saldo",
+  "abrirNovaConferencia()"
+ ],
+ [
+  "Conferir o saldo · primeira vez",
+  "conferencias=[]; abrirNovaConferencia()"
+ ],
+ [
+  "Balanço · apagar conferência",
+  "abrirBalanco(); pedirExcluirConferencia(conferencias[conferencias.length-1].id)"
+ ],
+ [
+  "Balanço · sem a tabela no banco",
+  "tabelasFaltando=['conferencias']; abrirBalanco()"
+ ]
+]

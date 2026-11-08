@@ -245,6 +245,10 @@ body {
 
 .menu-botao:active { background: var(--marca-toque); }
 
+/* O botão que fica sozinho na última linha ocupa as duas colunas: meio
+   botão com meio vazio do lado lê como falha de carregamento. */
+.menu-botao-largo { grid-column: 1 / -1; }
+
 /* Os botões ficam sempre do mesmo tamanho. O vago ao lado do último é
    lugar guardado pro Cartões (faturas), que entra aqui. */
 
@@ -2468,3 +2472,68 @@ body.escuro .resumo-secao .item-icone.entrada { background: #17372d; }
   font-variant-numeric: tabular-nums;
 }
 .cartao-limite-txt span:last-child { opacity: .75; font-weight: 400; }
+
+/* ─── 30. BALANÇO ────────────────────────────────────────────────────────
+   A tela em que o app admite que não sabia quanto você tem, pergunta, e
+   depois presta contas da diferença. */
+
+/* A DIFERENÇA MERECE MOLDURA PRÓPRIA. Ela não é um aviso de erro — é um
+   achado: o tamanho, em dinheiro, do que ficou sem lançar. Âmbar porque
+   é "olhe isto", não "está tudo perdido". */
+.balanco-furo {
+  border-left: 4px solid var(--aviso);
+  background: color-mix(in srgb, var(--aviso) 7%, var(--papel));
+}
+.balanco-furo .bloco-topo h2 { font-size: 14.5px; color: var(--aviso); }
+.balanco-furo .bloco-topo strong {
+  font-size: 19px;
+  font-weight: 800;
+  color: var(--aviso);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Sobrando dinheiro é a metade boa do mesmo achado, e ela não usa o
+   âmbar de atenção: quem tem a mais não precisa de alerta, precisa de
+   explicação. */
+.balanco-furo.sobrando { border-left-color: var(--entrada); background: color-mix(in srgb, var(--entrada) 6%, var(--papel)); }
+.balanco-furo.sobrando .bloco-topo h2,
+.balanco-furo.sobrando .bloco-topo strong { color: var(--entrada); }
+
+/* A CONTA LINHA POR LINHA. Tenho, vou receber, vou pagar, sobra — nesta
+   ordem, porque é a ordem em que a pergunta é feita. Cada linha é
+   rótulo à esquerda e número à direita, com os dígitos alinhados: duas
+   somas que não se alinham na vertical obrigam a pessoa a somar de
+   cabeça pra conferir. */
+.balanco-conta > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1px dashed var(--borda);
+  font-size: 13.5px;
+}
+.balanco-conta > div:first-child { padding-top: 0; }
+.balanco-conta span { color: var(--fraco); }
+.balanco-conta strong { font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.balanco-conta strong.mais { color: var(--entrada); }
+.balanco-conta strong.menos { color: var(--saida); }
+
+/* O RESULTADO FECHA A CONTA, então ele não é só mais uma linha: linha
+   cheia em cima dele, sem tracejado embaixo, e o número maior. */
+.balanco-conta-fim {
+  border-bottom: 0 !important;
+  border-top: 1.5px solid var(--borda) !important;
+  margin-top: 2px;
+  padding-bottom: 0 !important;
+}
+.balanco-conta-fim span {
+  color: var(--texto) !important;
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.balanco-conta-fim strong { font-size: 21px; color: var(--entrada); }
+.balanco-conta-fim.ruim strong { color: var(--saida); }

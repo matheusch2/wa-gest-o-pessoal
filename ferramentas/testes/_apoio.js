@@ -118,6 +118,7 @@ function montarPaginaComBanco() {
               entradas_fixas: () => entradasFixas,
               reservas: () => reservas,
               movimentos_reserva: () => movimentosReserva,
+              conferencias: () => conferencias,
             };
             let linhas = [];
             try { linhas = (globais[q._t] ? globais[q._t]() : []) || []; } catch (e) {}
@@ -130,7 +131,8 @@ function montarPaginaComBanco() {
             const alvo = q._eq.find(e => e[0] === "id");
             if (alvo) {
               for (const lista of [comprasCartao, contas, lancamentos, metas,
-                                   cartoes, reservas, movimentosReserva]) {
+                                   cartoes, reservas, movimentosReserva,
+                                   conferencias]) {
                 const achou = (lista || []).find(x => x.id === alvo[1]);
                 if (achou) { base = achou; break; }
               }
