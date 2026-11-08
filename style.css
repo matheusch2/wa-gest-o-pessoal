@@ -2430,3 +2430,41 @@ body.escuro .resumo-secao .item-icone.entrada { background: #17372d; }
   color: var(--aviso);
   font-weight: 700;
 }
+
+/* ─── 29. O LIMITE DO CARTÃO ─────────────────────────────────────────────
+   O limite é do CARTÃO, não da fatura: comprar R$ 1.200 em 6x come
+   R$ 1.200 do limite hoje, e a fatura do mês mostra R$ 200. Por isso a
+   barra vive na capa, e não muda quando se troca de mês.
+
+   Ela mora dentro de um cartão colorido, então todas as cores vêm de
+   currentColor — o que funciona no roxo do Nubank, no amarelo do Will e
+   no preto do C6 sem uma regra por banco. */
+.cartao-limite { margin: 10px 0 2px; }
+
+.cartao-limite-barra {
+  height: 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, currentColor 22%, transparent);
+  overflow: hidden;
+}
+.cartao-limite-barra span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: currentColor;
+}
+/* Estourado é a única coisa aqui que merece cor própria: ela precisa
+   gritar mesmo por cima do vermelho do Bradesco ou do laranja do Inter. */
+.cartao-limite-barra.estourou span { background: #ff6b6b; }
+
+.cartao-limite-txt {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  opacity: .9;
+  font-variant-numeric: tabular-nums;
+}
+.cartao-limite-txt span:last-child { opacity: .75; font-weight: 400; }

@@ -433,4 +433,137 @@ module.exports = () => suite("Cartão e fatura", async ({ p, ok, abrir, chamadas
   ok("mês sem assinatura não ganha o atalho",
     (await p.locator(".contas-total-link").count()) === 0);
 
+
+  /* ─── O LIMITE ───────────────────────────────────────────────────────
+     O limite do cartão NÃO é ocupado pela fatura: é ocupado pela COMPRA,
+     inteira, no dia em que ela acontece. Comprar R$ 1.200 em 6x come
+     R$ 1.200 do limite na hora e devolve R$ 200 a cada fatura paga.
+
+     É por isso que a conta não podia ser "limite menos a fatura do mês":
+     quem tem seis parceladas correndo tem seis valores cheios ocupando o
+     cartão, e só uma fração deles aparece na fatura. */
+  const LIM = `
+    lancamentos = []; contas = []; metas = []; fechamentos = [];
+    cartoes = [{ id:"k", nome:"Nubank", banco:"nubank",
+                 dia_fechamento:1, dia_vencimento:10, limite:5000 }];
+    comprasCartao = [
+      { id:"t", cartao_id:"k", descricao:"Tênis", valor:1800, parcelas:6,
+        data:"2026-10-05", categoria:"Lazer", recorrente:false, fim:null },
+      { id:"g", cartao_id:"k", descricao:"Geladeira", valor:1200, parcelas:10,
+        data:"2026-09-05", categoria:"Casa", recorrente:false, fim:null }];
+    pagamentosFatura = []; _cartaoPrincipal = "k"; _faturaMes = null;
+  `;
+
+  await abrir(LIM);
+  ok("a compra parcelada ocupa o valor CHEIO, não a parcela",
+    (await p.evaluate(() => _limiteUsado(cartoes[0]))) === 3000);
+  ok("e o livre é o limite menos isso",
+    (await p.evaluate(() => _limiteDoCartao(cartoes[0]).livre)) === 2000);
+
+  /* PAGAR DEVOLVE LIMITE. Pagar R$ 500 da fatura libera R$ 500 do
+     cartão — é a única coisa que libera. */
+  await abrir(LIM + `
+    pagamentosFatura = [{ id:"p", cartao_id:"k", mes_ref:"2026-11", tipo:"pago",
+                          valor:500, pago_em:"2026-11-10", lancamento_id:null, compra_id:null }];`);
+  ok("pagar a fatura devolve limite",
+    (await p.evaluate(() => _limiteUsado(cartoes[0]))) === 2500);
+
+  /* O ROTATIVO NÃO DEVOLVE NADA. O pagamento tipo 'saldo' é a dívida
+     empurrada pra fatura seguinte: ele abate a fatura do mês, mas o
+     dinheiro continua devido ao banco e o limite continua ocupado.
+     Contá-lo aqui faria o cartão parecer ter folga que não tem — num
+     app de dinheiro, mentir pra mais é o pior lado pra errar. */
+  await abrir(LIM + `
+    pagamentosFatura = [{ id:"q", cartao_id:"k", mes_ref:"2026-11", tipo:"saldo",
+                          valor:800, pago_em:"2026-11-10", lancamento_id:null, compra_id:null }];`);
+  ok("o rotativo NÃO devolve limite, porque a dívida continua",
+    (await p.evaluate(() => _limiteUsado(cartoes[0]))) === 3000);
+
+  /* A ASSINATURA SÓ OCUPA O QUE JÁ FOI COBRADO. Diferente da parcelada,
+     ela não tem total contratado: o mês que vem só existe se ninguém
+     cancelar, e reservar limite pra ele seria inventar dívida. */
+  await abrir(LIM + `
+    comprasCartao = [{ id:"n", cartao_id:"k", descricao:"Netflix", valor:100,
+                       parcelas:1, data:"2026-09-14", categoria:"Lazer",
+                       recorrente:true, fim:null }];`);
+  const assina = await p.evaluate(() => _limiteUsado(cartoes[0]));
+  const cobradas = await p.evaluate(() =>
+    _mesesComFatura(cartoes[0]).filter(m => m <= _mesFaturaAberta(cartoes[0]))
+      .filter(m => _cobrancaDaAssinatura(cartoes[0], comprasCartao[0], m)).length);
+  ok("a assinatura ocupa só as cobranças que já entraram em fatura",
+    assina === cobradas * 100 && cobradas > 0);
+
+  /* O TETO É CONFERIDO FORÇANDO O CASO. Hoje _mesesComFatura() já para
+     na fatura aberta, então a guarda do _limiteUsado() é a segunda
+     tranca da mesma porta — e uma tranca que nenhum teste experimenta é
+     uma tranca que pode estar quebrada sem ninguém saber. Aqui a função
+     é trocada por uma que devolve meses futuros, que é o que aconteceria
+     se alguém mudasse a regra dela um dia. */
+  const comFuturo = await p.evaluate(() => {
+    const real = _mesesComFatura;
+    try {
+      _mesesComFatura = (c) => real(c).concat(["2028-01", "2028-02", "2028-03"]);
+      return _limiteUsado(cartoes[0]);
+    } finally { _mesesComFatura = real; }
+  });
+  ok("e meses futuros não entram no limite nem se aparecerem na lista",
+    comFuturo === assina);
+
+  /* ESTOURAR O LIMITE é dito com palavra, e a barra não passa de 100%. */
+  await abrir(LIM + `cartoes[0].limite = 2000;`);
+  const estourado = await p.evaluate(() => _limiteDoCartao(cartoes[0]));
+  ok("passar do limite é marcado", estourado.estourou === true);
+  ok("com o quanto passou", estourado.excesso === 1000);
+  ok("o livre não fica negativo", estourado.livre === 0);
+  ok("e a barra para em 100%", estourado.fracao === 1);
+
+  await abrir(LIM + `cartoes[0].limite = 2000; abrirCartoes();`);
+  ok("a tela diz que passou, em vez de mostrar livre negativo",
+    (await texto(".cartao-limite-txt")).includes("Passou"));
+
+  // Sem limite cadastrado a tela não mostra nada — "disponível R$ 0"
+  // leria como cartão estourado, que é o oposto da verdade.
+  await abrir(LIM + `cartoes[0].limite = null; abrirCartoes();`);
+  ok("cartão sem limite não ganha barra nenhuma",
+    (await p.evaluate(() => _limiteDoCartao(cartoes[0]))) === null &&
+    (await p.locator(".cartao-limite").count()) === 0);
+
+  /* ─── EDITAR O CARTÃO ────────────────────────────────────────────── */
+  await abrir(LIM + "; abrirCartoes(); abrirCartao('k');");
+  ok("a tela do cartão tem o botão de editar",
+    (await texto("#carne-acoes")).includes("Editar o cartão"));
+
+  await abrir(LIM + "; abrirEdicaoCartao('k');");
+  ok("o formulário abre com o que já está salvo",
+    (await p.inputValue("#ct-cartao-nome")) === "Nubank" &&
+    (await p.inputValue("#ct-fechamento")) === "1" &&
+    (await p.inputValue("#ct-vencimento")) === "10" &&
+    valor(await p.inputValue("#ct-limite")) === 5000);
+
+  await p.evaluate(() => {
+    document.getElementById("ct-limite").value = "8.000,00";
+    document.getElementById("ct-vencimento").value = "20";
+  });
+  await p.evaluate(() => salvarCartao(document.querySelector(".lancamento-tela > .botao"), "k"));
+  const ed = await chamadas();
+  ok("salvar edita, não cria outro cartão",
+    ed[0].op === "update" && ed[0].eq.some(e => e[0] === "id" && e[1] === "k"));
+  ok("com o limite e o vencimento novos",
+    ed[0].dados.limite === 8000 && ed[0].dados.dia_vencimento === 20);
+
+  // Limite em branco é limite apagado, não limite zero.
+  await abrir(LIM + "; abrirEdicaoCartao('k');");
+  await p.evaluate(() => { document.getElementById("ct-limite").value = ""; });
+  await p.evaluate(() => salvarCartao(document.querySelector(".lancamento-tela > .botao"), "k"));
+  ok("limite apagado vira nulo, não zero",
+    (await chamadas())[0].dados.limite === null);
+
+  await abrir(LIM + "; abrirNovoCartao();");
+  ok("o mesmo formulário serve pra criar, em branco",
+    (await p.inputValue("#ct-cartao-nome")) === "" &&
+    (await p.inputValue("#ct-limite")) === "");
+  await p.evaluate(() => { document.getElementById("ct-cartao-nome").value = "Novo"; });
+  await p.evaluate(() => salvarCartao(document.querySelector(".lancamento-tela > .botao"), null));
+  ok("e aí ele insere", (await chamadas())[0].op === "insert");
+
 });

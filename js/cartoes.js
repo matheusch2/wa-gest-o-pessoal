@@ -290,6 +290,7 @@ function desenharCartoes() {
 
   const umCartao = ({ c, b, s, venc, mes, aberta, semFatura }, i) => {
     const valor = s.quitada ? s.pago : s.parcial ? s.restante : s.total;
+    const lim = _limiteDoCartao(c);
     return `
       <button class="cartao-card${c.id === _cartaoPrincipal ? " aberto" : ""}"
               id="cartao-${c.id}" style="background:${b.cor};color:${b.texto};z-index:${i + 1}"
@@ -302,6 +303,20 @@ function desenharCartoes() {
           ${_ICO_CARTAO}
         </div>
         <span class="cartao-card-nome">${esc(c.nome)}</span>
+        <!-- Só no cartão da frente: nas tirinhas de trás não há altura, e
+             o limite não é a pergunta de quem está folheando o baralho. -->
+        ${lim ? `
+          <div class="cartao-limite">
+            <div class="cartao-limite-barra${lim.estourou ? " estourou" : ""}">
+              <span style="width:${Math.round(lim.fracao * 100)}%"></span>
+            </div>
+            <div class="cartao-limite-txt">
+              <span>${lim.estourou
+                ? "Passou " + moeda(lim.excesso) + " do limite"
+                : moeda(lim.livre) + " livres"}</span>
+              <span>de ${moeda(lim.limite)}</span>
+            </div>
+          </div>` : ""}
         <div class="cartao-card-baixo">
           <div>
             <small>${semFatura
@@ -408,6 +423,65 @@ function desenharCartoes() {
 
     <button class="botao-fraco" onclick="voltarInicio()">Voltar</button>
   `;
+}
+
+/* ═══ O LIMITE, E O QUE SOBRA DELE ════════════════════════════════════
+   O limite do cartão não é ocupado pela fatura: é ocupado pela COMPRA,
+   inteira, no dia em que ela acontece. Comprar R$ 1.200 em 6x come
+   R$ 1.200 do limite na hora, e devolve R$ 200 a cada fatura paga — não
+   R$ 200 por mês que passa.
+
+   É por isso que a conta não pode ser "limite menos a fatura aberta".
+   Quem tem seis compras parceladas correndo tem seis valores cheios
+   ocupando o cartão, e só uma fração deles aparece na fatura do mês.
+
+   Então: USADO = tudo que foi comprado, menos tudo que foi pago.
+
+   O pagamento tipo 'saldo' NÃO entra: ele é o rotativo, a dívida empurrada
+   pra fatura seguinte. Ele abate a fatura do mês, mas não devolve limite
+   nenhum — o dinheiro continua devido ao banco.
+
+   A assinatura conta só o que JÁ FOI COBRADO. Diferente da parcelada,
+   ela não tem um total contratado: o mês que vem só existe se ninguém
+   cancelar, e reservar limite pra ele seria inventar dívida. */
+
+function _limiteUsado(cartao) {
+  let comprado = 0;
+  for (const c of comprasCartao) {
+    if (c.cartao_id !== cartao.id) continue;
+    if (c.recorrente) {
+      // Quantas cobranças dela já entraram em alguma fatura, até a aberta.
+      const aberta = _mesFaturaAberta(cartao);
+      for (const mes of _mesesComFatura(cartao)) {
+        if (mes > aberta) break;
+        if (_cobrancaDaAssinatura(cartao, c, mes)) comprado += Number(c.valor);
+      }
+      continue;
+    }
+    // Parcelada e à vista ocupam o valor CHEIO desde a compra.
+    comprado += Number(c.valor);
+  }
+
+  const pago = pagamentosFatura
+    .filter(x => x.cartao_id === cartao.id && x.tipo === "pago")
+    .reduce((t, x) => t + Number(x.valor), 0);
+
+  return _centavos(Math.max(0, comprado - pago));
+}
+
+// Nulo quando o cartão não tem limite cadastrado: a tela não mostra nada
+// em vez de mostrar "disponível R$ 0", que leria como cartão estourado.
+function _limiteDoCartao(cartao) {
+  const limite = Number(cartao.limite || 0);
+  if (limite < 0.005) return null;
+  const usado = _limiteUsado(cartao);
+  return {
+    limite, usado,
+    livre: _centavos(Math.max(0, limite - usado)),
+    estourou: usado > limite + 0.005,
+    excesso: _centavos(Math.max(0, usado - limite)),
+    fracao: Math.min(1, usado / limite),
+  };
 }
 
 /* ═══ O QUE DÁ PRA CANCELAR ═══════════════════════════════════════════
@@ -531,55 +605,87 @@ function desenharAssinaturas() {
 
 /* ═══ CADASTRAR CARTÃO ════════════════════════════════════════════════ */
 
-function abrirNovoCartao() {
-  abrirTela(() => {
+function abrirNovoCartao() { abrirTela(() => _desenharFormCartao(null)); }
+
+function abrirEdicaoCartao(id) {
+  const c = cartoes.find(x => x.id === id);
+  if (!c) { erro("Cartão não encontrado."); return; }
+  abrirTela(() => _desenharFormCartao(c));
+}
+
+/* UM FORMULÁRIO SÓ PRA CRIAR E EDITAR. Dois teriam que ser mantidos
+   iguais à mão, e o dia em que divergissem o cartão editado perderia um
+   campo em silêncio. */
+function _desenharFormCartao(cartao) {
+  (() => {
     destruirGrafico();
+    const editando = !!cartao;
     const icoTexto = `<svg viewBox="0 0 24 24" aria-hidden="true"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="16" y2="12"/><line x1="4" y1="17" x2="12" y2="17"/></svg>`;
     const icoBanco = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10h18M5 10v9m4-9v9m6-9v9m4-9v9M2 19h20M12 3 3 8h18z"/></svg>`;
     const icoData = `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`;
     const dias = n => Array.from({ length: 28 }, (_, i) => i + 1)
       .map(d => `<option value="${d}"${d === n ? " selected" : ""}>Dia ${d}</option>`).join("");
+    const icoLimite = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 1-9 9"/><polyline points="3 3 3 9 9 9"/><line x1="12" y1="7" x2="12" y2="12"/><line x1="12" y1="12" x2="16" y2="14"/></svg>`;
 
     document.getElementById("area").innerHTML = `
       <section class="lancamento-tela" style="--cor-tipo:var(--marca-txt)">
       <div class="lancamento-cabecalho">
         <span class="lancamento-cabecalho-icone">${_ICO_CARTAO}</span>
         <span class="lancamento-caption">Cartões</span>
-        <h2>Novo cartão</h2>
+        <h2>${editando ? "Editar cartão" : "Novo cartão"}</h2>
       </div>
 
       <div class="lancamento-form">
         <div class="campo">
           <div class="campo-label">${icoTexto}<label for="ct-cartao-nome">Nome do cartão</label></div>
-          <input type="text" id="ct-cartao-nome" placeholder="Ex: Nubank principal" autocomplete="off">
+          <input type="text" id="ct-cartao-nome" placeholder="Ex: Nubank principal" autocomplete="off"
+                 value="${esc(cartao ? cartao.nome : "")}">
         </div>
 
         <div class="campo">
           <div class="campo-label">${icoBanco}<label for="ct-cartao-banco">Banco</label></div>
           <select id="ct-cartao-banco" onchange="_previaCorCartao()">
-            ${BANCOS.map(b => `<option value="${b.id}">${esc(b.nome)}</option>`).join("")}
+            ${BANCOS.map(b => `<option value="${b.id}"${cartao && cartao.banco === b.id ? " selected" : ""}>${esc(b.nome)}</option>`).join("")}
           </select>
         </div>
 
         <div class="dois">
           <div class="campo">
             <div class="campo-label">${icoData}<label for="ct-fechamento">Fecha no</label></div>
-            <select id="ct-fechamento">${dias(1)}</select>
+            <select id="ct-fechamento">${dias(cartao ? Number(cartao.dia_fechamento) : 1)}</select>
           </div>
           <div class="campo">
             <div class="campo-label">${icoData}<label for="ct-vencimento">Vence no</label></div>
-            <select id="ct-vencimento">${dias(10)}</select>
+            <select id="ct-vencimento">${dias(cartao ? Number(cartao.dia_vencimento) : 10)}</select>
           </div>
         </div>
 
         <p class="cartao-dica">A compra feita depois do dia de fechamento já entra na fatura do mês seguinte.</p>
+
+        <div class="campo" style="margin:16px 0 0">
+          <div class="campo-label">${icoLimite}<label for="ct-limite">Limite (opcional)</label></div>
+          <div class="lancamento-valor">
+            <span>R$</span>
+            <input type="text" inputmode="decimal" id="ct-limite" placeholder="0,00" autocomplete="off"
+                   value="${cartao && cartao.limite
+                     ? Number(cartao.limite).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                     : ""}">
+          </div>
+        </div>
+        <!-- OPCIONAL de verdade: sem ele o cartão funciona igual, só não
+             mostra quanto sobra. Em branco é melhor do que um número
+             chutado, porque limite errado vira "disponível" errado. -->
+        <p class="cartao-dica">
+          Com o limite, o cartão passa a mostrar quanto ainda dá pra gastar.
+          Deixe em branco se não souber.
+        </p>
       </div>
 
       <div class="cartao-previa" id="cartao-previa"></div>
 
-      <button class="botao" onclick="salvarCartao(this)">
+      <button class="botao" onclick="salvarCartao(this, ${cartao ? `'${cartao.id}'` : "null"})">
         <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-        Salvar cartão
+        ${editando ? "Salvar alteração" : "Salvar cartão"}
       </button>
       <button class="botao-fraco lancamento-voltar" onclick="voltarTela()">Voltar</button>
       </section>`;
@@ -587,7 +693,7 @@ function abrirNovoCartao() {
     _previaCorCartao();
     // Sem foco automático: no celular ele abre o teclado sozinho e come
     // metade da tela antes de a pessoa ter lido o formulário.
-  });
+  })();
 }
 
 // Mostra a cor do banco escolhido antes de salvar — a cor é a única coisa
@@ -602,27 +708,45 @@ function _previaCorCartao() {
     </div>`;
 }
 
-async function salvarCartao(botao) {
+async function salvarCartao(botao, id) {
   if (botao?.disabled) return;
 
   const nome = (document.getElementById("ct-cartao-nome").value || "").trim();
   const banco = document.getElementById("ct-cartao-banco").value;
   const fechamento = Number(document.getElementById("ct-fechamento").value);
   const vencimento = Number(document.getElementById("ct-vencimento").value);
+  const txtLimite = (document.getElementById("ct-limite").value || "").trim();
+  const limite = txtLimite ? parseMoedaBR(txtLimite) : null;
 
   if (!nome) { erro("Dê um nome ao cartão."); return; }
+  if (txtLimite && (limite === null || limite <= 0)) {
+    erro("O limite precisa ser maior que zero, ou ficar em branco."); return;
+  }
 
   const solta = travar(botao, "Salvando...");
-  const { data, error } = await sb.from("cartoes").insert({
-    user_id: usuario.id, nome, banco,
-    dia_fechamento: fechamento, dia_vencimento: vencimento,
-  }).select().single();
+  const campos = { nome, banco, dia_fechamento: fechamento, dia_vencimento: vencimento, limite };
+
+  /* MUDAR O DIA DE FECHAMENTO REESCREVE O PASSADO, e isso precisa ser
+     dito. _mesDaPrimeiraParcela() usa o dia de fechamento pra decidir em
+     que fatura cada compra caiu — trocar o dia muda a fatura de compras
+     que já aconteceram, e faturas já pagas podem passar a mostrar outro
+     valor. Não é erro: é a conta sendo refeita com a regra nova. Mas
+     quem mexeu só pra corrigir o vencimento não espera isso. */
+  const mudouFechamento = id && Number(cartoes.find(x => x.id === id)?.dia_fechamento) !== fechamento;
+
+  const { data, error } = id
+    ? await sb.from("cartoes").update(campos).eq("id", id).eq("user_id", usuario.id).select().single()
+    : await sb.from("cartoes").insert({ user_id: usuario.id, ...campos }).select().single();
 
   if (error) { solta(); erro("Erro ao salvar: " + error.message); return; }
 
-  cartoes.push(data);
+  if (id) cartoes = cartoes.map(x => (x.id === id ? data : x));
+  else cartoes.push(data);
   cartoes.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
-  ok("Cartão cadastrado!");
+
+  ok(!id ? "Cartão cadastrado!"
+     : mudouFechamento ? "Cartão alterado. As compras foram recontadas pelo novo fechamento."
+     : "Cartão alterado!");
   voltarTela();
 }
 
@@ -654,6 +778,7 @@ function desenharCartao(id) {
   if (!c) { voltarInicio(); return; }
 
   const b = _banco(c.banco);
+  const lim = _limiteDoCartao(c);
   const mesVisivel = _faturaMes || _mesVisivelDaFatura(c, _mesFaturaAberta(c));
   const mes = _mesInternoDaFatura(c, mesVisivel);
   const itens = mes ? _parcelasDaFatura(c, mes) : [];
@@ -718,6 +843,21 @@ function desenharCartao(id) {
       </div>
       <span class="cartao-card-nome">${esc(c.nome)}</span>
       <small class="cartao-capa-regra">Fecha dia ${c.dia_fechamento} · Vence dia ${c.dia_vencimento}</small>
+      <!-- O LIMITE É DO CARTÃO, NÃO DA FATURA, e por isso ele fica na
+           capa e não muda quando se troca de mês. Comprar R$ 1.200 em 6x
+           come R$ 1.200 do limite hoje; a fatura do mês mostra R$ 200. -->
+      ${lim ? `
+        <div class="cartao-limite">
+          <div class="cartao-limite-barra${lim.estourou ? " estourou" : ""}">
+            <span style="width:${Math.round(lim.fracao * 100)}%"></span>
+          </div>
+          <div class="cartao-limite-txt">
+            <span>${lim.estourou
+              ? "Passou " + moeda(lim.excesso) + " do limite"
+              : moeda(lim.livre) + " livres"}</span>
+            <span>de ${moeda(lim.limite)}</span>
+          </div>
+        </div>` : ""}
     </div>
 
     <div class="bloco" style="padding:11px">
@@ -746,6 +886,14 @@ function desenharCartao(id) {
     ${itens.length
       ? `<div class="bloco" style="margin-top:14px"><div class="lista">${linhas}</div></div>`
       : `<div class="bloco" style="margin-top:14px"><p class="vazio">Nenhuma compra nesta fatura.</p></div>`}
+
+    <!-- Editar e excluir no mesmo lugar, como no carnê. Editar vem
+         primeiro: é o que se faz muito mais vezes. -->
+    <div id="carne-acoes">
+      <button class="botao-fraco" onclick="abrirEdicaoCartao('${c.id}')">
+        ✏️ Editar o cartão
+      </button>
+    </div>
 
     <div id="cartao-excluir">
       <button class="botao-fraco cartao-apagar" onclick="pedirExcluirCartao('${c.id}')">
