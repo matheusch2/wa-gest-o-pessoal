@@ -2475,30 +2475,7 @@ body.escuro .resumo-secao .item-icone.entrada { background: #17372d; }
 
 /* ─── 30. BALANÇO ────────────────────────────────────────────────────────
    A tela em que o app admite que não sabia quanto você tem, pergunta, e
-   depois presta contas da diferença. */
-
-/* A DIFERENÇA MERECE MOLDURA PRÓPRIA. Ela não é um aviso de erro — é um
-   achado: o tamanho, em dinheiro, do que ficou sem lançar. Âmbar porque
-   é "olhe isto", não "está tudo perdido". */
-.balanco-furo {
-  border-left: 4px solid var(--aviso);
-  background: color-mix(in srgb, var(--aviso) 7%, var(--papel));
-}
-.balanco-furo .bloco-topo h2 { font-size: 14.5px; color: var(--aviso); }
-.balanco-furo .bloco-topo strong {
-  font-size: 19px;
-  font-weight: 800;
-  color: var(--aviso);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-/* Sobrando dinheiro é a metade boa do mesmo achado, e ela não usa o
-   âmbar de atenção: quem tem a mais não precisa de alerta, precisa de
-   explicação. */
-.balanco-furo.sobrando { border-left-color: var(--entrada); background: color-mix(in srgb, var(--entrada) 6%, var(--papel)); }
-.balanco-furo.sobrando .bloco-topo h2,
-.balanco-furo.sobrando .bloco-topo strong { color: var(--entrada); }
+   faz a única conta que ela existe pra fazer. */
 
 /* A CONTA LINHA POR LINHA. Tenho, vou receber, vou pagar, sobra — nesta
    ordem, porque é a ordem em que a pergunta é feita. Cada linha é
@@ -2537,14 +2514,3 @@ body.escuro .resumo-secao .item-icone.entrada { background: #17372d; }
 }
 .balanco-conta-fim strong { font-size: 21px; color: var(--entrada); }
 .balanco-conta-fim.ruim strong { color: var(--saida); }
-
-/* A nota da primeira conferência. Ela ocupa o lugar onde o bloco do
-   achado apareceria, e é texto solto de propósito: ali não houve achado
-   nenhum, e emoldurar isso daria a ela um peso que ela não tem. */
-.balanco-partida {
-  margin: 0 0 12px;
-  padding: 0 4px;
-  font-size: 13px;
-  line-height: 1.55;
-  color: var(--fraco);
-}

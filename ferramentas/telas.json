@@ -464,35 +464,23 @@
   "conferencias=[]; abrirBalanco()"
  ],
  [
-  "Balanço · bateu certinho",
-  "conferencias=[{id:'cf1',data:'2026-01-02',saldo_informado:0}]; lancamentos=[]; abrirBalanco()"
- ],
- [
-  "Balanço · sobrou dinheiro",
-  "conferencias=[{id:'cf1',data:'2026-01-02',saldo_informado:0},{id:'cf2',data:'2026-01-20',saldo_informado:300}]; lancamentos=[]; abrirBalanco()"
- ],
- [
   "Balanço · falta pra fechar o mês",
   "conferencias=[{id:'cf1',data:'2026-01-02',saldo_informado:0}]; lancamentos=[]; entradasFixas=[]; contas=[{id:'c9',nome:'Aluguel',valor:1400,vencimento:mesDe(_hojeLocal())+'-28',pago:false,categoria:'Casa'}]; abrirBalanco()"
- ],
- [
-  "Conferir o saldo",
-  "abrirNovaConferencia()"
- ],
- [
-  "Conferir o saldo · primeira vez",
-  "conferencias=[]; abrirNovaConferencia()"
- ],
- [
-  "Balanço · apagar conferência",
-  "abrirBalanco(); pedirExcluirConferencia(conferencias[conferencias.length-1].id)"
  ],
  [
   "Balanço · sem a tabela no banco",
   "tabelasFaltando=['conferencias']; abrirBalanco()"
  ],
  [
-  "Balanço · primeira conferência",
-  "lancamentos=[{id:'v1',tipo:'entrada',valor:4000,data:'2026-02-10',categoria:'Salário',descricao:'Salário'},{id:'v2',tipo:'saida',valor:900,data:'2026-05-10',categoria:'Mercado',descricao:'Feira'}]; conferencias=[{id:'p1',data:_hojeLocal(),saldo_informado:3021}]; abrirBalanco()"
+  "Balanço · saldo de hoje",
+  "conferencias=[{id:'cf1',data:_hojeLocal(),saldo_informado:3021}]; abrirBalanco()"
+ ],
+ [
+  "Colocar o saldo",
+  "conferencias=[]; abrirAtualizarSaldo()"
+ ],
+ [
+  "Atualizar o saldo",
+  "abrirAtualizarSaldo()"
  ]
 ]

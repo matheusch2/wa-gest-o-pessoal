@@ -47,16 +47,17 @@ function montarPaginaComBanco() {
     window.CHAMADAS = [];
     const supabase = { createClient: () => ({
       from(t) {
-        const q = { _t: t, _op: null, _dados: null, _eq: [], _in: null };
+        const q = { _t: t, _op: null, _dados: null, _eq: [], _in: null, _conflito: null };
         q.insert = (d) => { q._op = "insert"; q._dados = d; return q; };
         q.update = (d) => { q._op = "update"; q._dados = d; return q; };
+        q.upsert = (d, o) => { q._op = "upsert"; q._dados = d; q._conflito = o; return q; };
         q.delete = () => { q._op = "delete"; return q; };
         q.select = () => q; q.order = () => q;
         q.eq = (c, v) => { q._eq.push([c, v]); return q; };
         q.in = (c, v) => { q._in = [c, v]; return q; };
         q.single = () => q.then();
         q.then = (fn) => {
-          window.CHAMADAS.push({ tabela: q._t, op: q._op, dados: q._dados, eq: q._eq, dentro: q._in });
+          window.CHAMADAS.push({ tabela: q._t, op: q._op, dados: q._dados, eq: q._eq, dentro: q._in, conflito: q._conflito });
 
           /* O BANCO TAMBÉM PRECISA SABER DIZER NÃO. Metade do cuidado
              deste app está no que acontece quando a gravação falha —

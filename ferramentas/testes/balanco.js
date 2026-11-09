@@ -5,19 +5,29 @@
  * que instalou o app nunca viu esses R$ 3.000, e quem fechou outubro com
  * R$ 800 viu novembro começar vazio.
  *
- * A conferência resolve isso com UM fato guardado — "no dia 8 eu tinha
- * tanto" — e tudo o mais é calculado. Os defeitos que caberiam aqui são
- * todos do mesmo tipo: números que não fecham entre si.
+ * A pessoa diz quanto tem. Esse número vira a base, e a tela faz UMA
+ * conta: tenho + vou receber − vou pagar.
  *
- *   - limite de data trocado      → o lançamento do dia da conferência
- *                                   conta duas vezes, e a diferença mente
- *   - diferença gravada em campo  → ela continua apontando um erro que já
- *                                   foi corrigido
- *   - âncora errada               → soma desde sempre em vez de partir da
- *                                   última conferência
- *   - saldo sem âncora            → R$ 0,00 apresentado como verdade
- *   - horizonte diferente         → Balanço e Resumo discordando sobre
- *                                   quanto ainda vai sair do mês
+ * ─── O QUE SAIU DAQUI, E POR QUÊ ────────────────────────────────────────
+ * A primeira versão comparava o saldo informado com o que o app calculara
+ * e anunciava a diferença. Isso chegou na mão do dono do app como "Faltou
+ * dinheiro na conta: R$ 4.180,83" na primeira vez que ele usou — um
+ * número que não existia, porque sem base anterior o app somava todos os
+ * lançamentos desde sempre. Saiu inteiro. As conferências que travavam
+ * aquele comportamento saíram junto; ficaram as que travam o que a tela
+ * faz hoje, e mais algumas novas pra garantir que o que saiu não volta.
+ *
+ * Os defeitos que ainda cabem aqui:
+ *
+ *   - limite de data trocado   → o lançamento do dia do saldo conta duas
+ *                                vezes, e o "você tem" mente
+ *   - base errada              → soma desde sempre em vez de partir do
+ *                                último saldo informado
+ *   - saldo sem base           → R$ 0,00 apresentado como verdade
+ *   - horizonte diferente      → Balanço e Resumo discordando sobre
+ *                                quanto ainda vai sair do mês
+ *   - gravar com insert        → saldo digitado errado sem conserto, já
+ *                                que não existe mais lista nem excluir
  */
 
 const { suite } = require("./_apoio");
@@ -32,6 +42,7 @@ const D = (n) => {
                          + "-" + String(d.getDate()).padStart(2, "0");
 };
 const HJ = D(0);
+const dataBRDe = (ymd) => { const [a, m, d] = ymd.split("-"); return `${d}/${m}/${a}`; };
 
 const BASE = `
   lancamentos = []; contas = []; cartoes = []; comprasCartao = [];
@@ -43,36 +54,24 @@ const BASE = `
 
 /* O CENÁRIO DOS LIMITES DE DATA.
  *
- * Conferência de R$ 2.000 em D(-30) e de R$ 2.150 em D(-10). Entre as
- * duas, +500 e −300: o app espera R$ 2.200 no dia 10, então a diferença
- * da segunda é de −R$ 50.
+ * Saldo de R$ 2.000 informado em D(-30). Depois dele: +500 e −300 e +400,
+ * então hoje são R$ 2.600.
  *
- * Os dois lançamentos das pontas estão aqui de propósito:
- *
- *   −1.000 EM D(-30), o dia da PRIMEIRA conferência. Não pode contar: o
- *   saldo informado naquele dia já contém ele. Contando, o esperado cai
- *   pra R$ 1.200.
- *
- *   −300 EM D(-10), o dia da SEGUNDA. Tem que contar: a pessoa informa o
- *   saldo no fim do dia. Sem ele, o esperado sobe pra R$ 2.500.
- *
- * Três resultados diferentes pro mesmo cenário — é isso que faz o teste
- * valer: qualquer troca de < por <= aparece num número.
+ * O −1.000 EM D(-30) está aqui de propósito: é o dia do saldo informado,
+ * e ele não pode contar — o saldo que a pessoa copiou do banco naquele
+ * dia já contém ele. Contando, o "você tem" cai pra R$ 1.600.
  */
-const PAR = `
+const COM_SALDO = `
   lancamentos = [
-    { id:"x1", tipo:"saida",   valor:1000, data:"${D(-30)}", categoria:"Casa",    descricao:"No dia da primeira" },
-    { id:"x2", tipo:"entrada", valor:500,  data:"${D(-20)}", categoria:"Salário", descricao:"Entre as duas" },
-    { id:"x3", tipo:"saida",   valor:300,  data:"${D(-10)}", categoria:"Mercado", descricao:"No dia da segunda" },
-    { id:"x4", tipo:"entrada", valor:400,  data:"${D(-3)}",  categoria:"Vendas",  descricao:"Depois da segunda" },
+    { id:"x1", tipo:"saida",   valor:1000, data:"${D(-30)}", categoria:"Casa",    descricao:"No dia do saldo" },
+    { id:"x2", tipo:"entrada", valor:500,  data:"${D(-20)}", categoria:"Salário", descricao:"Depois" },
+    { id:"x3", tipo:"saida",   valor:300,  data:"${D(-10)}", categoria:"Mercado", descricao:"Depois" },
+    { id:"x4", tipo:"entrada", valor:400,  data:"${D(-3)}",  categoria:"Vendas",  descricao:"Depois" },
   ];
-  conferencias = [
-    { id:"cfa", data:"${D(-30)}", saldo_informado:2000 },
-    { id:"cfb", data:"${D(-10)}", saldo_informado:2150 },
-  ];
+  conferencias = [{ id:"cfa", data:"${D(-30)}", saldo_informado:2000 }];
 `;
 
-module.exports = () => suite("Balanço: conferir o saldo", async ({ p, ok, abrir, texto, valor, chamadas, falharProxima }) => {
+module.exports = () => suite("Balanço: quanto você tem", async ({ p, ok, abrir, texto, valor, chamadas, falharProxima }) => {
 
   /* ─── O BOTÃO NO MENU ────────────────────────────────────────────── */
   await abrir(BASE + "; voltarInicio();");
@@ -84,128 +83,104 @@ module.exports = () => suite("Balanço: conferir o saldo", async ({ p, ok, abrir
     (await p.locator("#menu .menu-botao-largo").count()) === 1);
 
 
-  /* ─── O LIMITE DE DATA ───────────────────────────────────────────────
-     O começo é EXCLUSIVO e o fim é INCLUSIVO. É o lugar mais fácil de
-     errar nesta tela e o mais caro: errado, a diferença acusa um buraco
-     que não existe, e a pessoa vai caçar um lançamento que está lá. */
-  await abrir(BASE + PAR);
-  const esperadoNaSegunda = await p.evaluate(() => saldoCalculadoEm(conferencias[1].data, "cfb"));
-  ok("o esperado na segunda conferência é R$ 2.200,00", esperadoNaSegunda === 2200);
-  ok("o lançamento do DIA DA ÂNCORA não conta de novo", esperadoNaSegunda !== 1200);
-  ok("o lançamento do DIA DA CONFERÊNCIA conta", esperadoNaSegunda !== 2500);
-
-  const dif = await p.evaluate(() => diferencaDaConferencia(conferencias[1]));
-  ok("então a diferença da segunda é de −R$ 50,00", dif.diferenca === -50);
-  ok("e ela não se compara consigo mesma", dif.esperado === 2200);
-
-  /* A ÂNCORA É A CONFERÊNCIA ANTERIOR MAIS RECENTE, não a primeira e não
-     a soma desde sempre. Sem ela, o esperado seria −800 (os lançamentos
-     todos a partir do zero), e a diferença viraria um número absurdo. */
-  ok("a conta parte da última conferência, não do zero", dif.esperado !== -800);
+  /* ─── A TELA É CURTA, E ISSO É O RECURSO ─────────────────────────────
+     Ela já teve bloco de diferença, nota explicando a primeira vez e
+     lista de conferências. Tudo isso exigia uma aula pra ser lido. Hoje
+     são duas coisas: o número e a conta. */
+  await abrir(BASE + COM_SALDO + "; abrirBalanco();");
+  const tela = await texto("#area");
+  ok("a tela não fala em faltar dinheiro na conta", !tela.includes("Faltou dinheiro"));
+  ok("nem em sobrar dinheiro na conta", !tela.includes("Sobrou dinheiro"));
+  ok("nem cita o que o app esperava", !tela.includes("o app esperava"));
+  ok("nem fala em ponto de partida", !tela.includes("ponto de partida"));
+  ok("nem em conferência", !tela.toLowerCase().includes("conferência"));
+  ok("não sobrou lista de saldos antigos", (await p.locator(".lista .item").count()) === 0);
+  ok("são dois blocos: o número e a conta",
+    (await p.locator(".contas-total").count()) === 1 &&
+    (await p.locator(".balanco-conta").count()) === 1);
 
 
-  /* ─── QUANTO VOCÊ TEM HOJE ──────────────────────────────────────── */
-  await abrir(BASE + PAR + "; abrirBalanco();");
+  /* ─── QUANTO VOCÊ TEM HOJE ──────────────────────────────────────────
+     O limite de data é o lugar mais fácil de errar e o mais caro: o dia
+     do saldo informado é EXCLUSIVO, porque o número copiado do banco
+     naquele dia já contém o que aconteceu nele. */
   const hoje = await p.evaluate(() => saldoDeHoje());
-  ok("hoje você tem R$ 2.550,00 — a conferência mais o que se moveu",
-    hoje.valor === 2550);
-  ok("e o app diz de quando é a âncora", hoje.desde === await p.evaluate(() => conferencias[1].data));
-  ok("sem ser conferido hoje", hoje.conferido === false);
+  ok("hoje você tem R$ 2.600,00 — o saldo mais o que se moveu depois",
+    hoje.valor === 2600);
+  ok("o lançamento do DIA DO SALDO não conta de novo", hoje.valor !== 1600);
+  ok("e o app sabe de quando é a base", hoje.desde === D(-30));
+  ok("sem ser de hoje", hoje.dehoje === false);
 
   const grande = await texto(".contas-total");
-  ok("o número grande da tela é o que você TEM", grande.includes("2.550,00"));
+  ok("o número grande da tela é o que você TEM", grande.includes("2.600,00"));
   ok("e ele se apresenta como saldo em conta, não como saldo do mês",
     grande.includes("Você tem na conta"));
-  ok("dizendo desde quando", grande.includes("Conferido em"));
+  ok("dizendo de quando é a base", grande.includes("mais o que se moveu"));
 
-
-  /* ─── A DIFERENÇA É O ACHADO ────────────────────────────────────── */
-  const furo = await texto(".balanco-furo");
-  ok("a tela mostra o buraco de R$ 50,00", furo.includes("50,00"));
-  ok("chamando pelo nome do que aconteceu", furo.includes("Faltou dinheiro na conta"));
-  ok("e mostra os dois números lado a lado",
-    furo.includes("2.150,00") && furo.includes("2.200,00"));
-  ok("apontando pro que falta fazer", furo.includes("não foi lançada"));
-
-
-  /* ─── A DIFERENÇA SOME SOZINHA ───────────────────────────────────────
-     É por isso que ela não é gravada. Achado o lançamento esquecido, o
-     bloco tem que DESAPARECER — diferença em campo continuaria acusando
-     um erro já corrigido, e a pessoa ia procurar pra sempre. */
-  await abrir(BASE + PAR + `
-    lancamentos.push({ id:"achei", tipo:"saida", valor:50, data:"${D(-11)}",
-                       categoria:"Lazer", descricao:"O que faltava" });
-    abrirBalanco();`);
-  ok("lançado o que faltava, o buraco desaparece da tela",
-    (await p.locator(".balanco-furo").count()) === 0);
-  ok("e a diferença calculada volta a zero",
-    (await p.evaluate(() => diferencaDaConferencia(conferencias[1]).diferenca)) === 0);
-  /* E O SALDO DE HOJE NÃO SE MEXE, o que parece errado e não é: o saldo
-     informado é um FATO sobre o dia 10, e achar o lançamento que faltava
-     não muda o que o banco mostrava naquele dia. O que muda é só a
-     EXPECTATIVA do app, que era o que estava errada. Se o número grande
-     pulasse aqui, ele estaria contando o mesmo dinheiro duas vezes. */
-  ok("mas o saldo de hoje não se mexe — o fato do banco é o mesmo",
-    (await p.evaluate(() => saldoDeHoje().valor)) === 2550);
-
-  /* Batendo, a lista diz que bateu em vez de mostrar um zero solto. */
-  const linha = await texto("#conf-cfb");
-  ok("a linha da conferência diz que bateu certinho", linha.includes("bateu certinho"));
-  ok("sem inventar um valor de diferença", !linha.includes("R$ 0,00"));
-
-
-  /* ─── SOBRAR É O OUTRO LADO DO MESMO ACHADO ─────────────────────── */
   await abrir(BASE + `
-    conferencias = [{ id:"c1", data:"${D(-20)}", saldo_informado:1000 },
-                    { id:"c2", data:"${D(-5)}",  saldo_informado:1300 }];
+    conferencias = [{ id:"c1", data:"${HJ}", saldo_informado:3021 }];
     abrirBalanco();`);
-  const sobrou = await texto(".balanco-furo");
-  ok("sobrando dinheiro, a tela diz que sobrou", sobrou.includes("Sobrou dinheiro na conta"));
-  ok("com o valor certo", sobrou.includes("300,00"));
-  ok("e aponta pra uma entrada, não pra uma saída", sobrou.includes("entrou alguma coisa"));
-  ok("e não veste a cor de alerta",
-    (await p.locator(".balanco-furo.sobrando").count()) === 1);
+  ok("colocado hoje, a tela diz que é de hoje",
+    (await texto(".contas-total")).includes("Atualizado hoje"));
 
 
-  /* ─── SEM CONFERÊNCIA NENHUMA O APP NÃO SABE ─────────────────────────
+  /* ─── SEM SALDO INFORMADO O APP NÃO SABE ─────────────────────────────
      E dizer que não sabe é melhor do que dar um número que começou do
      zero. Era exatamente o que o app fazia antes desta tela. */
   await abrir(BASE + `
     lancamentos = [{ id:"s", tipo:"saida", valor:120, data:"${D(-2)}",
                      categoria:"Mercado", descricao:"Feira" }];
     abrirBalanco();`);
-  ok("sem âncora, o app não devolve saldo", (await p.evaluate(() => saldoDeHoje())) === null);
-  const semAncora = await texto(".contas-total");
-  ok("a tela PERGUNTA em vez de afirmar", semAncora.includes("Quanto você tem na conta?"));
-  ok("e não mostra R$ 0,00 como se fosse verdade", !semAncora.includes("R$ 0,00"));
-  ok("explicando que falta o ponto de partida", semAncora.includes("ponto de partida"));
+  ok("sem base, o app não devolve saldo", (await p.evaluate(() => saldoDeHoje())) === null);
+  const semBase = await texto(".contas-total");
+  ok("a tela PERGUNTA em vez de afirmar", semBase.includes("Quanto você tem na conta?"));
+  ok("e não mostra R$ 0,00 como se fosse verdade", !semBase.includes("R$ 0,00"));
+  ok("explicando que falta dizer de quanto partiu", semBase.includes("não sabe de quanto partiu"));
   ok("sem projetar nada por cima de um saldo que não existe",
     (await p.locator(".balanco-conta").count()) === 0);
-  ok("mas com o botão de conferir em destaque",
-    (await texto(".botao")).includes("Conferir o saldo"));
+  ok("mas com o botão em destaque", (await texto(".botao")).includes("Colocar o saldo"));
 
 
-  /* ─── CONFERÊNCIA COM DATA NO FUTURO NÃO ANCORA NADA ────────────────
-     Ela existiria na lista e seria ignorada pelo número grande. O app não
-     deixa gravar uma (conferido mais abaixo), mas se uma aparecer — vinda
-     de outro aparelho, de outro fuso — o saldo de hoje tem que continuar
-     saindo da última conferência que JÁ ACONTECEU. */
+  /* A BASE É O SALDO MAIS RECENTE, não o primeiro que a pessoa colocou.
+     Quem usa o app há meses tem vários, e partir do mais antigo faria o
+     app refazer, a cada abertura, uma soma que já foi corrigida. */
+  await abrir(BASE + `
+    lancamentos = [
+      { id:"a", tipo:"saida",   valor:200, data:"${D(-10)}", categoria:"Casa",   descricao:"Entre os dois" },
+      { id:"b", tipo:"entrada", valor:100, data:"${D(-2)}",  categoria:"Vendas", descricao:"Depois" },
+    ];
+    conferencias = [{ id:"c1", data:"${D(-20)}", saldo_informado:1000 },
+                    { id:"c2", data:"${D(-5)}",  saldo_informado:1500 }];
+    abrirBalanco();`);
+  ok("com vários saldos, vale o mais recente: 1500 + 100 = 1600",
+    (await p.evaluate(() => saldoDeHoje().valor)) === 1600);
+  ok("e não o primeiro, que daria 900",
+    (await p.evaluate(() => saldoDeHoje().valor)) !== 900);
+  ok("a tela mostra de quando é a base que ela usou",
+    (await texto(".contas-total")).includes(dataBRDe(D(-5))));
+
+
+  /* ─── SALDO COM DATA NO FUTURO NÃO É BASE DE NADA ────────────────────
+     O app não deixa gravar um (a gravação usa sempre hoje), mas se um
+     aparecer — vindo de outro aparelho, de outro fuso — o "você tem"
+     continua saindo do último saldo que JÁ ACONTECEU. */
   await abrir(BASE + `
     conferencias = [{ id:"c1", data:"${D(-5)}",  saldo_informado:900 },
                     { id:"c2", data:"${D(+5)}",  saldo_informado:5000 }];
     abrirBalanco();`);
-  ok("o saldo de hoje ignora a conferência do futuro",
+  ok("o saldo de hoje ignora o que está datado no futuro",
     (await p.evaluate(() => saldoDeHoje().valor)) === 900);
   ok("e a tela mostra o número que já aconteceu",
     (await texto(".contas-total")).includes("900,00"));
 
 
   /* ─── TENHO + VOU RECEBER − TENHO A PAGAR ────────────────────────────
-     O que ele pediu. O horizonte é o MÊS CORRENTE, o mesmo do Resumo:
+     A conta que ele pediu, e a única coisa que esta tela faz além de
+     mostrar o saldo. O horizonte é o MÊS CORRENTE, o mesmo do Resumo:
      dois horizontes diferentes fariam as duas telas discordarem sobre
      quanto sobra, e aí não serve nenhuma das duas. */
   const MES = `
-    conferencias = [{ id:"c1", data:"${D(0)}", saldo_informado:1000 }];
+    conferencias = [{ id:"c1", data:"${HJ}", saldo_informado:1000 }];
     entradasFixas = [{ id:"ef1", nome:"Salário", valor:2000, dia:28, categoria:"Salário" }];
     contas = [{ id:"k1", nome:"Aluguel", valor:1400,
                 vencimento:mesDe(_hojeLocal()) + "-27", pago:false, categoria:"Casa" }];
@@ -219,7 +194,7 @@ module.exports = () => suite("Balanço: conferir o saldo", async ({ p, ok, abrir
   ok("e a última fecha a conta: 1000 + 2000 − 1400 = 1600",
     conta[3].includes("Sobra") && conta[3].includes("1.600,00"));
 
-  /* OS NÚMEROS SÃO OS DO APP, não cópias.  Se o Balanço recalculasse "o
+  /* OS NÚMEROS SÃO OS DO APP, não cópias. Se o Balanço recalculasse "o
      que ainda vai sair" por conta própria, ele e o Resumo dariam
      respostas diferentes pro mesmo mês — o defeito que este projeto mais
      persegue. */
@@ -241,7 +216,7 @@ module.exports = () => suite("Balanço: conferir o saldo", async ({ p, ok, abrir
 
   /* ─── QUANDO NÃO DÁ ─────────────────────────────────────────────────── */
   await abrir(BASE + `
-    conferencias = [{ id:"c1", data:"${D(0)}", saldo_informado:200 }];
+    conferencias = [{ id:"c1", data:"${HJ}", saldo_informado:200 }];
     contas = [{ id:"k1", nome:"Aluguel", valor:1400,
                 vencimento:mesDe(_hojeLocal()) + "-27", pago:false, categoria:"Casa" }];
     abrirBalanco();`);
@@ -253,80 +228,84 @@ module.exports = () => suite("Balanço: conferir o saldo", async ({ p, ok, abrir
     (await texto(".rel-rodape")).includes("1.200,00"));
 
 
-  /* ─── CONFERIR: O FORMULÁRIO ─────────────────────────────────────── */
-  await abrir(BASE + PAR + "; abrirNovaConferencia();");
+  /* ─── COLOCAR O SALDO: UM CAMPO E UM BOTÃO ───────────────────────────
+     O formulário já teve campo de data, prévia da diferença enquanto se
+     digitava e um parágrafo explicando o que ia acontecer. Hoje tem o
+     campo e o botão, porque a pessoa está com o app do banco aberto na
+     outra mão e o saldo é o de agora. */
+  await abrir(BASE + COM_SALDO + "; abrirAtualizarSaldo();");
   ok("o campo do saldo começa VAZIO, de propósito",
     (await p.inputValue("#cf-saldo")) === "");
-  ok("a data começa hoje", (await p.inputValue("#cf-data")) === HJ);
-  ok("e não aceita data no futuro nem no calendário",
-    (await p.getAttribute("#cf-data", "max")) === HJ);
-  const dica = await texto("#cf-previa");
+  ok("não há campo de data", (await p.locator("#cf-data").count()) === 0);
+  const dica = await texto(".cartao-dica");
   ok("a dica manda abrir o banco", dica.includes("app do seu banco"));
-  ok("e já diz o que o app espera", dica.includes("2.550,00"));
+  ok("e não promete veredicto nenhum",
+    !dica.includes("diferença") && !dica.includes("espera"));
+  ok("o título diz que é atualização, já que já existe um saldo",
+    (await texto("h2")).includes("Atualizar o saldo"));
 
-  /* A PRÉVIA ENQUANTO DIGITA. É o momento em que a informação vale mais:
-     ainda dá pra ver que foi engano de digitação antes de gravar. */
-  await p.fill("#cf-saldo", "2500,00");
-  ok("digitando menos, a prévia diz quanto falta",
-    (await texto("#cf-previa")).includes("50,00") &&
-    (await texto("#cf-previa")).includes("a menos"));
-  await p.fill("#cf-saldo", "2600,00");
-  ok("digitando mais, ela diz que sobrou",
-    (await texto("#cf-previa")).includes("a mais"));
-  await p.fill("#cf-saldo", "2550,00");
-  ok("digitando o valor certo, ela diz que bate",
-    (await texto("#cf-previa")).includes("Bate certinho"));
-
-  /* Primeira conferência não tem o que comparar, e a tela não finge que
-     tem: ela explica que aquele número vira o ponto de partida. */
-  await abrir(BASE + "; abrirNovaConferencia();");
-  ok("na primeira vez, a dica fala de ponto de partida",
-    (await texto("#cf-previa")).includes("ponto de partida"));
-  ok("sem citar um esperado que não existe",
-    !(await texto("#cf-previa")).includes("O app espera"));
+  await abrir(BASE + "; abrirAtualizarSaldo();");
+  ok("sem saldo nenhum ainda, o título é colocar",
+    (await texto("h2")).includes("Colocar o saldo"));
 
 
-  /* ─── CONFERIR: GRAVAR ──────────────────────────────────────────── */
-  await abrir(BASE + PAR + "; abrirNovaConferencia();");
+  /* ─── GRAVAR ─────────────────────────────────────────────────────── */
+  await abrir(BASE + COM_SALDO + "; abrirAtualizarSaldo();");
   await p.fill("#cf-saldo", "2.480,00");
   await p.click(".botao");
   const g = await chamadas();
   ok("salvar grava UMA linha", g.length === 1 && g[0].tabela === "conferencias");
-  ok("como insert", g[0].op === "insert");
   ok("com o saldo lido do campo, milhar e tudo", g[0].dados.saldo_informado === 2480);
-  ok("a data de hoje", g[0].dados.data === HJ);
+  ok("sempre com a data de hoje", g[0].dados.data === HJ);
   ok("e o dono", g[0].dados.user_id === "u1");
-  ok("SÓ o fato é gravado — a diferença não vira campo",
-    !("diferenca" in g[0].dados) && !("esperado" in g[0].dados) &&
-    !("saldo_calculado" in g[0].dados));
-  ok("e o aviso já diz o tamanho da diferença",
-    (await texto("#avisos")).includes("70,00"));
+
+  /* UPSERT, NÃO INSERT, e isto é o que torna a tela sem lista possível:
+     não há mais onde apagar um saldo digitado errado, então digitar de
+     novo no mesmo dia TEM que corrigir em vez de dar erro de duplicado.
+     Com insert, o segundo toque batia no índice único e a pessoa ficava
+     presa com o número errado. */
+  ok("como upsert, não insert", g[0].op === "upsert");
+  ok("conflitando por dono e dia", g[0].conflito.onConflict === "user_id,data");
+
+  ok("e o aviso é só a confirmação, sem veredicto",
+    (await texto("#avisos")).includes("Saldo atualizado"));
+
+  /* E o segundo saldo do mesmo dia SUBSTITUI o primeiro na memória do
+     app, igual o banco faz. Sem isto a tela voltaria mostrando os dois,
+     e o "você tem" sairia do que foi corrigido. */
+  await abrir(BASE + `
+    conferencias = [{ id:"c1", data:"${HJ}", saldo_informado:999 }];
+    abrirAtualizarSaldo();`);
+  await p.fill("#cf-saldo", "3021");
+  await p.click(".botao");
+  ok("um saldo por dia continua valendo do lado de cá",
+    (await p.evaluate(() => conferencias.length)) === 1);
+  ok("e é o novo que vale",
+    (await p.evaluate(() => saldoDeHoje().valor)) === 3021);
 
   /* Saldo ZERO é saldo. Conta zerada existe, e recusar o zero obrigaria a
-     pessoa a mentir ou a não conferir. */
-  await abrir(BASE + "; abrirNovaConferencia();");
+     pessoa a mentir ou a não colocar. */
+  await abrir(BASE + "; abrirAtualizarSaldo();");
   await p.fill("#cf-saldo", "0");
   await p.click(".botao");
   const zero = await chamadas();
   ok("saldo zero é aceito", zero.length === 1 && zero[0].dados.saldo_informado === 0);
 
-  await abrir(BASE + "; abrirNovaConferencia();");
+  await abrir(BASE + "; abrirAtualizarSaldo();");
   await p.click(".botao");
   ok("campo vazio não grava nada", (await chamadas()).length === 0);
   ok("e diz o que falta", (await texto("#avisos")).includes("saldo"));
 
   /* SALDO NEGATIVO tem duas trancas, e a primeira é o teclado: o
      formatador de dinheiro do app já come o sinal de menos enquanto se
-     digita. A segunda é a conferência aqui embaixo, pra quando o valor
+     digita. A segunda é a conferência no salvar, pra quando o valor
      chegar por outro caminho. */
-  await abrir(BASE + "; abrirNovaConferencia();");
+  await abrir(BASE + "; abrirAtualizarSaldo();");
   await p.fill("#cf-saldo", "-300");
   ok("o campo de dinheiro não deixa nem digitar o menos",
     (await p.inputValue("#cf-saldo")) === "300");
 
-  // Atribuir sem disparar o 'input' é o único jeito de chegar na tranca
-  // de baixo — que é justamente o caso que ela existe pra cobrir.
-  await abrir(BASE + `; abrirNovaConferencia();
+  await abrir(BASE + `; abrirAtualizarSaldo();
     document.getElementById("cf-saldo").value = "-300";`);
   await p.click(".botao");
   ok("e, se um negativo chegar de outro jeito, não grava",
@@ -334,58 +313,15 @@ module.exports = () => suite("Balanço: conferir o saldo", async ({ p, ok, abrir
   ok("explicando que cheque especial é dívida, não saldo",
     (await texto("#avisos")).includes("dívida"));
 
-  /* Data no futuro: o campo já barra no calendário, mas quem digita à mão
-     passa por cima do max. */
-  await abrir(BASE + `; abrirNovaConferencia();
-    document.getElementById("cf-data").value = "${D(+10)}";`);
-  await p.fill("#cf-saldo", "1000");
+  /* Erro do banco não pode passar por sucesso: a tela tem que continuar
+     no formulário, com o número ainda na mão da pessoa. */
+  await abrir(BASE + "; abrirAtualizarSaldo();");
+  await falharProxima("XX000", "indisponível");
+  await p.fill("#cf-saldo", "1500");
   await p.click(".botao");
-  ok("data no futuro não grava", (await chamadas()).length === 0);
-  ok("e a tela diz por quê", (await texto("#avisos")).includes("futuro"));
-
-  /* Uma por dia: duas no mesmo dia tornariam ambígua a pergunta "quanto
-     eu tinha naquele dia?", que é a que ancora todo o resto. */
-  await abrir(BASE + PAR + "; abrirNovaConferencia();");
-  await falharProxima("23505", "duplicate key value violates unique constraint");
-  await p.fill("#cf-saldo", "2550");
-  await p.click(".botao");
-  ok("conferência repetida no mesmo dia é recusada com explicação",
-    (await texto("#avisos")).includes("Já existe uma conferência nesse dia"));
-  ok("e a tela não volta como se tivesse dado certo",
+  ok("falhando a gravação, a tela avisa", (await texto("#avisos")).includes("Erro ao salvar"));
+  ok("e não volta como se tivesse dado certo",
     (await p.locator("#cf-saldo").count()) === 1);
-
-
-  /* ─── APAGAR É O JEITO DE REFAZER ────────────────────────────────────
-     Uma por dia, e um saldo digitado errado estraga todas as contas dali
-     pra frente, porque ele é a âncora. */
-  await abrir(BASE + PAR + "; abrirBalanco();");
-  await p.evaluate(() => pedirExcluirConferencia("cfb"));
-  const pedido = await texto("#balanco-confirma");
-  ok("apagar pede confirmação", (await p.locator(".confirmar").count()) === 1);
-  ok("dizendo qual conferência é", pedido.includes("2.150,00"));
-  ok("e o que acontece com as contas", pedido.includes("conferência anterior"));
-
-  await p.click(".confirmar .sim");
-  const ap = await chamadas();
-  ok("apaga só aquela linha",
-    ap.length === 1 && ap[0].tabela === "conferencias" && ap[0].op === "delete");
-  ok("presa ao dono, não só ao id",
-    ap[0].eq.some(e => e[0] === "id" && e[1] === "cfb") &&
-    ap[0].eq.some(e => e[0] === "user_id"));
-  /* 2.000 da primeira conferência, mais 500 − 300 + 400 do que se moveu
-     DEPOIS dela: R$ 2.600. Note que o −1.000 do dia dela continua de
-     fora, e é a mesma regra de limite valendo com outra âncora. */
-  ok("e as contas voltam pra âncora anterior",
-    (await p.evaluate(() => saldoDeHoje().valor)) === 2600);
-  ok("a tela se redesenha sem ela",
-    (await p.locator("#conf-cfb").count()) === 0 &&
-    (await p.locator("#conf-cfa").count()) === 1);
-
-  await abrir(BASE + PAR + "; abrirBalanco();");
-  await p.evaluate(() => pedirExcluirConferencia("cfb"));
-  await p.click(".confirmar button:not(.sim)");
-  ok("cancelar não apaga nada", (await chamadas()).length === 0);
-  ok("e a conferência continua lá", (await p.locator("#conf-cfb").count()) === 1);
 
 
   /* ─── A TABELA QUE FALTA NÃO DERRUBA O APP ───────────────────────────
@@ -399,104 +335,13 @@ module.exports = () => suite("Balanço: conferir o saldo", async ({ p, ok, abrir
     (await p.evaluate(() => faltaATabela("conferencias"))) === true);
 
   await p.evaluate(() => abrirBalanco());
-  const semBanco = await texto("#area");
+  const semTabela = await texto("#area");
   ok("a tela explica que falta rodar o banco.sql",
-    semBanco.includes("banco.sql") && semBanco.includes("SQL Editor"));
+    semTabela.includes("banco.sql") && semTabela.includes("SQL Editor"));
   ok("e não mostra saldo nenhum", (await p.locator(".contas-total").count()) === 0);
   ok("nem a projeção do mês", (await p.locator(".balanco-conta").count()) === 0);
 
   await p.evaluate(() => voltarInicio());
   await p.evaluate(() => abrirResumo());
   ok("e o Resumo abre normalmente do lado", (await p.locator(".saldo").count()) === 1);
-
-
-  /* ─── A PRIMEIRA CONFERÊNCIA NÃO TEM DIFERENÇA ──────────────────────
-     DEFEITO QUE CHEGOU NA MÃO DO USUÁRIO, e o pior tipo: número grande,
-     vermelho, e inventado. Sem conferência anterior, o app somava TODOS
-     os lançamentos desde sempre a partir do zero e chamava aquilo de "o
-     que eu esperava". Com um ano de uso, a primeira conferência da vida
-     da pessoa abria com "Faltou dinheiro na conta: R$ 4.180,83".
-
-     Não havia buraco nenhum. Havia um número que não queria dizer nada
-     sendo apresentado como expectativa — justamente na única conferência
-     que, por definição, não tem com o que ser comparada. */
-  const ANO_DE_USO = `
-    lancamentos = [
-      { id:"v1", tipo:"entrada", valor:4000, data:"${D(-300)}", categoria:"Salário", descricao:"Salário" },
-      { id:"v2", tipo:"saida",   valor:900,  data:"${D(-250)}", categoria:"Mercado", descricao:"Feira" },
-      { id:"v3", tipo:"entrada", valor:4000, data:"${D(-120)}", categoria:"Salário", descricao:"Salário" },
-      { id:"v4", tipo:"saida",   valor:1900, data:"${D(-60)}",  categoria:"Casa",    descricao:"Aluguel" },
-    ];
-  `;
-  await abrir(BASE + ANO_DE_USO + `
-    conferencias = [{ id:"p1", data:"${D(0)}", saldo_informado:3021 }];
-    abrirBalanco();`);
-
-  ok("a soma de tudo desde sempre NÃO vira expectativa",
-    (await p.evaluate(() => saldoCalculadoEm(_hojeLocal()))) === null);
-  const partida = await p.evaluate(() => diferencaDaConferencia(conferencias[0]));
-  ok("a primeira conferência não tem diferença", partida.diferenca === null);
-  ok("nem esperado", partida.esperado === null);
-  ok("ela se declara ponto de partida", partida.partida === true);
-
-  ok("e a tela não acusa buraco nenhum",
-    (await p.locator(".balanco-furo").count()) === 0);
-  const tela = await texto("#area");
-  ok("nem fala em faltar dinheiro", !tela.includes("Faltou dinheiro"));
-  ok("nem cita um esperado que não existe", !tela.includes("o app esperava"));
-
-  /* E NÃO FICA CALADA. Quem acabou de conferir está esperando um
-     veredicto; o veredicto honesto aqui é "a partir de agora dá pra
-     conferir". */
-  const nota = await texto(".balanco-partida");
-  ok("a tela explica que esta é a primeira", nota.includes("primeira conferência"));
-  ok("e o que muda na próxima", nota.includes("próxima"));
-
-  const linhaP = await texto("#conf-p1");
-  ok("na lista, ela aparece como ponto de partida", linhaP.includes("ponto de partida"));
-  ok("sem número de diferença", !linhaP.includes("4.180") && !linhaP.includes("R$ 0,00"));
-
-  /* O SALDO CONTINUA FUNCIONANDO — o ponto de partida ancora, que é pra
-     isso que ele serve. */
-  ok("e o 'você tem' sai certinho mesmo assim",
-    (await p.evaluate(() => saldoDeHoje().valor)) === 3021);
-  ok("com a projeção do mês no lugar",
-    (await p.locator(".balanco-conta").count()) === 1);
-
-  /* DA SEGUNDA EM DIANTE A COMPARAÇÃO EXISTE, e aí sim o número vale. */
-  await abrir(BASE + ANO_DE_USO + `
-    conferencias = [{ id:"p1", data:"${D(-7)}", saldo_informado:3021 },
-                    { id:"p2", data:"${D(0)}",  saldo_informado:2900 }];
-    abrirBalanco();`);
-  ok("a segunda conferência já tem o que comparar",
-    (await p.evaluate(() => diferencaDaConferencia(conferencias[1]).diferenca)) === -121);
-  ok("e aí o buraco aparece, agora valendo",
-    (await texto(".balanco-furo")).includes("121,00"));
-  ok("mas a primeira continua sendo ponto de partida",
-    (await texto("#conf-p1")).includes("ponto de partida"));
-  ok("e a nota de primeira conferência sai da tela",
-    (await p.locator(".balanco-partida").count()) === 0);
-
-  /* A PRÉVIA ENQUANTO DIGITA TAMBÉM NÃO PODE INVENTAR. Era por ali que o
-     defeito começava a aparecer, antes mesmo de gravar. */
-  await abrir(BASE + ANO_DE_USO + "; abrirNovaConferencia();");
-  await p.fill("#cf-saldo", "3021,00");
-  const previaP = await texto("#cf-previa");
-  ok("digitando a primeira conferência, a prévia não acusa diferença",
-    !previaP.includes("a menos") && !previaP.includes("a mais"));
-  ok("ela explica que aquilo é o ponto de partida",
-    previaP.includes("ponto de partida"));
-
-  await p.click(".botao");
-  ok("e o aviso ao salvar comemora em vez de assustar",
-    (await texto("#avisos")).includes("Agora o app sabe quanto você tem"));
-
-
-  /* ─── A LISTA ────────────────────────────────────────────────────── */
-  await abrir(BASE + PAR + "; abrirBalanco();");
-  const itens = await p.locator(".lista .item").count();
-  ok("as duas conferências aparecem na lista", itens === 2);
-  const primeiro = await texto(".lista .item:first-child .item-txt");
-  ok("a mais recente vem primeiro", primeiro.includes("2.150,00"));
-  ok("com a data por extenso", primeiro.includes("/"));
 });
