@@ -231,9 +231,14 @@ function desenharReservas() {
       </div>
     </section>
 
-    <!-- A FRASE DEBAIXO DO NÚMERO É O CONTEÚDO, não enfeite. Um saldo
-         guardado sozinho não diz se é muito ou pouco: "R$ 6.000" vale
-         meio ano pra uma pessoa e três semanas pra outra.
+    <!-- A LINHA DEBAIXO DO NÚMERO SÓ APARECE QUANDO TEM NÚMERO PRA DAR.
+         Um saldo guardado sozinho não diz se é muito ou pouco: "R$ 6.000"
+         vale meio ano pra uma pessoa e três semanas pra outra. Por isso a
+         cobertura fica.
+
+         O que saiu foram as versões SEM número — "comece pela reserva de
+         emergência", "lance alguns meses pra saber" —, que não informavam
+         nada, só conversavam. Sem o que dizer, a linha não existe.
 
          E ela fala da EMERGÊNCIA, com o valor dela escrito. Antes somava
          tudo: "você tem R$ 9.850 — cobre 4,9 meses", com R$ 4.000 de
@@ -242,15 +247,9 @@ function desenharReservas() {
     <div class="contas-total">
       <span>Você tem guardado</span>
       <strong>${moeda(total)}</strong>
-      <small>${
-        !reservas.length
-          ? "Comece pela reserva de emergência."
-          : !emergencia
-            ? "Você ainda não tem uma reserva de emergência — é a que segura os meses em que nada entra"
-            : cobertura
-              ? `Dos ${moeda(saldoEmergencia)} da emergência, dá pra viver ${_mesesPorExtenso(cobertura.meses)} — você gasta ${moeda(cobertura.media)} por mês, em média`
-              : "Lance alguns meses pra saber quantos meses a emergência cobre"
-      }</small>
+      ${reservas.length && emergencia && cobertura
+        ? `<small>Dos ${moeda(saldoEmergencia)} da emergência, dá pra viver ${_mesesPorExtenso(cobertura.meses)}</small>`
+        : ""}
     </div>
 
     <button class="botao" onclick="abrirNovaReserva()">
@@ -258,17 +257,12 @@ function desenharReservas() {
       Nova reserva
     </button>
 
+    <!-- SEM RESERVA, SEM CAIXA. Havia aqui um bloco explicando o que é
+         uma reserva. O número zero em cima e o botão "Nova reserva" logo
+         abaixo já dizem a mesma coisa, e dizem sem pedir leitura. -->
     ${lista.length
       ? `<div class="reserva-lista">${lista.map(umaReserva).join("")}</div>`
-      : `<div class="bloco" style="margin-top:14px">
-           <p class="vazio">Nenhuma reserva ainda.</p>
-           <p class="cartao-dica" style="margin:0">
-             Reserva é dinheiro que sai da conta e continua sendo seu. Crie
-             uma pra emergência — a que cobre os meses em que nada entra —
-             e outras pro que você está juntando: a viagem, a troca do
-             carro, a obra.
-           </p>
-         </div>`}
+      : ""}
 
     <!-- INVESTIMENTOS NÃO FICA AQUI: tem botão próprio no menu. Um atalho
          daqui pra lá seria o segundo caminho pro mesmo lugar, que é
@@ -424,21 +418,12 @@ function _desenharFormReserva(r) {
         <label class="escolha-op">
           <input type="radio" name="rs-tipo" value="emergencia" checked
                  onchange="_aoTrocarTipoDaReserva()">
-          <span>
-            <strong>Emergência</strong>
-            <small>O colchão pros meses em que nada entra. O objetivo dela se
-                   mede em meses da sua despesa, e é ela que aparece no topo
-                   com o "dá pra viver tanto tempo".</small>
-          </span>
+          <span><strong>Emergência</strong></span>
         </label>
         <label class="escolha-op">
           <input type="radio" name="rs-tipo" value="objetivo"
                  onchange="_aoTrocarTipoDaReserva()">
-          <span>
-            <strong>Um objetivo</strong>
-            <small>A viagem, a troca do carro, a obra. Tem preço, e é esse
-                   preço que você põe como objetivo.</small>
-          </span>
+          <span><strong>Um objetivo</strong></span>
         </label>
       </div>
     </div>`;
@@ -475,8 +460,8 @@ function _desenharFormReserva(r) {
       <!-- OPCIONAL de verdade, e isto é decisão de produto: exigir o
            número impediria de começar quem ainda não sabe quanto quer
            juntar — que é quase todo mundo no primeiro dia. Em branco, a
-           reserva só mostra o saldo, sem barra de progresso. -->
-      <p class="cartao-dica">Deixe em branco se ainda não sabe o número. Dá pra pôr depois.</p>
+           reserva só mostra o saldo, sem barra de progresso. O "(opcional)"
+           no rótulo diz isso; a frase que dizia de novo saiu. -->
 
       <!-- Os atalhos de meses vivem aqui dentro e são redesenhados quando
            o tipo muda. Trocar a tela inteira apagaria o que já foi
@@ -509,10 +494,7 @@ function _atalhosDeObjetivo(tipo) {
         <button type="button" class="pilula" onclick="_porObjetivoEmMeses(${n})">
           ${n} meses
         </button>`).join("")}
-    </div>
-    <p class="cartao-dica" style="margin-top:7px">
-      Um mês da sua vida custa ${moeda(media)}, pela média dos últimos meses.
-    </p>`;
+    </div>`;
 }
 
 function _tipoEscolhidoNoForm() {

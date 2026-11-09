@@ -148,8 +148,11 @@ module.exports = () => suite("Reservas e investimentos", async ({ p, ok, abrir, 
   ok("a média de gasto vem dos meses fechados", media === 1000);
   const frase = await texto(".contas-total small");
   ok("a tela diz quantos meses a reserva cobre", frase.includes("2,5 meses"));
-  ok("e diz com base em quanto, pra conta ser conferível",
-    frase.includes("1.000,00"));
+  ok("e diz de qual dinheiro está falando", frase.includes("2.500,00"));
+  /* A MÉDIA SAIU DA FRASE. Ela explicava a conta ("você gasta R$ 1.000 por
+     mês, em média") e era o tipo de legenda que o dono do app mandou tirar
+     da tela toda. O número que importa — quantos meses cobre — ficou. */
+  ok("sem explicar a conta por extenso", !frase.includes("em média"));
 
   /* A COBERTURA SAI SÓ DA EMERGÊNCIA, e este é o defeito que o pedido do
      dono do app revelou por baixo. A tela somava TUDO: com R$ 2.500 de
@@ -177,12 +180,17 @@ module.exports = () => suite("Reservas e investimentos", async ({ p, ok, abrir, 
     movimentosReserva = [{ id:"mv9", reserva_id:"r2", tipo:"guardar",
                            valor:4000, data:"${M(-1)}-05", lancamento_id:"g9" }];
     abrirReservas();`);
-  const soObjetivo = await texto(".contas-total small");
-  ok("só com objetivos, a tela avisa que falta a emergência",
-    soObjetivo.includes("ainda não tem uma reserva de emergência"));
-  // A frase certa usa a palavra ("segura os meses em que nada entra"), então
-  // o que se confere é que não há NÚMERO de meses prometido.
-  ok("e não promete número nenhum de meses", !/\d[\d.,]*\s*(mês|meses)/.test(soObjetivo));
+  /* SEM EMERGÊNCIA, SEM LINHA. A tela já avisou aqui que faltava a
+     emergência; hoje ela cala, porque a linha debaixo do número só existe
+     pra dar um número, e sem emergência não há cobertura pra dar. O que
+     não pode, em hipótese nenhuma, é os R$ 4.000 da viagem virarem meses
+     de colchão. */
+  ok("só com objetivos, não há linha de cobertura",
+    (await p.locator(".contas-total small").count()) === 0);
+  const soObjetivo = await texto(".contas-total");
+  ok("e não se promete número nenhum de meses",
+    !/\d[\d.,]*\s*(mês|meses)/.test(soObjetivo));
+  ok("o total guardado continua dito", soObjetivo.includes("4.000,00"));
 
   // Na tela de dentro, só a emergência ganha a frase dos meses.
   await abrir(BASE + TRES_MESES + UMA + "; abrirReserva('r1');");
@@ -207,11 +215,13 @@ module.exports = () => suite("Reservas e investimentos", async ({ p, ok, abrir, 
   ok("o mês corrido não entra na média",
     (await p.evaluate(() => _gastoMedioMensal(6))) === 1000);
 
-  // Sem mês fechado nenhum não há régua, e a tela diz isso em vez de
-  // inventar um "cobre 0 meses" que leria como reserva inútil.
+  /* Sem mês fechado nenhum não há régua. A tela cala — o que ela não pode
+     é inventar um "cobre 0 meses", que leria como reserva inútil. */
   await abrir(BASE + UMA + "; abrirReservas();");
-  ok("sem histórico, a tela não finge saber a cobertura",
-    (await texto(".contas-total small")).includes("Lance alguns meses"));
+  ok("sem histórico, não há linha de cobertura",
+    (await p.locator(".contas-total small").count()) === 0);
+  ok("e nenhum número de meses é prometido",
+    !/\d[\d.,]*\s*(mês|meses)/.test(await texto(".contas-total")));
 
   /* O SELO SÓ APARECE QUANDO O NOME NÃO DIZ. "Emergência EMERGÊNCIA" é a
      mesma palavra duas vezes na mesma linha, comendo a largura do nome. */
@@ -259,10 +269,19 @@ module.exports = () => suite("Reservas e investimentos", async ({ p, ok, abrir, 
     (await texto(".reserva-card-baixo")).includes("Objetivo alcançado") &&
     (await p.locator(".reserva-card.completa").count()) === 1);
 
+  /* SEM RESERVA, A TELA NÃO EXPLICA NADA. Havia aqui um bloco ensinando o
+     que é uma reserva. O zero em cima e o botão "Nova reserva" logo
+     abaixo dizem a mesma coisa sem pedir leitura — e o dono do app pediu
+     esse tipo de texto fora de todas as telas. */
   await abrir(BASE + "; abrirReservas();");
-  ok("sem nenhuma reserva, a tela explica o que é uma",
-    (await p.locator(".reserva-card").count()) === 0 &&
-    (await texto(".bloco")).includes("continua sendo seu"));
+  ok("sem nenhuma reserva, não há cartão de reserva",
+    (await p.locator(".reserva-card").count()) === 0);
+  ok("nem caixa explicando o que é uma reserva",
+    (await p.locator(".bloco").count()) === 0);
+  const vazia = await texto("#area");
+  ok("a tela fica no número, no botão e no voltar",
+    vazia.includes("Você tem guardado") && vazia.includes("Nova reserva"));
+  ok("sem aula sobre o que é guardar", !vazia.includes("continua sendo seu"));
 
   /* ─── GUARDAR: OS DOIS LADOS, NESTA ORDEM ────────────────────────────
      O lançamento nasce PRIMEIRO. Se o segundo passo falhar, o que sobra é
@@ -375,6 +394,29 @@ module.exports = () => suite("Reservas e investimentos", async ({ p, ok, abrir, 
     (await p.locator('input[name="rs-tipo"]').count()) === 2);
   ok("e já vem na emergência, que é por onde se começa",
     (await p.locator('input[name="rs-tipo"]:checked').inputValue()) === "emergencia");
+
+  /* ─── O FORMULÁRIO NÃO DÁ AULA ───────────────────────────────────────
+     Cada opção vinha com um parágrafo embaixo explicando o conceito, o
+     campo de objetivo vinha com outro dizendo que dava pra deixar em
+     branco, e os atalhos vinham com um terceiro contando quanto custa um
+     mês da vida da pessoa. Três textos num formulário de dois campos. O
+     dono do app mandou tirar, e tem razão: o rótulo "(opcional)" já diz o
+     que a frase dizia, e as opções se explicam pelo nome. */
+  const form = await texto("#area");
+  ok("as opções são só o nome, sem explicação embaixo",
+    (await p.locator(".escolha-op small").count()) === 0);
+  ok("'Emergência' e 'Um objetivo' continuam lá",
+    form.includes("Emergência") && form.includes("Um objetivo"));
+  ok("sem o parágrafo do colchão", !form.includes("colchão"));
+  ok("sem o parágrafo da viagem e da obra", !form.includes("troca do carro, a obra"));
+  ok("sem o 'deixe em branco'", !form.includes("Deixe em branco"));
+  ok("mas o rótulo continua dizendo que é opcional", form.includes("(opcional)"));
+  ok("sem contar quanto custa um mês da vida da pessoa",
+    !form.includes("custa") && !form.includes("pela média"));
+  ok("e o formulário ficou sem nenhuma dica solta",
+    (await p.locator(".cartao-dica").count()) === 0);
+  ok("o rótulo dos atalhos fica, porque rotula um controle",
+    form.includes("Quantos meses"));
   ok("na emergência, o objetivo em meses vira atalho",
     (await p.locator(".reserva-atalhos .pilula").count()) === 3);
   await p.click(".reserva-atalhos .pilula:has-text('6 meses')");
