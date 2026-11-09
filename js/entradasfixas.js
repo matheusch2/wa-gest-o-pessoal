@@ -103,13 +103,6 @@ function aReceberDoMes(mesRef) {
   return { linhas, total: Math.round(linhas.reduce((s, x) => s + x.valor, 0) * 100) / 100 };
 }
 
-function _diaDoMes(dia, mesRef) {
-  const [a, m] = mesRef.split("-").map(Number);
-  // Dia 31 num mês de 30 vira o último dia do mês, não o dia 1 do seguinte.
-  const ultimo = new Date(a, m, 0).getDate();
-  return mesRef + "-" + String(Math.min(dia, ultimo)).padStart(2, "0");
-}
-
 // O bloco que entra no alto da tela de "Lançar entrada".
 function blocoEntradasFixas() {
   const mes = mesDe(_hojeLocal());

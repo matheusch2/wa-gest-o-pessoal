@@ -251,16 +251,13 @@ function _comprometidoPorMes(mesRef, quantos) {
      O carnê já existe inteiro no banco, uma linha por parcela — é só
      somar as que caem em cada mês. A conta fixa não: o app só cria a do
      mês seguinte quando a atual é paga, então lá na frente não há linha
-     nenhuma. Projetar é repetir o último valor conhecido de cada nome.
+     nenhuma.
 
-     E só onde não existe linha de verdade: contar as duas coisas faria o
-     aluguel aparecer duas vezes no mês que o app já preparou. */
-  const fixas = new Map();
-  for (const c of contas) {
-    if (!c.recorrente) continue;
-    const atual = fixas.get(c.nome);
-    if (!atual || c.vencimento > atual.vencimento) fixas.set(c.nome, c);
-  }
+     QUEM PROJETA É O CORE, e não este arquivo. A projeção nasceu aqui e
+     ficou só aqui, e foi exatamente por isso que o Resumo e o Balanço de
+     janeiro mostravam mês sem aluguel enquanto o Relatório mostrava o
+     aluguel: a mesma pergunta com duas respostas, porque eram dois
+     códigos. Agora é um. */
 
   for (const l of linhas) {
     for (const c of contas) {
@@ -272,12 +269,9 @@ function _comprometidoPorMes(mesRef, quantos) {
         l.parcelas = _cent(l.parcelas + Number(c.valor));
       }
     }
-    for (const [nome, c] of fixas) {
-      const jaTem = contas.some(x => x.nome === nome && mesDe(x.vencimento) === l.mes);
-      if (!jaTem) {
-        l.fixas = _cent(l.fixas + Number(c.valor));
-        somarNaCategoria(l, c.categoria, Number(c.valor));
-      }
+    for (const f of fixasProjetadasNoMes(l.mes)) {
+      l.fixas = _cent(l.fixas + f.valor);
+      somarNaCategoria(l, f.categoria, f.valor);
     }
 
     /* O DIA A DIA: o que a meta obrigatória prevê, MENOS o que já foi

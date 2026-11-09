@@ -230,9 +230,14 @@ function _linhaDoQueVaiSair(r) {
     // a MESMA frase da fatura, que já tinha esse caso. Sem isto, o
     // número da direita ficava menor que a conta sem explicar por quê.
     r.tipo === "conta"
-      ? (r.gasto > 0
-          ? `${moeda(r.gasto)} de ${moeda(r.previsto)} já pagos`
-          : "Vence " + dataBR(r.vencimento))
+      // A FIXA PROJETADA DIZ QUE É PROJEÇÃO. Ela não tem linha no banco
+      // naquele mês, então "vence 05/01" mandaria a pessoa procurar em
+      // Contas a pagar uma conta que ainda não existe.
+      ? (r.previsao
+          ? "Prevista para " + dataBR(r.vencimento)
+          : r.gasto > 0
+            ? `${moeda(r.gasto)} de ${moeda(r.previsto)} já pagos`
+            : "Vence " + dataBR(r.vencimento))
     : r.tipo === "fatura"
       // Fatura paga pela metade mostra a metade que falta, com o total do
       // lado: o número da direita ficaria menor que a fatura sem explicação.

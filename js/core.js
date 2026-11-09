@@ -9,7 +9,7 @@
    index.html. Serve pra uma pergunta que já custou tempo: "o defeito que
    você está vendo é do código de agora, ou o celular ainda está com o
    app velho em cache?" — sem isso, a resposta é chute. */
-const VERSAO_APP = "2026-11-09 · 57";
+const VERSAO_APP = "2026-11-09 · 58";
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -84,6 +84,16 @@ function dataBR(ymd) {
 }
 
 function mesDe(ymd) { return String(ymd).slice(0, 7); }
+
+// O dia D dentro do mês M, em "AAAA-MM-DD". Dia 31 num mês de 30 vira o
+// último dia do mês, não o dia 1 do seguinte. Mora aqui porque as duas
+// coisas que se repetem todo mês — a entrada fixa e a conta fixa —
+// precisam da mesma régua.
+function _diaDoMes(dia, mesRef) {
+  const [a, m] = mesRef.split("-").map(Number);
+  const ultimo = new Date(a, m, 0).getDate();
+  return mesRef + "-" + String(Math.min(dia, ultimo)).padStart(2, "0");
+}
 
 function mesPorExtenso(ym) {
   const [a, m] = ym.split("-").map(Number);
@@ -372,6 +382,59 @@ function carregarChart() {
    Depois de pago, nada disso sobra: pagar uma conta a marca como paga E
    vira saída no extrato, e a saída derruba o que faltava da meta. */
 
+/* ═══ A CONTA FIXA DOS MESES QUE O APP AINDA NÃO PREPAROU ═════════════
+   Conta fixa não existe no banco em todos os meses. Existe UMA LINHA POR
+   MÊS, e a do mês seguinte só nasce quando a atual é paga (ou quando a
+   pessoa toca "lançar a próxima" na aba Fixos). Lá na frente não há
+   linha nenhuma.
+
+   O ESTRAGO QUE ISSO FAZIA: quem olhava o Resumo de janeiro não via o
+   aluguel, nem a luz, nem a internet. O mês aparecia com a renda inteira
+   livre, e a sobra do Balanço vinha alta pelo mesmo motivo. Dezembro
+   aparecia certo — porque dezembro tinha linha — e todos os meses depois
+   dele apareciam vazios. Foi assim que o defeito foi reportado: "aparece
+   no mês posterior, mas no restante não".
+
+   Projetar é repetir o último valor conhecido de cada nome. Duas regras
+   guardam o resultado:
+
+   1. SÓ ONDE NÃO EXISTE LINHA DE VERDADE. Contar as duas coisas faria o
+      aluguel aparecer duas vezes no mês que o app já preparou.
+
+   2. NUNCA ANTES DE A SÉRIE COMEÇAR. Cadastrando hoje o aluguel que
+      começa em dezembro, novembro não pode ganhar um aluguel que ninguém
+      vai pagar — e novembro é justamente o mês que a pessoa está olhando
+      quando cadastra.
+
+   O que esta função NÃO sabe é quando uma fixa acabou: não há data de
+   fim em contas, então uma série abandonada se projeta pra sempre. Quem
+   para de pagar precisa apagar a série. */
+function fixasProjetadasNoMes(mesRef) {
+  const ultima = new Map();
+  const primeira = new Map();
+  for (const c of contas) {
+    if (!c.recorrente) continue;
+    const u = ultima.get(c.nome);
+    if (!u || c.vencimento > u.vencimento) ultima.set(c.nome, c);
+    const p = primeira.get(c.nome);
+    if (!p || c.vencimento < p) primeira.set(c.nome, c.vencimento);
+  }
+
+  const fora = [];
+  for (const [nome, c] of ultima) {
+    if (mesRef < mesDe(primeira.get(nome))) continue;
+    if (contas.some(x => x.nome === nome && mesDe(x.vencimento) === mesRef)) continue;
+    fora.push({
+      nome,
+      valor: Number(c.valor),
+      categoria: c.categoria || "",
+      vencimento: _diaDoMes(Number(String(c.vencimento).slice(-2)), mesRef),
+      previsao: true,
+    });
+  }
+  return fora.sort((a, b) => a.vencimento.localeCompare(b.vencimento));
+}
+
 function aindaVaiSairDoMes(mesRef) {
   // Mês que já acabou não reserva nada. Reservar é dizer "isto ainda vai
   // sair", e num mês fechado nada mais vai sair dele: as contas ou foram
@@ -396,6 +459,19 @@ function aindaVaiSairDoMes(mesRef) {
       tipo: "conta", nome: c.nome, categoria: c.categoria || "",
       previsto: Number(c.valor), gasto: Number(c.valor_pago || 0), falta,
       vencimento: c.vencimento,
+    });
+  }
+
+  /* E AS FIXAS DOS MESES QUE AINDA NÃO TÊM LINHA. Entram como conta, com
+     o mesmo tipo, porque é o que elas são: dinheiro que vai sair naquele
+     mês com nome, dia e valor. Entrar como "conta" também é o que faz a
+     meta da categoria descontá-las logo abaixo — fosse outro tipo, o
+     aluguel previsto e a meta "Casa" somariam os dois no mesmo mês. */
+  for (const f of fixasProjetadasNoMes(mesRef)) {
+    linhas.push({
+      tipo: "conta", nome: f.nome, categoria: f.categoria,
+      previsto: f.valor, gasto: 0, falta: f.valor,
+      vencimento: f.vencimento, previsao: true,
     });
   }
 

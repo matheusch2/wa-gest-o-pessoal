@@ -144,4 +144,29 @@ module.exports = () => suite("Resumo: extrato, e só", async ({ p, ok, abrir, te
     (await p.evaluate(x => _retratoDoMes(x).entrou, M(0))) === 4500);
   ok("ela não é 'dinheiro mudando de lugar'",
     (await p.evaluate(() => idsQueNaoSaoGasto().has("ret"))) === false);
+
+
+  /* ─── A FIXA PREVISTA DIZ QUE É PREVISÃO ─────────────────────────────
+     No mês que ainda não tem linha no banco, o aluguel aparece no "ainda
+     vai sair" — senão o mês mostraria a renda inteira livre. Mas ele não
+     pode dizer "vence 05/01" como se houvesse um boleto: quem tocasse na
+     linha iria pra Contas a pagar procurar uma conta que não existe. */
+  await abrir(CENARIO + `;
+    contas = [{ id:"al", nome:"Aluguel", valor:1200, vencimento:"${M(1)}-05",
+                pago:false, categoria:"Casa", recorrente:true }];
+    mesAtual = "${M(1)}"; abrirResumo();`);
+  const noProximo = await texto(".resumo-secao .lista");
+  ok("no mês que tem linha, a conta diz quando vence",
+    noProximo.includes("Vence 05/"));
+  ok("sem falar em previsão", !noProximo.includes("Prevista"));
+
+  await abrir(CENARIO + `;
+    contas = [{ id:"al", nome:"Aluguel", valor:1200, vencimento:"${M(1)}-05",
+                pago:false, categoria:"Casa", recorrente:true }];
+    mesAtual = "${M(3)}"; abrirResumo();`);
+  const laNaFrente = await texto(".resumo-secao .lista");
+  ok("três meses à frente o aluguel continua aparecendo",
+    laNaFrente.includes("Aluguel") && laNaFrente.includes("1.200,00"));
+  ok("mas dito como previsão", laNaFrente.includes("Prevista para"));
+  ok("sem prometer um boleto que não existe", !laNaFrente.includes("Vence"));
 });
