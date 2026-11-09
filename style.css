@@ -245,8 +245,10 @@ body {
 
 .menu-botao:active { background: var(--marca-toque); }
 
-/* O botão que fica sozinho na última linha ocupa as duas colunas: meio
-   botão com meio vazio do lado lê como falha de carregamento. */
+/* O botão da linha inteira. Com onze botões num grid de duas colunas um
+   deles sobra, e meio botão com meio vazio do lado lê como falha de
+   carregamento. O que sobra ocupa as duas colunas — e, no alto, vira
+   cabeçalho do menu em vez de resto. */
 .menu-botao-largo { grid-column: 1 / -1; }
 
 /* Os botões ficam sempre do mesmo tamanho. O vago ao lado do último é

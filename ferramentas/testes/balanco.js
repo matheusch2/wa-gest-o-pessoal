@@ -79,8 +79,17 @@ module.exports = () => suite("Balanço: quanto você tem", async ({ p, ok, abrir
   ok("há um 'Balanço' no menu", nomes.includes("Balanço"));
   ok("e ele fica ao lado do Resumo, que é a outra metade da pergunta",
     nomes.indexOf("Balanço") === nomes.indexOf("Resumo do mês") + 1);
-  ok("nenhum botão fica meio sozinho na última linha",
+
+  /* O MENU FECHA EM PARES. São onze botões num grid de duas colunas, então
+     um tem que ocupar a linha inteira — e é "Meu negócio", no alto, que é
+     o único de outro bolso. Os dez do dinheiro pessoal ficam em cinco
+     pares embaixo dele, sem nenhum meio botão com meio vazio do lado. */
+  ok("um único botão ocupa a linha inteira",
     (await p.locator("#menu .menu-botao-largo").count()) === 1);
+  ok("e é o 'Meu negócio'",
+    (await p.locator("#menu .menu-botao-largo").textContent()).includes("Meu negócio"));
+  ok("ele abre o menu, não fecha", nomes[0] === "Meu negócio");
+  ok("e sobram dez, que é par", nomes.length - 1 === 10);
 
 
   /* ─── A TELA É CURTA, E ISSO É O RECURSO ─────────────────────────────

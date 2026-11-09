@@ -88,7 +88,7 @@
   <link rel="preconnect" href="https://efewoxdgfcgkodtqbqsz.supabase.co" crossorigin>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 
-  <link rel="stylesheet" href="style.css?v=80">
+  <link rel="stylesheet" href="style.css?v=81">
 
   <!-- defer: baixa em paralelo e só executa depois da página montada, em
        ordem. Sem ele, cada script trava a leitura do HTML no meio.
@@ -126,6 +126,18 @@
 
     <!-- Menu principal. Só aparece depois de entrar. -->
     <nav id="menu" class="menu" style="display:none">
+      <!-- O NEGÓCIO É OUTRO BOLSO, e é por isso que ele tem botão próprio
+           em vez de virar mais uma categoria. O que o WA Aqua fatura não é
+           renda da pessoa: renda dela é a retirada.
+
+           ELE ABRE O MENU, na linha inteira. Já esteve sozinho no fim, que
+           era onde sobrava o lugar ímpar — e lá embaixo ele lia como resto.
+           No alto, a linha cheia vira cabeçalho do menu, e os dez botões
+           do dinheiro pessoal ficam em cinco pares certinhos embaixo. -->
+      <button class="menu-botao menu-botao-largo" onclick="abrirMeuNegocio()">
+        <svg viewBox="0 0 24 24"><path d="M3 9.5 4.6 4.6A1 1 0 0 1 5.5 4h13a1 1 0 0 1 .9.6L21 9.5"/><path d="M3 9.5h18"/><path d="M4.5 9.5V20h15V9.5"/><path d="M9.5 20v-5.5h5V20"/></svg>
+        Meu negócio
+      </button>
       <button class="menu-botao" onclick="abrirResumo()">
         <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
         Resumo do mês
@@ -185,17 +197,6 @@
       <button class="menu-botao" onclick="abrirInvestimentos()">
         <svg viewBox="0 0 24 24"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="15 7 21 7 21 13"/></svg>
         Investimentos
-      </button>
-      <!-- O NEGÓCIO É OUTRO BOLSO, e é por isso que ele tem botão próprio
-           em vez de virar mais uma categoria. O que o WA Aqua fatura não é
-           renda da pessoa: renda dela é a retirada. Um botão separado
-           guarda essa separação antes mesmo de existir a tela. Ele ocupa a
-           linha inteira porque, com onze botões, alguém tinha que sobrar
-           sozinho no fim — e sobrar sozinho é exatamente o que o negócio
-           é aqui: dinheiro que não é da pessoa. -->
-      <button class="menu-botao menu-botao-largo" onclick="abrirMeuNegocio()">
-        <svg viewBox="0 0 24 24"><path d="M3 9.5 4.6 4.6A1 1 0 0 1 5.5 4h13a1 1 0 0 1 .9.6L21 9.5"/><path d="M3 9.5h18"/><path d="M4.5 9.5V20h15V9.5"/><path d="M9.5 20v-5.5h5V20"/></svg>
-        Meu negócio
       </button>
     </nav>
 
