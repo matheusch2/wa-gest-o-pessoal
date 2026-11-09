@@ -2537,3 +2537,14 @@ body.escuro .resumo-secao .item-icone.entrada { background: #17372d; }
 }
 .balanco-conta-fim strong { font-size: 21px; color: var(--entrada); }
 .balanco-conta-fim.ruim strong { color: var(--saida); }
+
+/* A nota da primeira conferência. Ela ocupa o lugar onde o bloco do
+   achado apareceria, e é texto solto de propósito: ali não houve achado
+   nenhum, e emoldurar isso daria a ela um peso que ela não tem. */
+.balanco-partida {
+  margin: 0 0 12px;
+  padding: 0 4px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--fraco);
+}

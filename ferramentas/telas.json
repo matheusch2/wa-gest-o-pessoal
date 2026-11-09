@@ -490,5 +490,9 @@
  [
   "Balanço · sem a tabela no banco",
   "tabelasFaltando=['conferencias']; abrirBalanco()"
+ ],
+ [
+  "Balanço · primeira conferência",
+  "lancamentos=[{id:'v1',tipo:'entrada',valor:4000,data:'2026-02-10',categoria:'Salário',descricao:'Salário'},{id:'v2',tipo:'saida',valor:900,data:'2026-05-10',categoria:'Mercado',descricao:'Feira'}]; conferencias=[{id:'p1',data:_hojeLocal(),saldo_informado:3021}]; abrirBalanco()"
  ]
 ]

@@ -410,6 +410,88 @@ module.exports = () => suite("Balanço: conferir o saldo", async ({ p, ok, abrir
   ok("e o Resumo abre normalmente do lado", (await p.locator(".saldo").count()) === 1);
 
 
+  /* ─── A PRIMEIRA CONFERÊNCIA NÃO TEM DIFERENÇA ──────────────────────
+     DEFEITO QUE CHEGOU NA MÃO DO USUÁRIO, e o pior tipo: número grande,
+     vermelho, e inventado. Sem conferência anterior, o app somava TODOS
+     os lançamentos desde sempre a partir do zero e chamava aquilo de "o
+     que eu esperava". Com um ano de uso, a primeira conferência da vida
+     da pessoa abria com "Faltou dinheiro na conta: R$ 4.180,83".
+
+     Não havia buraco nenhum. Havia um número que não queria dizer nada
+     sendo apresentado como expectativa — justamente na única conferência
+     que, por definição, não tem com o que ser comparada. */
+  const ANO_DE_USO = `
+    lancamentos = [
+      { id:"v1", tipo:"entrada", valor:4000, data:"${D(-300)}", categoria:"Salário", descricao:"Salário" },
+      { id:"v2", tipo:"saida",   valor:900,  data:"${D(-250)}", categoria:"Mercado", descricao:"Feira" },
+      { id:"v3", tipo:"entrada", valor:4000, data:"${D(-120)}", categoria:"Salário", descricao:"Salário" },
+      { id:"v4", tipo:"saida",   valor:1900, data:"${D(-60)}",  categoria:"Casa",    descricao:"Aluguel" },
+    ];
+  `;
+  await abrir(BASE + ANO_DE_USO + `
+    conferencias = [{ id:"p1", data:"${D(0)}", saldo_informado:3021 }];
+    abrirBalanco();`);
+
+  ok("a soma de tudo desde sempre NÃO vira expectativa",
+    (await p.evaluate(() => saldoCalculadoEm(_hojeLocal()))) === null);
+  const partida = await p.evaluate(() => diferencaDaConferencia(conferencias[0]));
+  ok("a primeira conferência não tem diferença", partida.diferenca === null);
+  ok("nem esperado", partida.esperado === null);
+  ok("ela se declara ponto de partida", partida.partida === true);
+
+  ok("e a tela não acusa buraco nenhum",
+    (await p.locator(".balanco-furo").count()) === 0);
+  const tela = await texto("#area");
+  ok("nem fala em faltar dinheiro", !tela.includes("Faltou dinheiro"));
+  ok("nem cita um esperado que não existe", !tela.includes("o app esperava"));
+
+  /* E NÃO FICA CALADA. Quem acabou de conferir está esperando um
+     veredicto; o veredicto honesto aqui é "a partir de agora dá pra
+     conferir". */
+  const nota = await texto(".balanco-partida");
+  ok("a tela explica que esta é a primeira", nota.includes("primeira conferência"));
+  ok("e o que muda na próxima", nota.includes("próxima"));
+
+  const linhaP = await texto("#conf-p1");
+  ok("na lista, ela aparece como ponto de partida", linhaP.includes("ponto de partida"));
+  ok("sem número de diferença", !linhaP.includes("4.180") && !linhaP.includes("R$ 0,00"));
+
+  /* O SALDO CONTINUA FUNCIONANDO — o ponto de partida ancora, que é pra
+     isso que ele serve. */
+  ok("e o 'você tem' sai certinho mesmo assim",
+    (await p.evaluate(() => saldoDeHoje().valor)) === 3021);
+  ok("com a projeção do mês no lugar",
+    (await p.locator(".balanco-conta").count()) === 1);
+
+  /* DA SEGUNDA EM DIANTE A COMPARAÇÃO EXISTE, e aí sim o número vale. */
+  await abrir(BASE + ANO_DE_USO + `
+    conferencias = [{ id:"p1", data:"${D(-7)}", saldo_informado:3021 },
+                    { id:"p2", data:"${D(0)}",  saldo_informado:2900 }];
+    abrirBalanco();`);
+  ok("a segunda conferência já tem o que comparar",
+    (await p.evaluate(() => diferencaDaConferencia(conferencias[1]).diferenca)) === -121);
+  ok("e aí o buraco aparece, agora valendo",
+    (await texto(".balanco-furo")).includes("121,00"));
+  ok("mas a primeira continua sendo ponto de partida",
+    (await texto("#conf-p1")).includes("ponto de partida"));
+  ok("e a nota de primeira conferência sai da tela",
+    (await p.locator(".balanco-partida").count()) === 0);
+
+  /* A PRÉVIA ENQUANTO DIGITA TAMBÉM NÃO PODE INVENTAR. Era por ali que o
+     defeito começava a aparecer, antes mesmo de gravar. */
+  await abrir(BASE + ANO_DE_USO + "; abrirNovaConferencia();");
+  await p.fill("#cf-saldo", "3021,00");
+  const previaP = await texto("#cf-previa");
+  ok("digitando a primeira conferência, a prévia não acusa diferença",
+    !previaP.includes("a menos") && !previaP.includes("a mais"));
+  ok("ela explica que aquilo é o ponto de partida",
+    previaP.includes("ponto de partida"));
+
+  await p.click(".botao");
+  ok("e o aviso ao salvar comemora em vez de assustar",
+    (await texto("#avisos")).includes("Agora o app sabe quanto você tem"));
+
+
   /* ─── A LISTA ────────────────────────────────────────────────────── */
   await abrir(BASE + PAR + "; abrirBalanco();");
   const itens = await p.locator(".lista .item").count();
