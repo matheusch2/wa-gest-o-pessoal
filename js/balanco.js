@@ -145,7 +145,13 @@ function desenharBalanco() {
       <!-- A CONTA, E SÓ ELA: tenho, mais o que vou receber, menos o que
            tenho a pagar. O horizonte é o MÊS CORRENTE, o mesmo do Resumo
            — usar outro aqui faria as duas telas discordarem sobre quanto
-           sobra. -->
+           sobra.
+
+           SEM FRASE EMBAIXO. Havia um parágrafo repetindo o resultado em
+           palavras ("faltam R$ 319,45 pra cobrir o que ainda vence neste
+           mês"). Quatro linhas que somam e um total em corpo 21 não
+           precisam de legenda; a frase só empurrava a conta pra cima e
+           dizia de novo o que o número já tinha dito. -->
       <div class="bloco">
         <div class="bloco-topo"><h2>E daqui até o fim do mês</h2></div>
         <div class="balanco-conta">
@@ -157,11 +163,6 @@ function desenharBalanco() {
             <strong>${moeda(Math.abs(sobra))}</strong>
           </div>
         </div>
-        <p class="rel-rodape">
-          ${sobra >= 0
-            ? `Dá pra chegar no fim do mês com <b>${moeda(sobra)}</b>, se nada novo aparecer.`
-            : `Faltam <b>${moeda(-sobra)}</b> pra cobrir o que ainda vence neste mês.`}
-        </p>
       </div>` : ""}
 
     <button class="botao-fraco" onclick="voltarInicio()">Voltar</button>

@@ -224,8 +224,14 @@ module.exports = () => suite("Balanço: quanto você tem", async ({ p, ok, abrir
   ok("faltando dinheiro, a última linha diz FALTA", aperto[3].includes("Falta"));
   ok("com o valor sem sinal de menos grudado", aperto[3].includes("1.200,00"));
   ok("e veste vermelho", (await p.locator(".balanco-conta-fim.ruim").count()) === 1);
-  ok("o rodapé diz o tamanho do aperto",
-    (await texto(".rel-rodape")).includes("1.200,00"));
+
+  /* E NÃO HÁ FRASE EMBAIXO repetindo o resultado em palavras. O número
+     em corpo 21 já disse; a legenda só empurrava a conta pra cima. */
+  ok("não há parágrafo repetindo o resultado",
+    (await p.locator(".rel-rodape").count()) === 0);
+  const curta = await texto("#area");
+  ok("nem em palavras soltas", !curta.includes("pra cobrir o que ainda vence"));
+  ok("nem na versão de quando sobra", !curta.includes("se nada novo aparecer"));
 
 
   /* ─── COLOCAR O SALDO: UM CAMPO E UM BOTÃO ───────────────────────────
