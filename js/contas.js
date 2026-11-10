@@ -128,7 +128,17 @@ function _carnePorBase(base) {
 // mostrando outro recorte, então o "Voltar" continua indo pro menu.
 let _contasFiltro = "todos";
 
-function abrirContas() { _contasFiltro = "todos"; abrirTela(desenharContas); }
+/* O MÊS QUE A ABA "A PAGAR" ESTÁ MOSTRANDO. Null = o mês corrente, e
+   abrir a tela sempre volta pra ele: quem entra em Contas quer saber o
+   que paga agora, não onde parou de folhear da última vez. */
+let _contasMes = null;
+
+function abrirContas() { _contasFiltro = "todos"; _contasMes = null; abrirTela(desenharContas); }
+
+function trocarMesDasContas(passo) {
+  _contasMes = mesVizinho(_contasMes || mesDe(_hojeLocal()), passo);
+  desenharContas();
+}
 function filtrarContas(f) { _contasFiltro = f; desenharContas(); }
 
 function desenharContas() {
@@ -148,22 +158,47 @@ function desenharContas() {
 
   const fixos = fixosPorSerie();
 
-  /* A aba "A pagar" mostra o carnê inteiro como UMA linha: a próxima
-     parcela. As outras abas não agrupam de propósito — "Vencidos" tem que
-     mostrar cada boleto vencido, um a um, porque cada um é um atraso. */
+  /* ─── A ABA "A PAGAR" É UM MÊS ───────────────────────────────────────
+     Ela mostrava TUDO em aberto, e num app com um carnê de 27 parcelas
+     isso são 41 linhas e R$ 18.189,93 — um número que assusta e não
+     ajuda, porque ele mistura o que vence semana que vem com o que vence
+     em 2029. E não havia jeito nenhum de perguntar "quanto cai em
+     dezembro".
+
+     Agora a aba é um mês, com setas, igual ao Resumo. O carnê deixa de
+     ser agrupado aqui: dentro de um mês ele é uma parcela, com a pílula
+     dizendo qual — que é exatamente a resposta pra "quanto de moto cai
+     neste mês".
+
+     AS ATRASADAS VÊM JUNTO, e só no mês corrente. Conta que venceu em
+     outubro e não foi paga continua sendo o que você tem pra pagar
+     agora; escondê-la no mês de outubro seria perdê-la de vista
+     justamente quando ela mais importa. */
   const { grupos: carnes, soltas } = _agruparCarnes(abertas);
+  const mesVisivel = _contasMes || mesDe(_hojeLocal());
+  const ehMesCorrente = mesVisivel === mesDe(_hojeLocal());
+  const cabeNoMes = (venc) =>
+    mesDe(venc) === mesVisivel || (ehMesCorrente && venc < hoje);
+
   const aPagar = soltas
+    .filter(c => cabeNoMes(c.vencimento))
     .map(c => ({ tipo: "conta", conta: c, vencimento: c.vencimento }))
-    .concat(carnes.filter(g => g.proxima).map(g => ({ tipo: "carne", carne: g, vencimento: g.proxima.vencimento })))
+    .concat(carnes.flatMap(g => g.abertas
+      .filter(x => cabeNoMes(x.vencimento))
+      .map(x => ({ tipo: "carne", carne: g, parcela: x, vencimento: x.vencimento }))))
     .sort((a, b) => a.vencimento.localeCompare(b.vencimento));
 
-  // O que some da lista por estar agrupado — dito em voz alta no cabeçalho,
-  // senão o total lá em cima não bate com a soma do que se vê.
+  const totalDoMes = aPagar.reduce((s, x) =>
+    s + faltaDaConta(x.tipo === "carne" ? x.parcela : x.conta), 0);
+
+  // O que ainda está em carnê, somando todos os meses. Dito no cabeçalho
+  // porque o total em aberto lá em cima o inclui, e a lista do mês não.
   const emCarnes = carnes.reduce((s, g) => s + g.falta, 0);
   const parcelasEscondidas = carnes.reduce((s, g) => s + Math.max(0, g.abertas.length - 1), 0);
 
   const abas = [
-    { id: "todos", rotulo: "A pagar", itens: aPagar, vazio: "Nenhuma conta em aberto. 🎉" },
+    { id: "todos", rotulo: "A pagar", itens: aPagar,
+      vazio: `Nada vence em ${soNomeDoMes(mesVisivel)}.` },
     { id: "vencendo", rotulo: "Vencendo", itens: vencendo, vazio: "Nada vencendo nos próximos dias." },
     { id: "vencidos", rotulo: "Vencidos", itens: vencidas, vazio: "Nenhuma conta vencida. 🎉" },
     { id: "pagos", rotulo: "Pagos", itens: pagas, vazio: "Nenhuma conta paga ainda." },
@@ -171,20 +206,41 @@ function desenharContas() {
   ];
   const abaAtual = abas.find(a => a.id === _contasFiltro) || abas[0];
 
+  /* EM MÊS FUTURO, A DATA; NO MÊS CORRENTE, OS DIAS.
+     "Vence em 35 dias" é verdade e não serve: quem está folheando
+     dezembro quer saber o DIA de dezembro, não a distância até lá. E o
+     contrário também vale — no mês corrente é a distância que diz se dá
+     tempo. Mês passado continua nos dias, porque lá o que importa é há
+     quanto tempo venceu. */
+  const porData = abaAtual.id === "todos" && mesVisivel > mesDe(hoje);
+  const quandoVence = (venc, dias) =>
+    porData ? "Vence " + dataBR(venc)
+    : dias < 0 ? `Venceu há ${Math.abs(dias)} dia${Math.abs(dias) > 1 ? "s" : ""}`
+    : dias === 0 ? "Vence hoje"
+    : `Vence em ${dias} dia${dias > 1 ? "s" : ""}`;
+
   const linha = (c) => {
     const dias = Math.round((_parseDataLocal(c.vencimento) - _parseDataLocal(hoje)) / 86400000);
     const parcial = contaParcial(c);
     const estado = c.pago ? "paga" : dias < 0 ? "vencida" : dias <= 5 ? "vencendo" : "";
     const quando = c.pago ? "Paga em " + dataBR(c.pago_em || c.vencimento)
-                 : dias < 0 ? `Venceu há ${Math.abs(dias)} dia${Math.abs(dias) > 1 ? "s" : ""}`
-                 : dias === 0 ? "Vence hoje"
-                 : `Vence em ${dias} dia${dias > 1 ? "s" : ""}`;
+                          : quandoVence(c.vencimento, dias);
     /* PAGA PELA METADE MOSTRA O QUE FALTA, com o já pago do lado. O
        valor cheio sozinho esconderia que parte já saiu; o que falta
        sozinho esconderia o tamanho da conta. */
     return `
       <div class="conta-item ${estado}${parcial ? " parcial" : ""}" id="conta-${c.id}">
-        <div class="conta-ico">${c.pago ? "✓" : parcial ? "◐" : c.recorrente ? "🔁" : "📄"}</div>
+        <!-- O ÍCONE DIZ O QUE É A CONTA, não que ela se repete. Com 🔁
+             pra toda fixa e 📄 pro resto, dez linhas tinham dois
+             desenhos: internet, aluguel, faculdade, água e energia
+             ficavam idênticas, e a pessoa lia nome por nome pra achar
+             uma. É a MESMA função do Resumo, então a conta de luz tem a
+             mesma cara nas duas telas.
+
+             Pago e pago-pela-metade continuam com marca de estado: ali o
+             que a pessoa procura é o estado, não a identidade. -->
+        <div class="conta-ico">${c.pago ? "✓" : parcial ? "◐"
+          : iconeDoLancamento({ tipo: "saida", categoria: c.categoria, descricao: c.nome })}</div>
         <div class="conta-nome">${esc(c.nome)}</div>
         <div class="conta-valor">${moeda(parcial ? faltaDaConta(c) : c.valor)}</div>
         <div class="conta-prazo">
@@ -205,16 +261,14 @@ function desenharContas() {
 
   // A linha do carnê: a próxima parcela, com "2/26" do lado. O toque abre
   // o carnê inteiro — as outras parcelas, e editar ou excluir a série.
-  const linhaCarne = (g) => {
-    const c = g.proxima;
+  const linhaCarne = (g, parcela) => {
+    const c = parcela || g.proxima;
     const dias = Math.round((_parseDataLocal(c.vencimento) - _parseDataLocal(hoje)) / 86400000);
     const estado = dias < 0 ? "vencida" : dias <= 5 ? "vencendo" : "";
-    const quando = dias < 0 ? `Venceu há ${Math.abs(dias)} dia${Math.abs(dias) > 1 ? "s" : ""}`
-                 : dias === 0 ? "Vence hoje"
-                 : `Vence em ${dias} dia${dias > 1 ? "s" : ""}`;
+    const quando = quandoVence(c.vencimento, dias);
     return `
       <div class="conta-item carne ${estado}" onclick="abrirCarne('${esc(g.base).replace(/'/g, "\\'")}')">
-        <div class="conta-ico">🧾</div>
+        <div class="conta-ico">${iconeDoLancamento({ tipo: "saida", categoria: c.categoria, descricao: g.base })}</div>
         <div class="conta-nome">${esc(g.base)} <span class="carne-pilula">${c.i}/${g.n}</span></div>
         <div class="conta-valor">${moeda(c.valor)}</div>
         <div class="conta-prazo">
@@ -226,7 +280,7 @@ function desenharContas() {
   };
 
   // A aba "A pagar" mistura conta solta e carnê; as outras só têm conta.
-  const linhaAPagar = (x) => x.tipo === "carne" ? linhaCarne(x.carne) : linha(x.conta);
+  const linhaAPagar = (x) => x.tipo === "carne" ? linhaCarne(x.carne, x.parcela) : linha(x.conta);
 
   const linhaFixo = (f) => `
     <div class="fixo-item ${f.emDia ? "" : "falta"}">
@@ -268,7 +322,7 @@ function desenharContas() {
         // linhas somando R$ 1.800 — dois números que não fecham na mesma
         // tela, que num app de dinheiro é o pior defeito que existe.
         parcelasEscondidas
-          ? `<br>${moeda(emCarnes)} em carnê, agrupado nas linhas 🧾`
+          ? `<br>${moeda(emCarnes)} em carnê, espalhado pelos próximos meses`
           : ""}</small>
     </div>
 
@@ -282,6 +336,21 @@ function desenharContas() {
         <button class="contas-aba${a.id === abaAtual.id ? " ativa" : ""}"
                 onclick="filtrarContas('${a.id}')">${a.rotulo}</button>`).join("")}
     </div>
+
+    <!-- A BARRA DO MÊS SÓ NA ABA "A PAGAR". As outras não são sobre um
+         mês: "Vencendo" é sobre os próximos cinco dias, "Vencidos" é
+         sobre tudo que já passou, "Pagos" é histórico e "Fixos" é
+         cadastro. Uma seta de mês ali não mudaria nada, e controle que
+         não faz nada é pior do que controle que falta. -->
+    ${abaAtual.id === "todos" ? `
+      <div class="contas-mes-barra">
+        <div class="resumo-mes" aria-label="Selecionar mês">
+          <button onclick="trocarMesDasContas(-1)" aria-label="Mês anterior">‹</button>
+          <strong>${mesPorExtenso(mesVisivel)}</strong>
+          <button onclick="trocarMesDasContas(1)" aria-label="Próximo mês">›</button>
+        </div>
+        <strong class="contas-mes-total">${moeda(totalDoMes)}</strong>
+      </div>` : ""}
 
     ${abaAtual.id === "fixos" && fixos.length ? `
       <div class="fixos-soma">

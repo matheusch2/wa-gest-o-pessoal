@@ -34,21 +34,135 @@ const ASSINATURA = `
 
 module.exports = () => suite("Contas, carnê e assinatura", async ({ p, ok, abrir, chamadas, texto, valor }) => {
 
-  /* ─── O carnê vira uma linha só ──────────────────────────────────────
-     27 contas numa lista é uma lista que ninguém lê. Ela colapsa igual ao
-     cartão, mostrando a PRÓXIMA parcela não paga. */
-  await abrir(CARNE + "; abrirContas();");
-  ok("27 contas viram 2 linhas", (await p.locator(".lista > .conta-item").count()) === 2);
-  ok("uma delas é o carnê agrupado", (await p.locator(".conta-item.carne").count()) === 1);
-  ok("e a conta fixa do mês continua visível", /Energia/.test(await texto(".lista")));
+  /* ─── A ABA "A PAGAR" É UM MÊS ───────────────────────────────────────
+     Ela mostrava TUDO em aberto: num app com um carnê de 26 parcelas,
+     41 linhas e R$ 18 mil de total — um número que mistura o que vence
+     semana que vem com o que vence em 2029, e nenhum jeito de perguntar
+     "quanto cai em dezembro".
 
-  const linha = await texto(".conta-item.carne");
-  ok("o carnê mostra a próxima parcela, não a primeira",
-    /2\/26/.test(linha) && !/1\/26/.test(linha));
-  // Sem este aviso o total diz 15 mil e a lista soma mil — dois números
-  // que não fecham na mesma tela.
-  ok("o cabeçalho avisa o que está agrupado",
-    /em carnê, agrupado nas linhas/.test(await texto(".contas-total")));
+     Agora a aba é um mês, com setas. O carnê deixa de ser agrupado aqui:
+     dentro de um mês ele é uma parcela, com a pílula dizendo qual. */
+  await abrir(CARNE + "; abrirContas();");
+  ok("a aba abre no mês corrente",
+    (await texto(".contas-mes-barra strong")).toLowerCase()
+      .startsWith(await p.evaluate(() => soNomeDoMes(mesDe(_hojeLocal())))));
+
+  const noMes = await texto(".lista");
+  ok("27 contas viram as do mês", (await p.locator(".lista > .conta-item").count()) === 3);
+  ok("a conta fixa do mês está lá", noMes.includes("Energia"));
+  ok("a parcela que vence no mês também", /3\/26/.test(noMes));
+  ok("e a que venceu e não foi paga vem junto, porque ainda é a pagar",
+    /2\/26/.test(noMes));
+  ok("a parcela já paga não volta", !/1\/26/.test(noMes));
+  ok("nem as de 2027 em diante", !/5\/26/.test(noMes) && !/6\/26/.test(noMes));
+
+  /* O TOTAL DA BARRA É O DO MÊS, e não o total em aberto lá de cima: são
+     duas perguntas diferentes, e misturar as duas numa só era o problema
+     de origem. */
+  const totalBarra = valor(await texto(".contas-mes-total"));
+  const totalTopo = valor(await texto(".contas-total strong"));
+  ok("a barra soma só o que está na lista", totalBarra === 180 + 600 + 600);
+  ok("e o cartão do alto continua somando tudo", totalTopo > totalBarra);
+  ok("dizendo que o resto está em carnê",
+    /em carnê, espalhado pelos próximos meses/.test(await texto(".contas-total")));
+
+  /* ─── PASSAR DE MÊS ──────────────────────────────────────────────── */
+  await p.evaluate(() => trocarMesDasContas(1));
+  const proximo = await texto(".lista");
+  ok("o mês seguinte mostra a parcela dele", /4\/26/.test(proximo));
+  ok("sem repetir a do mês passado", !/3\/26/.test(proximo));
+  ok("e sem arrastar a atrasada, que só aparece no mês corrente",
+    !/2\/26/.test(proximo));
+  ok("a energia do mês corrente também não vem junto", !proximo.includes("Energia"));
+
+  /* EM MÊS FUTURO, A DATA; NO MÊS CORRENTE, OS DIAS. "Vence em 35 dias"
+     é verdade e não serve: quem folheia dezembro quer o DIA de dezembro,
+     não a distância até lá. */
+  ok("no mês seguinte, o prazo vira data", /Vence \d\d\/\d\d\/\d{4}/.test(proximo));
+  ok("sem contar dias de distância", !/Vence em \d+ dias/.test(proximo));
+
+  await p.evaluate(() => trocarMesDasContas(-1));
+  const voltou = await texto(".lista");
+  ok("de volta no mês corrente, o prazo volta a ser em dias",
+    /Vence em \d+ dias?/.test(voltou));
+  ok("e o que venceu continua dizendo há quanto tempo",
+    /Venceu há \d+ dias?/.test(voltou));
+
+  /* A aba "Vencidos" não muda de régua por causa do mês que ficou
+     escolhido na outra aba: lá o que importa é sempre há quanto tempo. */
+  await p.evaluate(() => { trocarMesDasContas(1); filtrarContas("vencidos"); });
+  ok("em Vencidos, o prazo é sempre há quantos dias",
+    /Venceu há \d+ dias?/.test(await texto(".lista")));
+  await p.evaluate(() => { filtrarContas("todos"); trocarMesDasContas(-1); });
+
+  // 26 parcelas a partir de setembro de 2026 chegam até outubro de 2028;
+  // 30 meses à frente de hoje passa do fim do carnê de propósito.
+  await p.evaluate(() => trocarMesDasContas(30));
+  ok("passando do fim do carnê, a lista fica vazia",
+    (await p.locator(".lista > .conta-item").count()) === 0);
+  ok("e a tela diz de qual mês está falando",
+    (await texto(".vazio")).startsWith("Nada vence em"));
+
+  /* Reabrir a tela volta pro mês corrente: quem entra em Contas quer
+     saber o que paga agora, não onde parou de folhear. */
+  await p.evaluate(() => { voltarInicio(); abrirContas(); });
+  ok("reabrir volta pro mês de hoje",
+    (await p.locator(".lista > .conta-item").count()) === 3);
+
+  /* ─── CADA CONTA COM A CARA DELA ─────────────────────────────────────
+     Eram dois desenhos pra lista inteira: 🔁 em toda conta fixa e 📄 no
+     resto. Internet, aluguel, faculdade, água e energia ficavam
+     idênticas, e achar uma exigia ler nome por nome. */
+  await abrir(`
+    const M = mesDe(_hojeLocal());
+    lancamentos = []; cartoes = []; comprasCartao = []; metas = [];
+    pagamentosFatura = []; fechamentos = []; entradasFixas = [];
+    contas = [
+      { id:"i",  nome:"Internet",  valor:150, vencimento:M+"-20", pago:false, categoria:"Internet", recorrente:true },
+      { id:"al", nome:"Aluguel",   valor:352, vencimento:M+"-20", pago:false, categoria:"Aluguel",  recorrente:true },
+      { id:"fa", nome:"Faculdade", valor:160, vencimento:M+"-20", pago:false, categoria:"Educação", recorrente:true },
+      { id:"en", nome:"Energia",   valor:150, vencimento:M+"-20", pago:false, categoria:"Energia",  recorrente:true },
+      { id:"ag", nome:"Água",      valor:50,  vencimento:M+"-20", pago:false, categoria:"Água",     recorrente:true },
+      { id:"pg", nome:"Mercado",   valor:90,  vencimento:M+"-20", pago:true,  pago_em:M+"-19", categoria:"Mercado" },
+      { id:"pc", nome:"Dentista",  valor:300, valor_pago:100, vencimento:M+"-20", pago:false, categoria:"Saúde" },
+    ];
+    for (let i = 1; i <= 3; i++) contas.push({ id:"mo"+i, nome:"Moto ("+i+"/3)", valor:600,
+      vencimento:M+"-25", pago:false, categoria:"Transporte" });
+    abrirContas();`);
+  const ico = (nome) => p.evaluate(x => {
+    const linha = [...document.querySelectorAll(".lista .conta-item")]
+      .find(e => e.textContent.includes(x));
+    return linha ? linha.querySelector(".conta-ico").textContent.trim() : null;
+  }, nome);
+  ok("internet ganha globo", (await ico("Internet")) === "🌐");
+  ok("aluguel ganha casa", (await ico("Aluguel")) === "🏠");
+  ok("faculdade ganha capelo", (await ico("Faculdade")) === "🎓");
+  ok("energia ganha raio", (await ico("Energia")) === "⚡");
+  ok("água ganha gota", (await ico("Água")) === "💧");
+  ok("o carnê também — ele não é mais um 🧾 pra todo mundo",
+    (await ico("Moto")) === "🚗");
+  ok("nenhuma linha ficou com o 🔁 ou o 📄 genéricos",
+    !(await texto(".lista")).includes("🔁") && !(await texto(".lista")).includes("📄"));
+
+  /* PAGO E PAGO-PELA-METADE MANTÊM A MARCA DE ESTADO. Ali o que a pessoa
+     procura é o estado, não a identidade da conta. */
+  ok("a paga pela metade continua com a meia-lua", (await ico("Dentista")) === "◐");
+  await p.evaluate(() => filtrarContas("pagos"));
+  ok("e a paga continua com o visto", (await ico("Mercado")) === "✓");
+  await p.evaluate(() => filtrarContas("todos"));
+
+
+  /* A BARRA DE MÊS NÃO APARECE NAS OUTRAS ABAS. Elas não são sobre um
+     mês — "Vencendo" é sobre cinco dias, "Vencidos" sobre tudo que
+     passou, "Pagos" é histórico e "Fixos" é cadastro. */
+  for (const aba of ["vencendo", "vencidos", "pagos", "fixos"]) {
+    await p.evaluate(x => filtrarContas(x), aba);
+    ok(`a aba ${aba} não tem barra de mês`,
+      (await p.locator(".contas-mes-barra").count()) === 0);
+  }
+  await p.evaluate(() => filtrarContas("todos"));
+  ok("e ela volta na aba A pagar",
+    (await p.locator(".contas-mes-barra").count()) === 1);
 
   /* ─── Excluir o carnê não mexe no que já foi pago ─────────────────── */
   await abrir(CARNE + `; abrirCarne("Moto");`);

@@ -2554,3 +2554,22 @@ body.escuro .resumo-secao .item-icone.entrada { background: #17372d; }
    contando com dinheiro que não entrou. Mesma cor de atenção das contas
    vencendo, pra ser a mesma ideia em qualquer tela. */
 .resumo-atrasado { color: var(--aviso) !important; font-weight: 700; }
+
+/* A barra de mês da aba "A pagar": as setas de um lado, o total do mês
+   do outro. O total fica aqui, e não no cartão do alto, porque o cartão
+   responde outra pergunta — "quanto eu devo no total" — e os dois números
+   juntos no mesmo lugar brigariam. */
+.contas-mes-barra {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 12px 0 10px;
+}
+.contas-mes-total {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--saida);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}

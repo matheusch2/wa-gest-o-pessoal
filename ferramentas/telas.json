@@ -482,5 +482,13 @@
  [
   "Atualizar o saldo",
   "abrirAtualizarSaldo()"
+ ],
+ [
+  "Contas · mês seguinte",
+  "abrirContas(); trocarMesDasContas(1)"
+ ],
+ [
+  "Contas · mês sem nada",
+  "abrirContas(); trocarMesDasContas(40)"
  ]
 ]
