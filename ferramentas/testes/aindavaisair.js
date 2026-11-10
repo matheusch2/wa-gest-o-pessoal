@@ -250,6 +250,133 @@ module.exports = () => suite("Metas, Resumo e o que ainda vai sair", async ({ p,
     batem.relatorio === batem.resumo && batem.relatorio === 1380);
 
 
+  /* ─── METAS E RESUMO CONCORDAM SOBRE O QUE OCUPA UMA META ────────────
+     DEFEITO ACHADO NA VARREDURA: boleto em aberto de uma categoria é
+     gasto daquela categoria que já está prometido. O Resumo sempre
+     soube — ele reservava R$ 848 pela meta "Casa" de R$ 1.400 e R$ 352
+     pelo boleto do aluguel. A tela de Metas não sabia, e dizia "Casa,
+     sobram R$ 1.200".
+
+     O TOTAL DAS DUAS BATIA, e era isso que escondia o defeito: a soma
+     fechava, e a frase da tela de Metas convidava a gastar R$ 352 que já
+     tinham dono. */
+  const META_COM_BOLETO = `
+    const M = mesDe(_hojeLocal());
+    mesAtual = M;
+    cartoes = []; comprasCartao = []; pagamentosFatura = [];
+    fechamentos = []; entradasFixas = [];
+    lancamentos = [{ id:"s", tipo:"saida", valor:200, data:M+"-03",
+                     categoria:"Casa", descricao:"Material" }];
+    contas = [{ id:"a", nome:"Aluguel", valor:352, vencimento:M+"-25",
+                pago:false, categoria:"Casa", recorrente:true }];
+    metas = [{ id:"m", categoria:"Casa", valor:1400, reservar:true }];
+  `;
+  await abrir(META_COM_BOLETO + "; abrirMetas();");
+
+  const _linhaDaMeta = () => p.evaluate(() => {
+    const linha = [...document.querySelectorAll(".meta-item")]
+      .find(e => e.textContent.includes("Casa"));
+    return linha.textContent.replace(/\s+/g, " ").trim();
+  });
+  const casaNaTela = await _linhaDaMeta();
+  ok("a meta desconta o boleto em aberto da categoria",
+    casaNaTela.includes("Sobram R$ 848,00"));
+  ok("e não convida mais a gastar os R$ 1.200", !casaNaTela.includes("1.200,00"));
+  ok("dizendo quanto está preso em boleto", casaNaTela.includes("352,00 em boleto"));
+  ok("sem esconder o que já saiu de verdade", casaNaTela.includes("200,00"));
+
+  /* OS DOIS CHAMAM A MESMA FUNÇÃO. Dar no mesmo hoje, por caminhos
+     diferentes, é exatamente como duas contas começam a divergir
+     amanhã. */
+  const bate = await p.evaluate(() => {
+    const M = mesDe(_hojeLocal());
+    const linhas = aindaVaiSairDoMes(M).linhas;
+    return {
+      doCore: contasAbertasDaCategoria("Casa", M),
+      noResumo: linhas.filter(x => x.tipo === "conta" && x.categoria === "Casa")
+                      .reduce((s, x) => s + x.falta, 0),
+      metaNoResumo: (linhas.find(x => x.tipo === "meta" && x.categoria === "Casa") || {}).falta,
+    };
+  });
+  ok("o core e o Resumo veem o mesmo boleto", bate.doCore === 352 && bate.noResumo === 352);
+  ok("e a reserva da meta no Resumo é a mesma sobra da tela de Metas",
+    bate.metaNoResumo === 848);
+
+  /* A BARRA MOSTRA OS DOIS PEDAÇOS, lado a lado e não empilhados — sem o
+     flex, o listrado caía embaixo e a barra dobrava de altura. */
+  const barra = await p.evaluate(() => {
+    const b = [...document.querySelectorAll(".meta-item")]
+      .find(e => e.textContent.includes("Casa")).querySelector(".meta-barra");
+    const cheio = b.querySelector("span").getBoundingClientRect();
+    const listrado = b.querySelector("i").getBoundingClientRect();
+    return {
+      ladoALado: Math.abs(cheio.top - listrado.top) < 1 && listrado.left >= cheio.right - 1,
+      altura: Math.round(b.getBoundingClientRect().height),
+      listradoTemLargura: listrado.width > 1,
+    };
+  });
+  ok("o pedaço preso fica ao lado do gasto", barra.ladoALado);
+  ok("e a barra não dobra de altura", barra.altura === 8);
+  ok("o pedaço preso aparece", barra.listradoTemLargura);
+
+  /* O PERCENTUAL CONTA OS DOIS. 200 gastos de 1.400 é 14%; com os R$ 352
+     do aluguel já prometidos, a categoria está em 39% do teto. Mostrar
+     14% ali é dizer que há folga onde não há — é o mesmo erro da frase,
+     só que em número grande. */
+  const pct = await p.evaluate(() => {
+    const linha = [...document.querySelectorAll(".meta-item")]
+      .find(e => e.textContent.includes("Casa"));
+    const b = linha.querySelector(".meta-barra");
+    return {
+      texto: linha.querySelector(".meta-pct").textContent.trim(),
+      larguraCheio: b.querySelector("span").getBoundingClientRect().width,
+      larguraPresa: b.querySelector("i").getBoundingClientRect().width,
+      larguraTotal: b.getBoundingClientRect().width,
+    };
+  });
+  ok("o percentual conta o gasto e o que está preso", pct.texto === "39%");
+  ok("e não só o gasto", pct.texto !== "14%");
+  /* E A BARRA DESENHA ESSA MESMA PROPORÇÃO: o cheio é o gasto, o
+     listrado é o preso, e juntos ocupam os 39%. */
+  ok("o pedaço cheio é o gasto (200 de 1.400)",
+    Math.abs(pct.larguraCheio / pct.larguraTotal - 200 / 1400) < 0.02);
+  ok("o listrado é o preso (352 de 1.400)",
+    Math.abs(pct.larguraPresa / pct.larguraTotal - 352 / 1400) < 0.02);
+
+  /* O NÚMERO DO TOPO TAMBÉM. "Ainda pode gastar" é a soma das sobras, e
+     se cada sobra desconta o boleto, o topo tem que descontar junto —
+     senão a tela se contradiz consigo mesma, com o total dizendo uma
+     coisa e as linhas embaixo dizendo outra. */
+  const topo = await texto(".contas-total");
+  ok("o topo desconta o boleto também", topo.includes("848,00"));
+  ok("e diz quanto do teto já está ocupado", topo.includes("552,00 de R$ 1.400,00"));
+  ok("sem anunciar a folga antiga", !topo.includes("1.200,00"));
+
+  /* FIXA AINDA SEM LINHA NO MÊS TAMBÉM OCUPA. Ela vai sair, e o Resumo
+     já a reserva como conta desde que passou a projetar. */
+  await abrir(META_COM_BOLETO + `;
+    contas[0].vencimento = _somaMes(M, -1) + "-25";
+    contas[0].pago = true; contas[0].pago_em = _somaMes(M, -1) + "-25";
+    abrirMetas();`);
+  const comPrevista = await _linhaDaMeta();
+  ok("a fixa projetada no mês também ocupa a meta",
+    comPrevista.includes("352,00 em boleto"));
+  ok("e a sobra desconta ela igual", comPrevista.includes("Sobram R$ 848,00"));
+
+  /* SEM BOLETO NENHUM, nada muda do que era antes. */
+  await abrir(META_COM_BOLETO + "; contas = []; abrirMetas();");
+  const semBoleto = await p.evaluate(() => {
+    const linha = [...document.querySelectorAll(".meta-item")]
+      .find(e => e.textContent.includes("Casa"));
+    return {
+      texto: linha.textContent.replace(/\s+/g, " ").trim(),
+      listrado: linha.querySelectorAll(".meta-barra i").length,
+    };
+  });
+  ok("sem boleto, a sobra é o teto menos o gasto", semBoleto.texto.includes("Sobram R$ 1.200,00"));
+  ok("e não há pedaço listrado na barra", semBoleto.listrado === 0);
+
+
   /* ─── O pagamento da fatura não é gasto de novo ──────────────────────
      Ele é a mesma despesa chegando pela segunda vez: as compras já foram
      contadas uma a uma, cada uma na sua categoria. */

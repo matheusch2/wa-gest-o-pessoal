@@ -506,5 +506,9 @@
  [
   "Balanço · detalhe do que vai entrar",
   "abrirBalanco(); verDetalheDoBalanco(\"receber\")"
+ ],
+ [
+  "Metas · com boleto em aberto",
+  "lancamentos=[{id:'s',tipo:'saida',valor:200,data:mesAtual+'-03',categoria:'Casa',descricao:'Material'}]; contas=[{id:'a',nome:'Aluguel',valor:352,vencimento:mesAtual+'-25',pago:false,categoria:'Casa',recorrente:true}]; metas=[{id:'m',categoria:'Casa',valor:1400,reservar:true}]; mesAtual=mesDe(_hojeLocal()); abrirMetas()"
  ]
 ]

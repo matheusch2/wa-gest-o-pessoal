@@ -9,7 +9,7 @@
    index.html. Serve pra uma pergunta que já custou tempo: "o defeito que
    você está vendo é do código de agora, ou o celular ainda está com o
    app velho em cache?" — sem isso, a resposta é chute. */
-const VERSAO_APP = "2026-11-10 · 68";
+const VERSAO_APP = "2026-11-10 · 69";
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -435,6 +435,38 @@ function fixasProjetadasNoMes(mesRef) {
   return fora.sort((a, b) => a.vencimento.localeCompare(b.vencimento));
 }
 
+/* ═══ O QUE JÁ TEM DONO DENTRO DE UMA CATEGORIA ═══════════════════════
+   Boleto em aberto de uma categoria é gasto daquela categoria que já
+   está prometido: o aluguel de R$ 352 ocupa R$ 352 da meta "Casa" antes
+   de alguém decidir qualquer coisa.
+
+   O Resumo já descontava isso da reserva da meta. A tela de Metas não —
+   ela dizia "Casa, sobram R$ 1.200" enquanto o Resumo reservava R$ 848
+   pela meta e R$ 352 pelo boleto. O total das duas batia, e era
+   justamente isso que escondia o defeito: a soma fechava e a frase da
+   tela de Metas convidava a gastar R$ 352 que já tinham dono.
+
+   Mora aqui porque as duas telas perguntam a mesma coisa, e a mesma
+   pergunta em dois códigos é uma pergunta com duas respostas — foi assim
+   que o "Guardado" virou 38% da rosca do Resumo enquanto sumia do
+   relatório. */
+function contasAbertasDaCategoria(categoria, mesRef) {
+  const alvo = categoria || "";
+  let total = 0;
+  for (const c of contas) {
+    if (c.pago || mesDe(c.vencimento) !== mesRef) continue;
+    if ((c.categoria || "") !== alvo) continue;
+    total += faltaDaConta(c);
+  }
+  // As fixas que ainda não têm linha no mês contam igual: elas vão sair,
+  // e o Resumo já as reserva como conta.
+  for (const f of fixasProjetadasNoMes(mesRef)) {
+    if ((f.categoria || "") !== alvo) continue;
+    total += Number(f.valor);
+  }
+  return Math.round(total * 100) / 100;
+}
+
 function aindaVaiSairDoMes(mesRef) {
   // Mês que já acabou não reserva nada. Reservar é dizer "isto ainda vai
   // sair", e num mês fechado nada mais vai sair dele: as contas ou foram
@@ -531,9 +563,10 @@ function aindaVaiSairDoMes(mesRef) {
     if (!m.reservar) continue;
     const previsto = Number(m.valor);
     const gasto = jaSaiu[m.categoria] || 0;
-    const emContas = linhas
-      .filter(x => x.tipo === "conta" && x.categoria === m.categoria)
-      .reduce((s, x) => s + x.falta, 0);
+    // A MESMA função que a tela de Metas chama. Somar daqui das linhas
+    // dava no mesmo hoje, e dar no mesmo hoje é exatamente como duas
+    // contas começam a divergir amanhã.
+    const emContas = contasAbertasDaCategoria(m.categoria, mesRef);
     const falta = Math.round(Math.max(0, previsto - gasto - emContas) * 100) / 100;
     if (falta < 0.005) continue;
     linhas.push({ tipo: "meta", nome: m.categoria, categoria: m.categoria, previsto, gasto, falta });

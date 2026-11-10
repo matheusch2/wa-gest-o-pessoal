@@ -2670,3 +2670,28 @@ body.escuro .resumo-secao .item-icone.entrada { background: #17372d; }
 }
 .balanco-detalhe .lista { gap: 6px; }
 .balanco-detalhe .item { padding: 8px 10px; }
+
+/* A BARRA DA META TEM DOIS PEDAÇOS, LADO A LADO. O cheio é o que já
+   saiu; o listrado é o que está preso em boleto em aberto da mesma
+   categoria — vai sair, mas ainda não saiu. Um pedaço só esconderia que
+   parte ainda dá pra renegociar; duas barras separadas fariam a pessoa
+   somar de cabeça pra saber quanto falta pro teto.
+
+   O "display:flex" é o que põe os dois na mesma linha: sem ele o <i>
+   caía embaixo do <span> e a barra dobrava de altura. */
+.meta-barra { display: flex; }
+.meta-barra i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background-image: repeating-linear-gradient(135deg,
+    currentColor 0 3px, transparent 3px 7px);
+  opacity: .5;
+}
+.meta-item.dentro   .meta-barra i { color: var(--entrada); }
+.meta-item.perto    .meta-barra i { color: var(--aviso); }
+.meta-item.estourou .meta-barra i { color: var(--saida); }
+
+/* O valor não se parte no meio: sem o nowrap, "· R$ 502,00 em boleto"
+   quebrava entre o "R$" e o "502,00". */
+.meta-preso { font-weight: 700; color: var(--fraco); white-space: nowrap; }

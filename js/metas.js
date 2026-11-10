@@ -72,23 +72,39 @@ function desenharMetas() {
 
   // Quem está mais perto de estourar aparece primeiro. A tela existe pra
   // avisar; ordem alfabética esconderia o alerta no meio da lista.
+  const _ocupadoDe = (m) =>
+    (gastos[m.categoria] || 0) + contasAbertasDaCategoria(m.categoria, mesAtual);
   const comMeta = metas.slice().sort((a, b) => {
-    const ua = (gastos[a.categoria] || 0) / Number(a.valor);
-    const ub = (gastos[b.categoria] || 0) / Number(b.valor);
+    const ua = _ocupadoDe(a) / Number(a.valor);
+    const ub = _ocupadoDe(b) / Number(b.valor);
     return ub - ua || a.categoria.localeCompare(b.categoria, "pt-BR");
   });
 
+  /* O BOLETO EM ABERTO JÁ OCUPA A META DA CATEGORIA DELE.
+     Esta tela dizia "Casa, sobram R$ 1.200" enquanto o aluguel de R$ 352
+     estava em aberto — e o Resumo, que sempre soube disso, reservava
+     R$ 848 pela meta e R$ 352 pelo boleto. O total das duas batia, e era
+     isso que escondia o defeito: a soma fechava e esta frase convidava a
+     gastar R$ 352 que já tinham dono.
+
+     Agora as duas telas chamam a MESMA função do core. */
+  const comprometido = {};
+  for (const m of metas) comprometido[m.categoria] = contasAbertasDaCategoria(m.categoria, mesAtual);
+
+  const ocupado = (m) => (gastos[m.categoria] || 0) + (comprometido[m.categoria] || 0);
+
   const totalMetas = comMeta.reduce((s, m) => s + Number(m.valor), 0);
-  const totalGasto = comMeta.reduce((s, m) => s + (gastos[m.categoria] || 0), 0);
+  const totalGasto = comMeta.reduce((s, m) => s + ocupado(m), 0);
   const sobra = totalMetas - totalGasto;
   const usadoGeral = totalMetas > 0 ? totalGasto / totalMetas : 0;
 
   const umaMeta = m => {
     const gasto = gastos[m.categoria] || 0;
+    const preso = comprometido[m.categoria] || 0;
     const teto = Number(m.valor);
-    const usado = teto > 0 ? gasto / teto : 0;
+    const usado = teto > 0 ? (gasto + preso) / teto : 0;
     const { classe } = _corDaMeta(usado);
-    const falta = teto - gasto;
+    const falta = teto - gasto - preso;
 
     return `
       <div class="meta-item ${classe}" id="meta-${m.id}">
@@ -96,9 +112,17 @@ function desenharMetas() {
           <span class="meta-nome">${iconeDoLancamento({ tipo: "saida", categoria: m.categoria })} ${esc(m.categoria)}</span>
           <span class="meta-pct">${Math.round(usado * 100)}%</span>
         </div>
-        <div class="meta-barra"><span style="width:${Math.min(100, usado * 100)}%"></span></div>
+        <!-- A barra tem dois pedaços: o que já saiu, cheio, e o que está
+             preso em boleto, listrado. Juntar os dois num só esconderia
+             que parte ainda dá pra cancelar; separar em duas barras faria
+             a pessoa somar de cabeça pra saber quanto falta pro teto. -->
+        <div class="meta-barra">
+          <span style="width:${Math.min(100, (gasto / (teto || 1)) * 100)}%"></span>
+          ${preso >= 0.005 ? `<i style="width:${Math.min(100 - Math.min(100, (gasto / (teto || 1)) * 100), (preso / (teto || 1)) * 100)}%"></i>` : ""}
+        </div>
         <div class="meta-baixo">
-          <span><strong>${moeda(gasto)}</strong> de ${moeda(teto)}</span>
+          <span><strong>${moeda(gasto)}</strong> de ${moeda(teto)}${
+            preso >= 0.005 ? ` · <b class="meta-preso">${moeda(preso)} em boleto</b>` : ""}</span>
           <span class="meta-falta">${falta >= 0 ? "Sobram " + moeda(falta) : "Passou " + moeda(-falta)}</span>
         </div>
         <div class="meta-acoes">
