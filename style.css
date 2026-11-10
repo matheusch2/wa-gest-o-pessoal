@@ -2531,3 +2531,20 @@ body.escuro .resumo-secao .item-icone.entrada { background: #17372d; }
   opacity: .75;
 }
 .conta-editar:active { opacity: 1; }
+
+/* NOME COM PÍLULA DE PARCELA: o nome encolhe, a pílula não.
+   Dentro do mesmo <strong> que corta com reticências, a pílula era a
+   primeira coisa a sumir — e ela é justamente o que não cabe no nome.
+   "Renegociação de dívidas …" não dizia nem o nome inteiro nem a parcela. */
+.item-txt strong.com-pilula {
+  display: flex;
+  align-items: baseline;
+  min-width: 0;
+}
+.item-txt strong.com-pilula > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.item-txt strong.com-pilula .carne-pilula { flex: none; }

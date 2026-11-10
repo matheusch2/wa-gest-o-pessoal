@@ -169,4 +169,113 @@ module.exports = () => suite("Resumo: extrato, e só", async ({ p, ok, abrir, te
     laNaFrente.includes("Aluguel") && laNaFrente.includes("1.200,00"));
   ok("mas dito como previsão", laNaFrente.includes("Prevista para"));
   ok("sem prometer um boleto que não existe", !laNaFrente.includes("Vence"));
+
+
+  /* ─── A ORDEM E A CARA DO "AINDA VAI SAIR" ───────────────────────────
+     Pedido depois de olhar o mês de verdade: três faturas, aluguel, duas
+     faculdades, transporte, um carnê e duas renegociações. Dez linhas
+     iguais, com o mesmo papelzinho cinza, ordenadas só por valor — as
+     faturas espalhadas entre o aluguel e a faculdade. */
+  const MES_CHEIO = `
+    const M = mesDe(_hojeLocal());
+    mesAtual = M;
+    lancamentos = []; metas = []; fechamentos = []; entradasFixas = [];
+    reservas = []; movimentosReserva = []; negocios = []; movimentosNegocio = [];
+    cartoes = [
+      { id:"k1", nome:"Nayara",  banco:"outro",  dia_fechamento:1, dia_vencimento:10 },
+      { id:"k3", nome:"Nubank",  banco:"nubank", dia_fechamento:1, dia_vencimento:6 },
+    ];
+    comprasCartao = [
+      { id:"c1", cartao_id:"k1", descricao:"Compras", valor:740.88, parcelas:1, data:_somaMes(M,-1)+"-15", categoria:"Casa" },
+      { id:"c3", cartao_id:"k3", descricao:"Compras", valor:121,    parcelas:1, data:_somaMes(M,-1)+"-15", categoria:"Casa" },
+    ];
+    pagamentosFatura = [];
+    contas = [
+      { id:"a",  nome:"Aluguel",      valor:500, vencimento:M+"-10", pago:false, categoria:"Casa", recorrente:true },
+      { id:"f1", nome:"Faculdade 1",  valor:486, vencimento:M+"-10", pago:false, categoria:"Educação", recorrente:true },
+      { id:"t",  nome:"Transporte",   valor:310, vencimento:M+"-10", pago:false, categoria:"Transporte", recorrente:true },
+      { id:"cm", nome:"Cama (2/12)",  valor:266, vencimento:M+"-09", pago:false, categoria:"Casa" },
+      { id:"r1", nome:"Renegociação de dívidas (3/12)", valor:81.11, vencimento:M+"-10", pago:false, categoria:"Outros" },
+    ];
+  `;
+  await abrir(MES_CHEIO + "; abrirResumo();");
+  const itens = p.locator(".resumo-secao .lista .item");
+  const nomes = (await itens.allTextContents()).map(t => t.replace(/\s+/g, " ").trim());
+
+  /* AS FATURAS EM CIMA. Elas são de outra natureza e, na prática, as
+     maiores — misturadas por valor, achar "quanto eu devo de cartão este
+     mês" virava garimpo. */
+  ok("as duas faturas abrem a lista",
+    nomes[0].includes("Fatura") && nomes[1].includes("Fatura"));
+  ok("e nenhuma fatura aparece depois das contas",
+    nomes.slice(2).every(n => !n.includes("Fatura")));
+  ok("entre elas, a maior primeiro",
+    nomes[0].includes("740,88") && nomes[1].includes("121,00"));
+  ok("e as contas continuam da maior pra menor",
+    nomes[2].includes("500,00") && nomes[3].includes("486,00") &&
+    nomes[nomes.length - 1].includes("81,11"));
+
+  /* A META VAI PRO FIM, porque é a única sem boleto: previsão de gasto,
+     não cobrança com data. */
+  await abrir(MES_CHEIO + `;
+    metas = [{ id:"mm", categoria:"Mercado", valor:900, reservar:true }];
+    abrirResumo();`);
+  const comMeta = (await p.locator(".resumo-secao .lista .item").allTextContents())
+    .map(t => t.replace(/\s+/g, " ").trim());
+  ok("a meta fecha a lista, atrás de todas as contas",
+    comMeta[comMeta.length - 1].includes("Mercado"));
+  ok("mesmo sendo maior que várias delas",
+    comMeta[comMeta.length - 1].includes("900,00"));
+
+  /* CADA CONTA COM O ÍCONE DA SUA CATEGORIA. Era 📄 pra todas: dez
+     linhas iguais, e a pessoa lia cada nome pra achar o aluguel. */
+  await abrir(MES_CHEIO + "; abrirResumo();");
+  const icone = (nome) => p.evaluate(x => {
+    const linha = [...document.querySelectorAll(".resumo-secao .lista .item")]
+      .find(e => e.textContent.includes(x));
+    return linha ? linha.querySelector(".item-icone").textContent.trim() : null;
+  }, nome);
+  ok("aluguel ganha casa", (await icone("Aluguel")) === "🏠");
+  ok("faculdade ganha capelo", (await icone("Faculdade")) === "🎓");
+  ok("transporte ganha carro", (await icone("Transporte")) === "🚗");
+  ok("renegociação de dívidas ganha banco", (await icone("Renegociação")) === "🏦");
+  ok("e a fatura continua sendo cartão", (await icone("Fatura Nubank")) === "💳");
+  ok("nenhuma conta ficou com o papelzinho genérico",
+    !(await p.locator(".resumo-secao .lista").textContent()).includes("📄"));
+
+  /* É A MESMA FUNÇÃO DO EXTRATO LOGO ABAIXO, e isso importa: o aluguel
+     tem que ter a mesma cara nas duas listas da mesma tela. */
+  ok("o ícone vem da função que desenha o extrato também",
+    (await p.evaluate(() => iconeDoLancamento({ tipo: "saida", categoria: "Casa", descricao: "Aluguel" }))) === "🏠");
+
+  /* O "(2/12)" FORA DO NOME. Dentro dele, era a primeira coisa que as
+     reticências comiam — e aí a linha não dizia nem o nome inteiro nem a
+     parcela. */
+  const carne = await texto(".resumo-secao .lista .item:has(.carne-pilula)");
+  ok("o carnê mostra o nome sem o (2/12) grudado", carne.includes("Cama"));
+  ok("e a parcela vira pílula", carne.includes("2/12"));
+  ok("com o nome e a pílula em caixas separadas",
+    (await p.locator(".resumo-secao .lista strong.com-pilula > span").count()) >= 1);
+
+  /* O NOME LONGO ENCOLHE E A PÍLULA NÃO. É o caso real que gerou isto:
+     "Renegociação de dívidas (3/12)" não cabia, e quem sumia era a
+     parcela. */
+  const larguras = await p.evaluate(() => {
+    const linha = [...document.querySelectorAll(".resumo-secao .lista .item")]
+      .find(e => e.textContent.includes("Renegociação"));
+    const pilula = linha.querySelector(".carne-pilula");
+    const caixa = linha.querySelector("strong.com-pilula");
+    return {
+      pilulaVisivel: pilula.getBoundingClientRect().width > 0,
+      pilulaDentro: pilula.getBoundingClientRect().right <= caixa.getBoundingClientRect().right + 1,
+      texto: pilula.textContent.trim(),
+    };
+  });
+  ok("a pílula do nome longo continua na tela", larguras.pilulaVisivel);
+  ok("sem transbordar da linha", larguras.pilulaDentro);
+  ok("e ainda diz qual parcela é", larguras.texto === "3/12");
+
+  /* Conta que NÃO é carnê não ganha pílula nenhuma. */
+  ok("só o carnê tem pílula",
+    (await p.locator(".resumo-secao .lista .carne-pilula").count()) === 2);
 });

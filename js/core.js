@@ -9,7 +9,7 @@
    index.html. Serve pra uma pergunta que já custou tempo: "o defeito que
    você está vendo é do código de agora, ou o celular ainda está com o
    app velho em cache?" — sem isso, a resposta é chute. */
-const VERSAO_APP = "2026-11-10 · 59";
+const VERSAO_APP = "2026-11-10 · 60";
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -539,7 +539,19 @@ function aindaVaiSairDoMes(mesRef) {
     linhas.push({ tipo: "meta", nome: m.categoria, categoria: m.categoria, previsto, gasto, falta });
   }
 
-  linhas.sort((a, b) => b.falta - a.falta);
+  /* A ORDEM DA LISTA: FATURA, CONTA, META.
+     Dentro de cada grupo, o maior primeiro.
+
+     As faturas sobem porque são de outra natureza — e, na prática, são as
+     maiores e as que a pessoa procura primeiro. Misturadas por valor, as
+     três faturas de quem tem três cartões ficavam espalhadas entre o
+     aluguel e a faculdade, e achar "quanto eu devo de cartão este mês"
+     virava trabalho de garimpo.
+
+     A meta vai pro fim porque ela é a única que não tem boleto: é
+     previsão de gasto, não cobrança com data. */
+  const ordemDoTipo = { fatura: 0, conta: 1, meta: 2 };
+  linhas.sort((a, b) => (ordemDoTipo[a.tipo] - ordemDoTipo[b.tipo]) || (b.falta - a.falta));
   return { linhas, total: Math.round(linhas.reduce((s, x) => s + x.falta, 0) * 100) / 100 };
 }
 

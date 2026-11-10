@@ -219,11 +219,27 @@ function desenharResumo(filtro) {
    — e cada uma leva pra tela de onde veio: quem toca na fatura quer ver a
    fatura, não a lista de contas. */
 function _linhaDoQueVaiSair(r) {
+  /* O ÍCONE DA CONTA VEM DA CATEGORIA E DO NOME, não é mais um 📄 pra
+     todas. Dez contas com o mesmo papelzinho cinza viravam dez linhas
+     iguais, e a pessoa lia cada nome pra achar o aluguel. Com 🏠, 🎓 e
+     🚗 o olho acha antes de ler — e é a MESMA função que desenha o
+     extrato logo abaixo, então o aluguel tem a mesma cara nos dois
+     lugares. */
   const cara = {
-    conta:  { icone: "📄", acao: "abrirContas()" },
+    conta:  { icone: iconeDoLancamento({ tipo: "saida", categoria: r.categoria, descricao: r.nome }),
+              acao: "abrirContas()" },
     fatura: { icone: "💳", acao: `abrirCartao('${r.cartaoId}')` },
     meta:   { icone: iconeDoLancamento({ tipo: "saida", categoria: r.categoria }), acao: "abrirMetas()" },
   }[r.tipo];
+
+  /* O "(2/12)" VIRA PILULA, igual na tela do carnê. Escrito dentro do
+     nome ele era a primeira coisa a ser cortada pelas reticências:
+     "Renegociação de dívidas (…" não diz nem o nome inteiro nem a
+     parcela. Fora do nome, cabem os dois. */
+  const parte = r.tipo === "conta" ? _parteDoCarne(r.nome) : null;
+  const titulo = parte
+    ? `<span>${esc(parte.base)}</span><span class="carne-pilula">${parte.i}/${parte.n}</span>`
+    : esc(r.nome);
 
   const detalhe =
     // A conta paga pela metade diz a metade que falta e o total do lado —
@@ -254,7 +270,7 @@ function _linhaDoQueVaiSair(r) {
     <div class="item item-toque" onclick="${cara.acao}" style="cursor:pointer">
       <div class="item-icone">${cara.icone}</div>
       <div class="item-txt">
-        <strong>${esc(r.nome)}</strong>
+        <strong${parte ? ` class="com-pilula"` : ""}>${titulo}</strong>
         <small>${detalhe}</small>
       </div>
       <span class="item-valor saida">${moeda(r.falta)}</span>
@@ -486,7 +502,9 @@ function iconeDoLancamento(l) {
     [["casa", "aluguel", "moradia"], "🏠"],
     [["transporte", "combustivel", "gasolina", "moto", "carro"], "🚗"],
     [["saude", "farmacia", "remedio"], "💊"],
+    [["faculdade", "universidade", "mensalidade", "matricula"], "🎓"],
     [["educacao", "escola", "curso", "livro"], "📚"],
+    [["divida", "dividas", "renegociacao", "emprestimo", "financiamento", "consignado"], "🏦"],
     [["lazer", "passeio", "cinema"], "🎉"],
     [["internet", "telefone", "celular"], "🌐"],
     [["energia", "luz"], "⚡"],
