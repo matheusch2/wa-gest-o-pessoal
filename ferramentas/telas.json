@@ -498,5 +498,13 @@
  [
   "Contas · pagos do mês",
   "abrirContas(); filtrarContas('pagos')"
+ ],
+ [
+  "Balanço · detalhe do que vai sair",
+  "abrirBalanco(); verDetalheDoBalanco(\"pagar\")"
+ ],
+ [
+  "Balanço · detalhe do que vai entrar",
+  "abrirBalanco(); verDetalheDoBalanco(\"receber\")"
  ]
 ]

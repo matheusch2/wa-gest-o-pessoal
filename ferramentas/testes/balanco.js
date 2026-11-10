@@ -132,6 +132,90 @@ module.exports = () => suite("Balanço: quanto você tem", async ({ p, ok, abrir
     (await texto(".contas-total")).includes("Atualizado hoje"));
 
 
+  /* ─── O SALDO INFORMADO NÃO ENGOLE O DIA INTEIRO ─────────────────────
+     DEFEITO ENCONTRADO INVESTIGANDO UMA DESCONFIANÇA DO DONO DO APP: a
+     regra era "o saldo do dia 8 já contém o que foi lançado no dia 8", e
+     ela só vale pro que foi lançado ANTES de a pessoa olhar o banco.
+
+     Quem conferia o saldo de manhã e gastava à tarde via o app parado no
+     número da manhã até o dia seguinte — a tela dizia "você tem" um valor
+     que o banco não tinha mais. Numa tela que existe justamente pra
+     responder quanto se tem, isso é o pior defeito possível.
+
+     Os dois lados guardam created_at, então a comparação é de INSTANTE,
+     não de dia. */
+  const HORA = (h) => `${HJ}T${String(h).padStart(2, "0")}:00:00.000Z`;
+  const DIA_DA_CONFERENCIA = `
+    lancamentos = []; contas = []; cartoes = []; comprasCartao = [];
+    pagamentosFatura = []; metas = []; fechamentos = []; entradasFixas = [];
+    reservas = []; movimentosReserva = []; tabelasFaltando = [];
+    mesAtual = mesDe(_hojeLocal());
+    conferencias = [{ id:"c1", data:"${HJ}", saldo_informado:1000,
+                      created_at:"${HORA(12)}" }];
+  `;
+
+  /* Lançado às 9h, conferido às 12h: o banco já mostrava o resultado
+     quando ela olhou. Contar de novo seria contar duas vezes. */
+  await abrir(DIA_DA_CONFERENCIA + `
+    lancamentos = [{ id:"a", tipo:"saida", valor:300, data:"${HJ}",
+                     categoria:"Mercado", descricao:"Antes de conferir",
+                     created_at:"${HORA(9)}" }];
+    abrirBalanco();`);
+  ok("o que foi lançado ANTES da conferência não conta de novo",
+    (await p.evaluate(() => saldoDeHoje().valor)) === 1000);
+
+  /* Lançado às 15h, conferido às 12h: saiu da conta DEPOIS de ela olhar
+     o banco. O saldo tem que cair. */
+  await abrir(DIA_DA_CONFERENCIA + `
+    lancamentos = [{ id:"b", tipo:"saida", valor:300, data:"${HJ}",
+                     categoria:"Mercado", descricao:"Depois de conferir",
+                     created_at:"${HORA(15)}" }];
+    abrirBalanco();`);
+  ok("o que foi lançado DEPOIS dela conta", (await p.evaluate(() => saldoDeHoje().valor)) === 700);
+  ok("e a tela mostra o número já descontado",
+    (await texto(".contas-total")).includes("700,00"));
+
+  /* Os dois no mesmo dia: só o de depois mexe no saldo. */
+  await abrir(DIA_DA_CONFERENCIA + `
+    lancamentos = [
+      { id:"a", tipo:"saida",   valor:300, data:"${HJ}", categoria:"Mercado", descricao:"Antes",  created_at:"${HORA(9)}" },
+      { id:"b", tipo:"saida",   valor:100, data:"${HJ}", categoria:"Mercado", descricao:"Depois", created_at:"${HORA(15)}" },
+      { id:"c", tipo:"entrada", valor:50,  data:"${HJ}", categoria:"Extra",   descricao:"Depois", created_at:"${HORA(16)}" },
+    ];
+    abrirBalanco();`);
+  ok("no mesmo dia, só o que veio depois mexe no saldo",
+    (await p.evaluate(() => saldoDeHoje().valor)) === 950);
+
+  /* SEM OS CARIMBOS, volta a excluir o dia inteiro — que é o lado
+     conservador do erro: melhor o app achar que tem menos movimento do
+     que inventar um saldo mais baixo do que o banco. */
+  await abrir(DIA_DA_CONFERENCIA + `
+    conferencias[0].created_at = null;
+    lancamentos = [{ id:"b", tipo:"saida", valor:300, data:"${HJ}",
+                     categoria:"Mercado", descricao:"Sem carimbo" }];
+    abrirBalanco();`);
+  ok("sem carimbo na conferência, o dia inteiro fica de fora",
+    (await p.evaluate(() => saldoDeHoje().valor)) === 1000);
+
+  await abrir(DIA_DA_CONFERENCIA + `
+    lancamentos = [{ id:"b", tipo:"saida", valor:300, data:"${HJ}",
+                     categoria:"Mercado", descricao:"Sem carimbo" }];
+    abrirBalanco();`);
+  ok("sem carimbo no lançamento, idem",
+    (await p.evaluate(() => saldoDeHoje().valor)) === 1000);
+
+  /* E O DIA SEGUINTE NÃO DEPENDE DE CARIMBO NENHUM: passou da data da
+     conferência, conta sempre. */
+  await abrir(DIA_DA_CONFERENCIA + `
+    conferencias = [{ id:"c1", data:"${D(-1)}", saldo_informado:1000,
+                      created_at:"${D(-1)}T12:00:00.000Z" }];
+    lancamentos = [{ id:"b", tipo:"saida", valor:300, data:"${HJ}",
+                     categoria:"Mercado", descricao:"No dia seguinte" }];
+    abrirBalanco();`);
+  ok("lançamento do dia seguinte conta, com carimbo ou sem",
+    (await p.evaluate(() => saldoDeHoje().valor)) === 700);
+
+
   /* ─── O BOTÃO NÃO ENCOSTA NO CARTÃO DE BAIXO ────────────────────────
      DEFEITO REPORTADO: "atualizar o saldo tá quase colado com essa tela
      de baixo". Era isso: .botao não tem margem nenhuma, e o que vinha
@@ -254,6 +338,65 @@ module.exports = () => suite("Balanço: quanto você tem", async ({ p, ok, abrir
   const outroMes = await p.locator(".balanco-conta > div").allTextContents();
   ok("navegar pra outro mês no Resumo não muda o Balanço",
     outroMes[3].includes("1.600,00"));
+
+
+  /* ─── AS DUAS LINHAS DO MEIO ABREM ───────────────────────────────────
+     O dono do app viu o resultado piorar de um dia pro outro e não teve
+     como saber por quê: "ainda vai pagar" era um número fechado. Número
+     fechado num app de dinheiro vira desconfiança, e desconfiança é o
+     fim do app.
+
+     A lista que abre é a MESMA do Resumo, pela mesma função — uma
+     segunda versão da verdade aqui dentro seria o defeito de sempre. */
+  await abrir(BASE + MES + "; abrirBalanco();");
+  ok("as duas linhas do meio abrem", (await p.locator(".balanco-abrivel").count()) === 2);
+  ok("e começam fechadas", (await p.locator(".balanco-detalhe").count()) === 0);
+
+  await p.click(".balanco-abrivel:has-text('Ainda vai pagar')");
+  const detalhe = await texto(".balanco-detalhe");
+  ok("tocando em 'ainda vai pagar', a conta aparece", detalhe.includes("Aluguel"));
+  ok("com o valor dela", detalhe.includes("1.400,00"));
+  ok("e a linha se marca como aberta",
+    (await p.locator(".balanco-abrivel.aberta").count()) === 1);
+
+  /* O DETALHE TEM QUE SOMAR O NÚMERO DA LINHA. Se não somar, abrir piora
+     a desconfiança em vez de resolver. */
+  const somaDetalhe = await p.evaluate(() =>
+    [...document.querySelectorAll(".balanco-detalhe .item-valor")]
+      .reduce((t, e) => t + Number(e.textContent.replace(/[^\d,]/g, "").replace(/\./g, "").replace(",", ".")), 0));
+  const naLinha = await p.evaluate(() => aindaVaiSairDoMes(mesDe(_hojeLocal())).total);
+  ok("o que está dentro soma exatamente o número da linha", somaDetalhe === naLinha);
+
+  await p.click(".balanco-abrivel:has-text('Ainda vai pagar')");
+  ok("tocar de novo fecha", (await p.locator(".balanco-detalhe").count()) === 0);
+
+  await p.click(".balanco-abrivel:has-text('Ainda vai receber')");
+  const entrar = await texto(".balanco-detalhe");
+  ok("o lado que entra também abre", entrar.includes("Salário"));
+  ok("dizendo quando cai", entrar.includes("Cai dia"));
+  ok("e só uma abre por vez",
+    (await p.locator(".balanco-detalhe").count()) === 1);
+
+  /* LINHA SEM NADA DENTRO NÃO ABRE: um acordeão vazio promete explicação
+     e não entrega. */
+  await abrir(BASE + `
+    conferencias = [{ id:"c1", data:"${HJ}", saldo_informado:1000 }];
+    contas = [{ id:"a", nome:"Aluguel", valor:400, vencimento:mesDe(_hojeLocal()) + "-27",
+                pago:false, categoria:"Casa" }];
+    abrirBalanco();`);
+  ok("sem nada a receber, só uma linha abre",
+    (await p.locator(".balanco-abrivel").count()) === 1);
+  ok("e é a de pagar",
+    (await p.locator(".balanco-abrivel").textContent()).includes("pagar"));
+
+  /* Sair da tela e voltar fecha o que estava aberto: a tela responde
+     "quanto eu tenho" em quatro linhas, e o detalhe é pra quando o número
+     não convence. */
+  await abrir(BASE + MES + "; abrirBalanco();");
+  await p.click(".balanco-abrivel:has-text('Ainda vai pagar')");
+  await p.evaluate(() => { voltarInicio(); abrirBalanco(); });
+  ok("reabrir a tela fecha o detalhe",
+    (await p.locator(".balanco-detalhe").count()) === 0);
 
 
   /* ─── QUANDO NÃO DÁ ─────────────────────────────────────────────────── */

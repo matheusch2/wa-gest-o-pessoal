@@ -40,15 +40,37 @@ function _conferenciasOrdenadas() {
   return conferencias.slice().sort((a, b) => String(a.data).localeCompare(String(b.data)));
 }
 
-// O que se moveu na conta entre duas datas. O começo é EXCLUSIVO e o fim
-// é INCLUSIVO: o saldo informado no dia 8 já contém o que foi lançado no
-// dia 8, então contá-lo de novo seria contar duas vezes.
-function _movimentoEntre(depoisDe, ate) {
+const _instante = (x) => { const n = Date.parse(x); return isNaN(n) ? null : n; };
+
+/* O QUE SE MOVEU NA CONTA ENTRE DUAS DATAS. O fim é INCLUSIVO. O começo
+   é o dia da conferência, e ele tem uma regra a mais, que é onde morava
+   um defeito.
+
+   O SALDO INFORMADO NÃO ENGOLE O DIA INTEIRO. A regra era "o saldo
+   informado no dia 8 já contém o que foi lançado no dia 8", e ela só
+   vale pro que foi lançado ANTES de a pessoa olhar o banco. Quem
+   conferia o saldo de manhã e gastava à tarde via o app parado no número
+   da manhã até o dia seguinte — a tela dizia "você tem" um valor que o
+   banco não tinha mais, e isso é exatamente o que esta tela existe pra
+   não deixar acontecer.
+
+   As duas tabelas guardam created_at, então dá pra comparar o INSTANTE:
+   no dia da conferência, conta o que foi lançado depois dela. Sem os
+   carimbos (linha antiga, relógio torto), volta a excluir o dia inteiro,
+   que é o lado conservador do erro. */
+function _movimentoEntre(depoisDe, ate, criadaEm) {
+  const t0 = criadaEm ? _instante(criadaEm) : null;
   let total = 0;
   for (const l of lancamentos) {
     const d = String(l.data);
-    if (depoisDe && d <= depoisDe) continue;
     if (d > ate) continue;
+    if (depoisDe) {
+      if (d < depoisDe) continue;
+      if (d === depoisDe) {
+        const t = _instante(l.created_at);
+        if (t0 === null || t === null || t <= t0) continue;
+      }
+    }
     total += l.tipo === "entrada" ? Number(l.valor) : -Number(l.valor);
   }
   return _cBal(total);
@@ -69,7 +91,8 @@ function saldoDeHoje() {
   const u = _ultimoSaldoInformado();
   if (!u) return null;
   return {
-    valor: _cBal(Number(u.saldo_informado) + _movimentoEntre(String(u.data), _hojeLocal())),
+    valor: _cBal(Number(u.saldo_informado)
+                 + _movimentoEntre(String(u.data), _hojeLocal(), u.created_at)),
     desde: String(u.data),
     dehoje: String(u.data) === _hojeLocal(),
   };
@@ -80,7 +103,17 @@ function saldoDeHoje() {
 const _ICO_BALANCA = `<svg viewBox="0 0 24 24" aria-hidden="true"><line x1="12" y1="3" x2="12" y2="21"/><line x1="5" y1="7" x2="19" y2="7"/><path d="M5 7 2 14h6z"/><path d="M19 7l-3 7h6z"/><line x1="8" y1="21" x2="16" y2="21"/></svg>`;
 const _ICO_LAPIS_B = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>`;
 
-function abrirBalanco() { abrirTela(desenharBalanco); }
+/* QUAL DAS DUAS LINHAS ESTÁ ABERTA. Fechado por padrão: a tela responde
+   "quanto eu tenho" em quatro linhas, e o detalhe é pra quando o número
+   não convence. */
+let _balancoAberto = null;
+
+function abrirBalanco() { _balancoAberto = null; abrirTela(desenharBalanco); }
+
+function verDetalheDoBalanco(qual) {
+  _balancoAberto = _balancoAberto === qual ? null : qual;
+  desenharBalanco();
+}
 
 function _faltaOBancoDoBalanco() { return faltaATabela("conferencias"); }
 
@@ -156,8 +189,8 @@ function desenharBalanco() {
         <div class="bloco-topo"><h2>E daqui até o fim do mês</h2></div>
         <div class="balanco-conta">
           <div><span>Você tem</span><strong>${moeda(hoje.valor)}</strong></div>
-          <div><span>Ainda vai receber</span><strong class="mais">+ ${moeda(aReceber.total)}</strong></div>
-          <div><span>Ainda vai pagar</span><strong class="menos">− ${moeda(aPagar.total)}</strong></div>
+          ${_linhaAbrivel("receber", "Ainda vai receber", aReceber, "mais", "+")}
+          ${_linhaAbrivel("pagar", "Ainda vai pagar", aPagar, "menos", "−")}
           <div class="balanco-conta-fim ${sobra < 0 ? "ruim" : ""}">
             <span>${sobra >= 0 ? "Sobra" : "Falta"}</span>
             <strong>${moeda(Math.abs(sobra))}</strong>
@@ -167,6 +200,53 @@ function desenharBalanco() {
 
     <button class="botao-fraco" onclick="voltarInicio()">Voltar</button>
   `;
+}
+
+/* AS DUAS LINHAS DO MEIO ABREM.
+   O dono do app viu o resultado piorar de um dia pro outro e não teve
+   como saber por quê: "ainda vai pagar" é um número fechado, e número
+   fechado num app de dinheiro vira desconfiança. Agora ele abre e mostra
+   conta por conta — a MESMA lista do Resumo, pela mesma função, pra não
+   nascer uma segunda versão da verdade aqui dentro.
+
+   Linha sem nada dentro não abre: um acordeão vazio promete explicação e
+   não entrega. */
+function _linhaAbrivel(qual, rotulo, dados, cor, sinal) {
+  const temDetalhe = dados.linhas && dados.linhas.length;
+  const aberta = _balancoAberto === qual;
+  const numero = `<strong class="${cor}">${sinal} ${moeda(dados.total)}</strong>`;
+
+  if (!temDetalhe) return `<div><span>${rotulo}</span>${numero}</div>`;
+
+  return `
+    <div class="balanco-abrivel${aberta ? " aberta" : ""}"
+         onclick="verDetalheDoBalanco('${qual}')" role="button" tabindex="0">
+      <span>${rotulo} <b class="balanco-seta" aria-hidden="true">›</b></span>
+      ${numero}
+    </div>
+    ${aberta ? `<div class="balanco-detalhe"><div class="lista">${
+      qual === "pagar"
+        ? dados.linhas.map(_linhaDoQueVaiSair).join("")
+        : dados.linhas.map(_linhaDoQueVaiEntrar).join("")
+    }</div></div>` : ""}`;
+}
+
+/* O espelho do _linhaDoQueVaiSair, pro lado que entra. Ele mora aqui e
+   não no Resumo porque o Resumo desenha essa lista com o bloco inteiro
+   em volta; aqui é só a linha. */
+function _linhaDoQueVaiEntrar(r) {
+  const atrasada = r.data < _hojeLocal();
+  return `
+    <div class="item item-toque" onclick="event.stopPropagation(); abrirLancar('entrada')" style="cursor:pointer">
+      <div class="item-icone">${iconeDoLancamento({ tipo: "entrada", categoria: r.categoria, descricao: r.nome })}</div>
+      <div class="item-txt">
+        <strong>${esc(r.nome)}</strong>
+        <small${atrasada ? ' class="resumo-atrasado"' : ""}>${atrasada
+          ? "Atrasado · era dia " + dataBR(r.data)
+          : "Cai dia " + dataBR(r.data)}</small>
+      </div>
+      <span class="item-valor entrada">${moeda(r.valor)}</span>
+    </div>`;
 }
 
 /* ═══ COLOCAR O SALDO ═════════════════════════════════════════════════

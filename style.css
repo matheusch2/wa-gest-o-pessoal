@@ -2629,3 +2629,44 @@ body.escuro .resumo-secao .item-icone.entrada { background: #17372d; }
   background: transparent;
 }
 .conta-item.prevista .conta-valor { opacity: .85; }
+
+/* A linha que abre: igual às outras, mais a seta e a mão. O "aberta"
+   gira a seta pra baixo, que é o único jeito curto de dizer que o que
+   está embaixo veio dali. */
+.balanco-abrivel {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1px dashed var(--borda);
+  font-size: 13.5px;
+  cursor: pointer;
+  user-select: none;
+}
+.balanco-abrivel > span { color: var(--fraco); }
+.balanco-seta {
+  display: inline-block;
+  margin-left: 3px;
+  font-size: 15px;
+  line-height: 0;
+  vertical-align: -1px;
+  transition: transform .15s;
+  opacity: .7;
+}
+.balanco-abrivel.aberta .balanco-seta { transform: rotate(90deg); }
+
+/* O detalhe sangra até as bordas do cartão e ganha fundo próprio: ele é
+   o de dentro da linha, não mais uma linha da conta. */
+/* O seletor é ".balanco-conta > .balanco-detalhe" e não só a classe:
+   o detalhe é filho direto de .balanco-conta, e a regra genérica das
+   linhas (".balanco-conta > div", duas partes contra uma) vencia o
+   padding dele. O auditor achou — na tela parecia só "apertadinho". */
+.balanco-conta > .balanco-detalhe {
+  margin: 0 -17px;
+  padding: 10px 14px 12px;
+  background: color-mix(in srgb, var(--fraco) 7%, transparent);
+  border-bottom: 1px dashed var(--borda);
+}
+.balanco-detalhe .lista { gap: 6px; }
+.balanco-detalhe .item { padding: 8px 10px; }
