@@ -9,7 +9,7 @@
    index.html. Serve pra uma pergunta que já custou tempo: "o defeito que
    você está vendo é do código de agora, ou o celular ainda está com o
    app velho em cache?" — sem isso, a resposta é chute. */
-const VERSAO_APP = "2026-11-09 · 58";
+const VERSAO_APP = "2026-11-10 · 59";
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -621,6 +621,17 @@ function voltarTela() {
   if (!pilha.length) { voltarInicio(); return; }
   pilha[pilha.length - 1]();
   window.scrollTo(0, 0);
+}
+
+/* REDESENHAR A TELA QUE ESTÁ ABERTA, sem empilhar e sem voltar.
+   É o que uma ação feita DENTRO de uma tela precisa quando ela muda os
+   dados: excluir um boleto, por exemplo. Chamar a tela pelo nome parece
+   igual e não é — foi assim que excluir uma parcela dentro do carnê
+   jogava a pessoa de volta na lista de todos os boletos, porque o código
+   chamava desenharContas() em vez de redesenhar onde ela estava. */
+function redesenharTela() {
+  if (!pilha.length) { voltarInicio(); return; }
+  pilha[pilha.length - 1]();
 }
 
 function voltarInicio() {

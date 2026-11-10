@@ -2516,3 +2516,18 @@ body.escuro .resumo-secao .item-icone.entrada { background: #17372d; }
 }
 .balanco-conta-fim strong { font-size: 21px; color: var(--entrada); }
 .balanco-conta-fim.ruim strong { color: var(--saida); }
+
+/* Editar um boleto: ícone discreto ao lado do "×", do mesmo tamanho e com
+   o mesmo peso. Ele divide a linha com o "Pagar", que é a ação principal
+   — por isso ele não vira botão cheio. */
+.conta-editar {
+  background: none;
+  border: none;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px 3px 4px 6px;
+  width: auto;
+  opacity: .75;
+}
+.conta-editar:active { opacity: 1; }

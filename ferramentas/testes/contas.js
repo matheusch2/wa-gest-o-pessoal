@@ -286,4 +286,151 @@ module.exports = () => suite("Contas, carnê e assinatura", async ({ p, ok, abri
       .reduce((t, e) => t + Number(e.textContent.replace(/[^\d,]/g, "").replace(",", ".")), 0));
   ok("e bate com a soma das linhas", soma === 1600);
 
+
+  /* ─── EXCLUIR UMA PARCELA NÃO TIRA A PESSOA DO CARNÊ ──────────────────
+     DEFEITO REPORTADO: "abro o boleto, clico pra cancelar uma das
+     parcelas, aí sai da tela e volta pra lista de todos os boletos; era
+     pra permanecer lá".
+
+     Era isso: tanto o "Cancelar" da confirmação quanto o excluir de
+     verdade chamavam desenharContas() fixo, e não a tela onde a pessoa
+     estava. Num carnê de 26, excluir três parcelas obrigava a achar o
+     carnê de novo três vezes. */
+  await abrir(CARNE + "; abrirContas(); abrirCarne('Moto');");
+  ok("o carnê abriu", (await texto(".lancamento-cabecalho h2")) === "Moto");
+  const quantas = await p.locator(".conta-item").count();
+
+  await p.evaluate(() => pedirExcluirConta("m5"));
+  ok("excluir pede confirmação dentro da própria linha",
+    (await p.locator("#conta-m5 .confirmar").count()) === 1);
+
+  await p.click("#conta-m5 .confirmar button:not(.sim)");
+  ok("cancelar deixa a pessoa no carnê",
+    (await texto(".lancamento-cabecalho h2")) === "Moto");
+  ok("com todas as parcelas de volta", (await p.locator(".conta-item").count()) === quantas);
+
+  await p.evaluate(() => pedirExcluirConta("m5"));
+  await p.click("#conta-m5 .confirmar .sim");
+  const ap = await chamadas();
+  ok("confirmar apaga a parcela", ap.length === 1 && ap[0].tabela === "contas" && ap[0].op === "delete");
+  ok("e a pessoa CONTINUA no carnê",
+    (await texto(".lancamento-cabecalho h2")) === "Moto");
+  ok("com uma parcela a menos", (await p.locator(".conta-item").count()) === quantas - 1);
+  ok("e a que saiu não está mais lá", (await p.locator("#conta-m5").count()) === 0);
+
+  /* Na lista de contas o comportamento é o mesmo de sempre: excluir
+     redesenha a lista, porque a lista é onde a pessoa está. */
+  await abrir(CARNE + "; abrirContas();");
+  await p.evaluate(() => pedirExcluirConta("luz"));
+  await p.click("#conta-luz .confirmar .sim");
+  ok("na lista, excluir redesenha a lista",
+    (await p.locator(".contas-abas").count()) === 1);
+  ok("e a conta saiu de lá", (await p.locator("#conta-luz").count()) === 0);
+
+  /* E REDESENHAR NÃO É ABRIR DE NOVO. Empilhando a mesma tela a cada
+     exclusão, um carnê com três parcelas apagadas precisaria de quatro
+     toques no "Voltar" pra sair — o tipo de coisa que ninguém reporta e
+     todo mundo sente. */
+  await abrir(CARNE + "; abrirContas(); abrirCarne('Moto');");
+  const pilhaAntes = await p.evaluate(() => pilha.length);
+  for (const id of ["m5", "m6", "m7"]) {
+    await p.evaluate(x => pedirExcluirConta(x), id);
+    await p.click(`#conta-${id} .confirmar .sim`);
+  }
+  ok("três exclusões seguidas não empilham tela nenhuma",
+    (await p.evaluate(() => pilha.length)) === pilhaAntes);
+  ok("e a pessoa continua no carnê o tempo todo",
+    (await texto(".lancamento-cabecalho h2")) === "Moto");
+
+  /* Excluída a ÚLTIMA parcela, o carnê deixa de existir — e aí o lugar
+     certo é a lista de onde se entrou, não o menu lá do começo.
+
+     O carnê tem DUAS parcelas de propósito: com uma só, "Moto (1/1)" não
+     é carnê nenhum (_parteDoCarne exige n >= 2), abrirCarne falharia
+     calado e as conferências abaixo passariam sem nunca ter entrado na
+     tela que elas dizem testar. Foi o que aconteceu na primeira versão
+     desta suíte, e só a quebra de propósito mostrou. */
+  const DUAS = `
+    contas = [
+      { id:"u1", nome:"Moto (1/2)", valor:600, vencimento:"2026-12-10",
+        pago:false, categoria:"Transporte", recorrente:false },
+      { id:"u2", nome:"Moto (2/2)", valor:600, vencimento:"2027-01-10",
+        pago:false, categoria:"Transporte", recorrente:false },
+    ];
+    lancamentos = []; cartoes = []; comprasCartao = []; metas = [];
+    pagamentosFatura = []; fechamentos = []; entradasFixas = [];
+  `;
+  await abrir(DUAS + "; abrirContas(); abrirCarne('Moto');");
+  ok("o carnê de duas parcelas abriu mesmo",
+    (await texto(".lancamento-cabecalho h2")) === "Moto" &&
+    (await p.locator(".conta-item").count()) === 2);
+
+  await p.evaluate(() => pedirExcluirConta("u1"));
+  await p.click("#conta-u1 .confirmar .sim");
+  ok("com uma parcela ainda de pé, segue no carnê",
+    (await texto(".lancamento-cabecalho h2")) === "Moto");
+
+  await p.evaluate(() => pedirExcluirConta("u2"));
+  await p.click("#conta-u2 .confirmar .sim");
+  ok("sem parcela nenhuma, volta pra lista de contas",
+    (await p.locator(".contas-abas").count()) === 1);
+  ok("e não pro menu do começo",
+    (await p.evaluate(() => document.getElementById("menu").style.display)) !== "grid");
+
+
+  /* ─── EDITAR UM BOLETO SÓ ────────────────────────────────────────────
+     "Editar o carnê" mexe em todos de uma vez. O caso mais comum é o
+     contrário: UM boleto veio com outro valor, ou foi negociado pra outra
+     data. Até aqui a tela mandava excluir o carnê inteiro e cadastrar de
+     novo só pra mudar uma data. */
+  await abrir(CARNE + "; abrirContas(); abrirCarne('Moto');");
+  ok("cada boleto em aberto tem o botão de editar",
+    (await p.locator(".conta-editar").count()) === 25);
+  ok("o já pago não tem — ele não se edita",
+    (await p.locator("#conta-m1 .conta-editar").count()) === 0);
+
+  await p.click("#conta-m5 .conta-editar");
+  ok("abre a tela daquele boleto",
+    (await texto(".lancamento-cabecalho h2")).includes("5/26"));
+  ok("com o valor dele no campo", (await p.inputValue("#eb-valor")) === "600,00");
+  const vencAntes = await p.evaluate(() => contas.find(c => c.id === "m5").vencimento);
+  ok("e o vencimento dele", (await p.inputValue("#eb-venc")) === vencAntes);
+
+  await p.fill("#eb-valor", "640,00");
+  await p.evaluate(() => { document.getElementById("eb-venc").value = "2027-03-20"; });
+  await p.click(".lancamento-tela > .botao");
+  const ed = await chamadas();
+  ok("salvar manda UM update", ed.length === 1 && ed[0].op === "update");
+  ok("só daquele boleto",
+    ed[0].eq.some(e => e[0] === "id" && e[1] === "m5") &&
+    ed[0].eq.some(e => e[0] === "user_id"));
+  ok("com o valor novo", ed[0].dados.valor === 640);
+  ok("e a data nova — que o editar do carnê não sabia mexer",
+    ed[0].dados.vencimento === "2027-03-20");
+  ok("as outras 25 parcelas não são tocadas",
+    (await p.evaluate(() => contas.filter(c => Number(c.valor) === 600).length)) === 25);
+
+  ok("e a tela volta pro carnê", (await texto(".lancamento-cabecalho h2")) === "Moto");
+  ok("já mostrando o valor novo", (await texto("#conta-m5")).includes("640,00"));
+
+  /* Boleto pago não entra aqui nem por caminho torto: o extrato já
+     registrou o que saiu, e mudar a conta por baixo faria os dois
+     números discordarem sem ninguém estar errado. */
+  await abrir(CARNE + "; abrirContas(); abrirCarne('Moto');");
+  await p.evaluate(() => abrirEditarConta("m1"));
+  ok("boleto pago não abre pra editar", (await p.locator("#eb-valor").count()) === 0);
+  ok("e a tela avisa por quê", (await texto("#avisos")).includes("já pago"));
+
+  await abrir(CARNE + "; abrirContas(); abrirCarne('Moto'); abrirEditarConta('m5');");
+  await p.fill("#eb-valor", "0");
+  await p.click(".lancamento-tela > .botao");
+  ok("valor zero não grava", (await chamadas()).length === 0);
+  ok("e diz o que falta", (await texto("#avisos")).includes("maior que zero"));
+
+  await abrir(CARNE + "; abrirContas(); abrirCarne('Moto'); abrirEditarConta('m5');");
+  await p.evaluate(() => { document.getElementById("eb-venc").value = ""; });
+  await p.click(".lancamento-tela > .botao");
+  ok("sem data não grava", (await chamadas()).length === 0);
+  ok("e diz por quê", (await texto("#avisos")).includes("vencimento"));
+
 });

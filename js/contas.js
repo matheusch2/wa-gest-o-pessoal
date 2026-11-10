@@ -314,7 +314,9 @@ function abrirCarne(base) {
 function desenharCarne(base) {
   destruirGrafico();
   const g = _carnePorBase(base);
-  if (!g) { voltarInicio(); return; }
+  // Excluída a última parcela, o carnê deixou de existir: o lugar certo é
+  // a lista de contas, de onde se entrou, e não o menu lá do começo.
+  if (!g) { voltarTela(); return; }
 
   const hoje = _hojeLocal();
   const total = g.parcelas.reduce((s, x) => s + Number(x.valor), 0);
@@ -338,7 +340,9 @@ function desenharCarne(base) {
           ${parcial ? `<span class="conta-cat parcial">${moeda(c.valor_pago)} pagos</span>` : ""}
         </div>
         <div class="conta-acao">
-          ${c.pago ? "" : `<button class="botao-pagar" onclick="abrirPagarConta('${c.id}')">${parcial ? "Pagar o resto" : "Pagar"}</button>`}
+          ${c.pago ? "" : `
+            <button class="botao-pagar" onclick="abrirPagarConta('${c.id}')">${parcial ? "Pagar o resto" : "Pagar"}</button>
+            <button class="conta-editar" onclick="abrirEditarConta('${c.id}')" aria-label="Editar este boleto">✏️</button>`}
           <button class="item-x" onclick="pedirExcluirConta('${c.id}')" aria-label="Excluir">×</button>
         </div>
       </div>`;
@@ -455,10 +459,14 @@ function abrirEdicaoCarne(base) {
                               escolhida: atual.categoria || "" })}
         </div>
 
+        <!-- A ÚNICA FRASE QUE FICOU, porque ela evita uma surpresa: o que
+             se muda aqui vale pro carnê inteiro, e um boleto já pago não
+             se mexe. Data de um boleto só agora se edita no próprio
+             boleto, então a instrução de "exclua o carnê e cadastre de
+             novo" saiu junto — ela não era mais verdade. -->
         <p class="cartao-dica">
-          Muda só os <b>${g.abertas.length} boleto${g.abertas.length > 1 ? "s" : ""} em aberto</b>.
-          ${g.pagas ? `${g.pagas > 1 ? `Os ${g.pagas} já pagos ficam` : "O já pago fica"} como está — o que saiu, saiu.` : ""}
-          As datas não mudam por aqui: pra mexer nelas, exclua o carnê e cadastre de novo.
+          Muda os <b>${g.abertas.length} boleto${g.abertas.length > 1 ? "s" : ""} em aberto</b>${
+            g.pagas ? `; ${g.pagas > 1 ? `os ${g.pagas} já pagos ficam` : "o já pago fica"} como está` : ""}.
         </p>
       </div>
 
@@ -501,6 +509,102 @@ async function salvarEdicaoCarne(botao, base) {
   ok("Carnê atualizado!");
   voltarTela();
   desenharCarne(nome);
+}
+
+/* ─── Editar UM boleto ───────────────────────────────────────────────
+   "Editar o carnê" mexe em todos de uma vez: nome, valor, categoria. O
+   que faltava era o caso mais comum de todos — um boleto que veio com
+   outro valor, ou que foi negociado pra outra data. Antes disso a
+   instrução na tela era "exclua o carnê e cadastre de novo", pra mudar
+   uma data.
+
+   SÓ BOLETO EM ABERTO. Mexer no valor de um já pago desencontraria a
+   conta do lançamento que saiu do extrato: o extrato diria R$ 300 e a
+   conta diria R$ 280, e nenhum dos dois estaria errado sozinho. Quem
+   pagou errado conserta no lançamento, que é onde o dinheiro está. */
+
+function abrirEditarConta(id) {
+  const c = contas.find(x => x.id === id);
+  if (!c) { erro("Conta não encontrada."); return; }
+  if (c.pago) { erro("Boleto já pago não se edita. Corrija no lançamento, se precisar."); return; }
+  abrirTela(() => _desenharEditarConta(id));
+}
+
+function _desenharEditarConta(id) {
+  destruirGrafico();
+  const c = contas.find(x => x.id === id);
+  if (!c) { voltarTela(); return; }
+
+  const cats = categorias.filter(x => x.tipo === "saida");
+  const icoData = `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`;
+  const icoEtiqueta = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.6 13.4 12 22l-9-9V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>`;
+
+  document.getElementById("area").innerHTML = `
+    <section class="lancamento-tela" style="--cor-tipo:var(--marca-txt)">
+    <div class="lancamento-cabecalho">
+      <span class="lancamento-caption">Boleto</span>
+      <h2>${esc(c.nome)}</h2>
+    </div>
+
+    <div class="lancamento-form">
+      <div class="campo">
+        <label for="eb-valor">Valor</label>
+        <div class="lancamento-valor">
+          <span>R$</span>
+          <input type="text" inputmode="decimal" id="eb-valor" autocomplete="off"
+                 value="${Number(c.valor).toFixed(2).replace(".", ",")}">
+        </div>
+      </div>
+
+      <div class="campo lancamento-campo-data">
+        <div class="campo-label">${icoData}<label for="eb-venc">Vencimento</label></div>
+        <input type="date" id="eb-venc" value="${esc(c.vencimento)}">
+      </div>
+
+      <div class="campo" style="margin-bottom:0">
+        <div class="campo-label">${icoEtiqueta}<label for="eb-cat">Categoria</label></div>
+        ${campoDeCategoria({ id: "eb-cat", tipo: "saida",
+                            opcoes: cats.length ? cats.map(x => x.nome) : ["Outros"],
+                            escolhida: c.categoria || "" })}
+      </div>
+
+      ${contaParcial(c) ? `
+        <!-- Com parte já paga, o valor novo muda o que AINDA falta, e a
+             pessoa precisa ver isso antes de salvar: baixar o valor pra
+             menos do que já foi pago zera o que falta em vez de gerar
+             troco. -->
+        <p class="cartao-dica">Já pagos ${moeda(c.valor_pago)} deste boleto.</p>` : ""}
+    </div>
+
+    <button class="botao" onclick="salvarEdicaoConta(this, '${id}')">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+      Salvar
+    </button>
+    <button class="botao-fraco lancamento-voltar" onclick="voltarTela()">Voltar</button>
+    </section>`;
+}
+
+async function salvarEdicaoConta(botao, id) {
+  if (botao?.disabled) return;
+  const c = contas.find(x => x.id === id);
+  if (!c) return;
+
+  const valor = parseMoedaBR(document.getElementById("eb-valor").value);
+  const vencimento = document.getElementById("eb-venc").value;
+  const categoria = document.getElementById("eb-cat").value;
+
+  if (valor === null || valor <= 0) { erro("Informe um valor maior que zero."); return; }
+  if (!vencimento) { erro("Escolha a data de vencimento."); return; }
+
+  const solta = travar(botao, "Salvando...");
+  const { error } = await sb.from("contas")
+    .update({ valor, vencimento, categoria })
+    .eq("id", id).eq("user_id", usuario.id);
+  if (error) { solta(); erro("Erro ao salvar: " + error.message); return; }
+
+  c.valor = valor; c.vencimento = vencimento; c.categoria = categoria;
+  ok("Boleto atualizado!");
+  voltarTela();
 }
 
 function abrirNovaConta() {
@@ -852,7 +956,7 @@ function pedirExcluirConta(id) {
         ? " O lançamento de saída continua no histórico."
         : ""}</p>
       <div class="confirmar-acoes">
-        <button onclick="desenharContas()">Cancelar</button>
+        <button onclick="redesenharTela()">Cancelar</button>
         <button class="sim" onclick="excluirConta(this, '${id}')">Sim, excluir</button>
       </div>
     </div>`;
@@ -865,5 +969,9 @@ async function excluirConta(botao, id) {
   if (error) { solta(); erro("Erro: " + error.message); return; }
   contas = contas.filter(c => c.id !== id);
   ok("Conta excluída.");
-  desenharContas();
+  /* REDESENHA ONDE A PESSOA ESTÁ. Antes era desenharContas() fixo, e
+     quem excluía uma parcela de dentro do carnê era cuspido na lista de
+     todos os boletos — perdia o lugar e tinha que achar o carnê de novo
+     pra excluir a próxima. */
+  redesenharTela();
 }
