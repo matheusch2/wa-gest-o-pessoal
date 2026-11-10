@@ -34,6 +34,25 @@ const ASSINATURA = `
 
 module.exports = () => suite("Contas, carnê e assinatura", async ({ p, ok, abrir, chamadas, texto, valor }) => {
 
+  /* O AVISO DE VENCIDAS CONTINUA A FRASE, não vira outro rótulo. A regra
+     do rótulo do cartão pegava qualquer <span> lá dentro, inclusive o
+     que mora no <small> — e "2 contas em aberto · 2 vencidas" quebrava em
+     duas linhas, com "2 VENCIDAS" em maiúsculas. */
+  await abrir(`
+    contas = [{ id:"v", nome:"Luz", valor:100, vencimento:"2020-01-05",
+                pago:false, categoria:"Casa" }];
+    lancamentos = []; cartoes = []; comprasCartao = []; metas = [];
+    pagamentosFatura = []; fechamentos = []; entradasFixas = [];
+    abrirContas();`);
+  const aviso = await p.evaluate(() => {
+    const e = document.querySelector(".contas-total .alerta");
+    const s = getComputedStyle(e);
+    return { display: s.display, caixa: s.textTransform, texto: e.textContent.trim() };
+  });
+  ok("o aviso de vencidas fica na mesma linha", aviso.display === "inline");
+  ok("e não vira maiúscula", aviso.caixa === "none");
+  ok("dizendo o que é", aviso.texto === "1 vencida");
+
   /* ─── A ABA "A PAGAR" É UM MÊS ───────────────────────────────────────
      Ela mostrava TUDO em aberto: num app com um carnê de 26 parcelas,
      41 linhas e R$ 18 mil de total — um número que mistura o que vence

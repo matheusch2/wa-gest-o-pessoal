@@ -533,7 +533,30 @@ body.escuro .item.vencida { border-color: #5c2d3d; background: #331d24; }
   margin-bottom: 14px;
   text-align: center;
 }
-.contas-total span { display: block; font-size: 11.5px; font-weight: 700; letter-spacing: .06em; opacity: .85; text-transform: uppercase; }
+/* O MESMO ACABAMENTO DO CARTÃO DO RESUMO: sombra pra ele descolar do
+   fundo e o círculo de luz no canto. Eram dois cartões-herói com a mesma
+   função em telas vizinhas, um com acabamento e outro sem — e o sem
+   parecia um retângulo chapado do lado do outro. */
+.contas-total { position: relative; overflow: hidden; box-shadow: 0 12px 26px rgba(15, 59, 92, .16); }
+.contas-total::after {
+  content: "";
+  position: absolute;
+  right: -36px;
+  bottom: -74px;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.06);
+  pointer-events: none;
+}
+.contas-total > * { position: relative; }
+
+/* O ">" não é detalhe: a regra é do RÓTULO do cartão, que é filho
+   direto. Sem ele, ela pegava também o <span class="alerta"> que mora
+   dentro do <small> — e "2 contas em aberto · 2 vencidas" quebrava em
+   duas linhas, com o "2 VENCIDAS" em maiúsculas, como se fosse outro
+   rótulo. */
+.contas-total > span { display: block; font-size: 11.5px; font-weight: 700; letter-spacing: .06em; opacity: .85; text-transform: uppercase; }
 .contas-total strong { display: block; font-size: 29px; font-weight: 800; margin-top: 6px; line-height: 1.1; font-variant-numeric: tabular-nums; }
 .contas-total small { display: block; font-size: 12px; opacity: .85; margin-top: 6px; }
 .contas-total .alerta { color: #ffd0d0; font-weight: 700; }
@@ -655,6 +678,16 @@ body.escuro .item.vencida { border-color: #5c2d3d; background: #331d24; }
 button { transition: transform .12s ease, filter .12s ease; }
 button:active:not(:disabled) { transform: scale(.98); }
 @media (prefers-reduced-motion: reduce) { button { transition: none; } button:active:not(:disabled) { transform: none; } }
+
+/* BOTÃO CHEIO SEGUIDO DE CARTÃO PRECISA RESPIRAR. O .botao não tem
+   margem nenhuma — quem vinha depois dele encostava. No Balanço isso
+   colava "Atualizar o saldo" na caixa da conta, e os dois liam como uma
+   peça só. A regra é por vizinhança, e não no .botao, pra não abrir
+   buraco entre o "Salvar" e o "Voltar" dos formulários. */
+.botao + .bloco,
+.botao + .contas-total,
+.botao + .lista,
+.botao + .reserva-lista { margin-top: 14px; }
 
 .botao-fraco {
   width: 100%;
@@ -2499,14 +2532,23 @@ body.escuro .resumo-secao .item-icone.entrada { background: #17372d; }
 .balanco-conta strong.mais { color: var(--entrada); }
 .balanco-conta strong.menos { color: var(--saida); }
 
-/* O RESULTADO FECHA A CONTA, então ele não é só mais uma linha: linha
-   cheia em cima dele, sem tracejado embaixo, e o número maior. */
+/* O RESULTADO FECHA A CONTA, então ele não é só mais uma linha: ele é a
+   conclusão do cartão. Sangra até as bordas (o .bloco tem 17 de padding),
+   ganha fundo na cor do que aconteceu e arredonda com o cartão. Antes era
+   um traço e um número maior, e a conta terminava sem terminar. */
 .balanco-conta-fim {
   border-bottom: 0 !important;
-  border-top: 1.5px solid var(--borda) !important;
-  margin-top: 2px;
-  padding-bottom: 0 !important;
+  border-top: 1px solid var(--borda) !important;
+  margin: 8px -17px -17px;
+  padding: 13px 17px !important;
+  border-radius: 0 0 14px 14px;
+  background: color-mix(in srgb, var(--entrada) 9%, transparent);
 }
+.balanco-conta-fim.ruim { background: color-mix(in srgb, var(--saida) 9%, transparent); }
+
+/* A linha logo acima da faixa perde o tracejado: com ele, o traço da
+   linha e a borda da faixa viravam duas réguas coladas. */
+.balanco-conta > div:nth-last-child(2) { border-bottom: 0; }
 .balanco-conta-fim span {
   color: var(--texto) !important;
   font-weight: 800;

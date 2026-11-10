@@ -132,6 +132,40 @@ module.exports = () => suite("Balanço: quanto você tem", async ({ p, ok, abrir
     (await texto(".contas-total")).includes("Atualizado hoje"));
 
 
+  /* ─── O BOTÃO NÃO ENCOSTA NO CARTÃO DE BAIXO ────────────────────────
+     DEFEITO REPORTADO: "atualizar o saldo tá quase colado com essa tela
+     de baixo". Era isso: .botao não tem margem nenhuma, e o que vinha
+     depois dele grudava. Os dois liam como uma peça só.
+
+     A conferência mede a distância de verdade, em pixels: classe e regra
+     de CSS passam sem que nada mude na tela, e foi uma dessas que já
+     deixou um defeito de cor passar nesta mesma suíte. */
+  const respiro = await p.evaluate(() => {
+    const botao = [...document.querySelectorAll(".botao")]
+      .find(e => e.textContent.includes("Atualizar") || e.textContent.includes("Colocar"));
+    const bloco = document.querySelector(".bloco");
+    return bloco.getBoundingClientRect().top - botao.getBoundingClientRect().bottom;
+  });
+  ok("há respiro entre o botão e o cartão da conta", respiro >= 10);
+
+  /* E A CONTA FECHA NUMA FAIXA, não num traço. O resultado é a conclusão
+     do cartão: fundo na cor do que aconteceu, sangrando até as bordas. */
+  const faixa = await p.evaluate(() => {
+    const fim = document.querySelector(".balanco-conta-fim");
+    const cartao = fim.closest(".bloco");
+    const f = fim.getBoundingClientRect(), c = cartao.getBoundingClientRect();
+    const fundo = getComputedStyle(fim).backgroundColor;
+    return {
+      sangra: Math.abs(f.left - c.left) < 2 && Math.abs(f.right - c.right) < 2,
+      fecha: Math.abs(f.bottom - c.bottom) < 2,
+      temFundo: fundo !== "rgba(0, 0, 0, 0)" && fundo !== "transparent",
+    };
+  });
+  ok("a faixa do resultado vai de borda a borda do cartão", faixa.sangra);
+  ok("e fecha no pé dele", faixa.fecha);
+  ok("com fundo próprio, não só um traço", faixa.temFundo);
+
+
   /* ─── SEM SALDO INFORMADO O APP NÃO SABE ─────────────────────────────
      E dizer que não sabe é melhor do que dar um número que começou do
      zero. Era exatamente o que o app fazia antes desta tela. */
