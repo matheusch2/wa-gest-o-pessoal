@@ -80,16 +80,15 @@ module.exports = () => suite("Balanço: quanto você tem", async ({ p, ok, abrir
   ok("e ele fica ao lado do Resumo, que é a outra metade da pergunta",
     nomes.indexOf("Balanço") === nomes.indexOf("Resumo do mês") + 1);
 
-  /* O MENU FECHA EM PARES. São onze botões num grid de duas colunas, então
-     um tem que ocupar a linha inteira — e é "Meu negócio", no alto, que é
-     o único de outro bolso. Os dez do dinheiro pessoal ficam em cinco
-     pares embaixo dele, sem nenhum meio botão com meio vazio do lado. */
-  ok("um único botão ocupa a linha inteira",
-    (await p.locator("#menu .menu-botao-largo").count()) === 1);
-  ok("e é o 'Meu negócio'",
-    (await p.locator("#menu .menu-botao-largo").textContent()).includes("Meu negócio"));
-  ok("ele abre o menu, não fecha", nomes[0] === "Meu negócio");
-  ok("e sobram dez, que é par", nomes.length - 1 === 10);
+  /* O MENU FECHA EM PARES. São dez botões num grid de duas colunas: cinco
+     linhas cheias, sem nenhum meio botão com meio vazio do lado, que lê
+     como falha de carregamento. Era isso que o "Meu negócio" resolvia
+     ocupando a linha inteira quando eram onze; saindo ele, a conta volta
+     a fechar sozinha. */
+  ok("o menu tem dez botões", nomes.length === 10);
+  ok("nenhum precisa ocupar a linha inteira",
+    (await p.locator("#menu .menu-botao-largo").count()) === 0);
+  ok("o Resumo é o primeiro", nomes[0] === "Resumo do mês");
 
 
   /* ─── A TELA É CURTA, E ISSO É O RECURSO ─────────────────────────────

@@ -245,10 +245,10 @@ body {
 
 .menu-botao:active { background: var(--marca-toque); }
 
-/* O botão da linha inteira. Com onze botões num grid de duas colunas um
-   deles sobra, e meio botão com meio vazio do lado lê como falha de
-   carregamento. O que sobra ocupa as duas colunas — e, no alto, vira
-   cabeçalho do menu em vez de resto. */
+/* O botão da linha inteira. Sem uso hoje: com dez botões o grid de duas
+   colunas fecha em cinco pares e ninguém sobra. A regra fica porque é o
+   que segura o menu quando ele voltar a ter número ímpar — meio botão
+   com meio vazio do lado lê como falha de carregamento. */
 .menu-botao-largo { grid-column: 1 / -1; }
 
 /* Os botões ficam sempre do mesmo tamanho. O vago ao lado do último é

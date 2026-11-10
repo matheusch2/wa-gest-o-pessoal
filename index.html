@@ -88,7 +88,7 @@
   <link rel="preconnect" href="https://efewoxdgfcgkodtqbqsz.supabase.co" crossorigin>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 
-  <link rel="stylesheet" href="style.css?v=83">
+  <link rel="stylesheet" href="style.css?v=84">
 
   <!-- defer: baixa em paralelo e só executa depois da página montada, em
        ordem. Sem ele, cada script trava a leitura do HTML no meio.
@@ -126,18 +126,15 @@
 
     <!-- Menu principal. Só aparece depois de entrar. -->
     <nav id="menu" class="menu" style="display:none">
-      <!-- O NEGÓCIO É OUTRO BOLSO, e é por isso que ele tem botão próprio
-           em vez de virar mais uma categoria. O que o WA Aqua fatura não é
-           renda da pessoa: renda dela é a retirada.
+      <!-- MEU NEGÓCIO SAIU DO MENU a pedido do dono do app: a tela existe
+           e funciona, mas o jeito de modelar um negócio dentro de um app
+           de finanças pessoais ainda não fechou.
 
-           ELE ABRE O MENU, na linha inteira. Já esteve sozinho no fim, que
-           era onde sobrava o lugar ímpar — e lá embaixo ele lia como resto.
-           No alto, a linha cheia vira cabeçalho do menu, e os dez botões
-           do dinheiro pessoal ficam em cinco pares certinhos embaixo. -->
-      <button class="menu-botao menu-botao-largo" onclick="abrirMeuNegocio()">
-        <svg viewBox="0 0 24 24"><path d="M3 9.5 4.6 4.6A1 1 0 0 1 5.5 4h13a1 1 0 0 1 .9.6L21 9.5"/><path d="M3 9.5h18"/><path d="M4.5 9.5V20h15V9.5"/><path d="M9.5 20v-5.5h5V20"/></svg>
-        Meu negócio
-      </button>
+           A TELA E OS DADOS CONTINUAM INTEIROS — js/negocio.js segue
+           carregado, as tabelas seguem no banco e carregarTudo() segue
+           lendo. Só o caminho até ela foi fechado, e devolver o botão é
+           colar este bloco de volta. Apagar o módulo junto teria jogado
+           fora o faturamento e as retiradas já lançados. -->
       <button class="menu-botao" onclick="abrirResumo()">
         <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
         Resumo do mês

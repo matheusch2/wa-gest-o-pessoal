@@ -48,13 +48,21 @@ const UM = `
 
 module.exports = () => suite("Meu negócio", async ({ p, ok, abrir, texto, valor, chamadas, falharProxima }) => {
 
-  /* ─── O BOTÃO VIROU TELA ─────────────────────────────────────────────
-     embreve.js carrega DEPOIS e sobrescreve quem vier antes. Se a função
-     tivesse ficado lá, o módulo novo seria carregado e ignorado — e o
-     defeito apareceria como "o botão não faz nada de novo". */
+  /* ─── A TELA EXISTE, O BOTÃO NÃO ─────────────────────────────────────
+     O dono do app tirou "Meu negócio" do menu: o jeito de modelar um
+     negócio dentro de um app de finanças pessoais ainda não fechou. A
+     tela e os dados ficaram inteiros, e esta suíte continua guardando
+     eles — é ela que garante que voltar a pôr o botão é só pôr o botão.
+
+     O que ela ainda trava do jeito antigo: embreve.js carrega DEPOIS e
+     sobrescreve quem vier antes. Com abrirMeuNegocio() lá dentro, o
+     módulo de verdade seria carregado e ignorado. */
   await abrir(BASE + UM + "; voltarInicio();");
-  await p.click("#menu .menu-botao:has-text('Meu negócio')");
-  ok("o botão abre a tela de verdade, não a de 'em construção'",
+  ok("o menu não tem mais o botão",
+    (await p.locator("#menu .menu-botao:has-text('Meu negócio')").count()) === 0);
+
+  await p.evaluate(() => abrirMeuNegocio());
+  ok("mas a tela abre de verdade, não a de 'em construção'",
     (await p.locator(".em-breve-selo").count()) === 0 &&
     (await p.locator(".negocio-botoes").count()) === 1);
 
