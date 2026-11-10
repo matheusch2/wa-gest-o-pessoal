@@ -99,13 +99,34 @@ function desenharResumo(filtro) {
         // sair" e "faltam R$ 203, já contando o salário que ainda não caiu"
         // são situações diferentes, e a segunda é bem mais grave.
         const dois = aReceber.total > 0 && aSair.total > 0;
-        const status = valor < 0
+        const negativo = valor < 0;
+
+        /* O RÓTULO SEGUE O SINAL. "SOBRA DO MÊS: R$ −294,13" eram as duas
+           metades do mesmo cartão se contradizendo: sobra é o que ficou,
+           e o que ficou não é negativo. Com o rótulo dizendo "Falta no
+           mês", o sinal de menos vira a mesma informação duas vezes —
+           por isso o número vai sem ele, igual ao Balanço.
+
+           "Saldo do mês" é outra coisa e fica: saldo negativo existe, é
+           mês em que saiu mais do que entrou. Esse mantém o sinal, e com
+           o menos de verdade (−), não o hífen do teclado. */
+        const rotulo = previsto ? (negativo ? "Falta no mês" : "Sobra do mês") : "Saldo do mês";
+        const numero = !negativo ? moeda(valor)
+                     : previsto ? moeda(-valor)
+                     : "− " + moeda(-valor);
+
+        /* A FRASE DE BAIXO QUALIFICA, NÃO REPETE. Ela dizia "Faltam
+           R$ 294,13" logo abaixo de um número que já era R$ 294,13. O que
+           ela tem de próprio é o QUE JÁ ESTÁ CONTADO ali — e isso muda o
+           tamanho do problema: faltar contando o salário que ainda não
+           caiu é bem pior do que faltar sem contar. */
+        const status = negativo
           ? dois
-            ? `Faltam ${moeda(-sobra)}, já contando ${moeda(aReceber.total)} a receber`
+            ? `Já contando ${moeda(aReceber.total)} a receber e ${moeda(aSair.total)} a pagar`
             : aReceber.total > 0
-              ? `Faltam ${moeda(-sobra)} mesmo contando ${moeda(aReceber.total)} que ainda vão entrar`
+              ? `Mesmo contando ${moeda(aReceber.total)} que ainda vão entrar`
               : aSair.total > 0
-                ? `Faltam ${moeda(-sobra)} pra cobrir o que ainda vai sair`
+                ? `Contando ${moeda(aSair.total)} que ainda vai sair`
                 : "As saídas passaram as entradas"
           : dois
             ? `Livre, contando ${moeda(aReceber.total)} a receber e ${moeda(aSair.total)} a pagar`
@@ -116,10 +137,10 @@ function desenharResumo(filtro) {
                 : "Resultado positivo neste mês";
         return `
         <div class="saldo resumo-saldo">
-          <span class="resumo-saldo-rotulo">${previsto ? "Sobra do mês" : "Saldo do mês"}</span>
-          <strong${valor < 0 ? ' class="negativo"' : ""}>${moeda(valor)}</strong>
-          <small class="resumo-saldo-status${valor < 0 ? " negativo" : ""}">
-            <b aria-hidden="true">${valor >= 0 ? "↗" : "↘"}</b>
+          <span class="resumo-saldo-rotulo">${rotulo}</span>
+          <strong${negativo ? ' class="negativo"' : ""}>${numero}</strong>
+          <small class="resumo-saldo-status${negativo ? " negativo" : ""}">
+            <b aria-hidden="true">${negativo ? "↘" : "↗"}</b>
             ${status}
           </small>
         </div>`;
@@ -146,17 +167,26 @@ function desenharResumo(filtro) {
             <strong class="resumo-total-entrada">${moeda(aReceber.total)}</strong>
           </div>
           <div class="lista">
-            ${aReceber.linhas.map(r => `
+            ${aReceber.linhas.map(r => {
+              /* O DIA JÁ PASSOU E O DINHEIRO NÃO CAIU. Isso estava escrito
+                 em cinza, do mesmo tamanho e da mesma cor do "cai dia 15"
+                 — e é informação de outra ordem: o mês inteiro está
+                 contando com um salário que não entrou. Agora ela se
+                 identifica, com a mesma cor de atenção das contas
+                 vencendo. */
+              const atrasada = r.data < _hojeLocal();
+              return `
               <div class="item item-toque" onclick="abrirLancar('entrada')" style="cursor:pointer">
-                <div class="item-icone">${iconeDoLancamento({ tipo: "entrada", categoria: r.categoria })}</div>
+                <div class="item-icone">${iconeDoLancamento({ tipo: "entrada", categoria: r.categoria, descricao: r.nome })}</div>
                 <div class="item-txt">
                   <strong>${esc(r.nome)}</strong>
-                  <small>${r.data < _hojeLocal()
-                    ? "Era dia " + dataBR(r.data)
+                  <small${atrasada ? ' class="resumo-atrasado"' : ""}>${atrasada
+                    ? "Atrasado · era dia " + dataBR(r.data)
                     : "Cai dia " + dataBR(r.data)}</small>
                 </div>
                 <span class="item-valor entrada">${moeda(r.valor)}</span>
-              </div>`).join("")}
+              </div>`;
+            }).join("")}
           </div>
         </div>` : ""}
 
@@ -489,7 +519,10 @@ function iconeDoLancamento(l) {
 
   if (l.tipo === "entrada") {
     if (texto.includes("resgate") || texto.includes("reserva")) return "🐷";
+    if (texto.includes("salario") || texto.includes("pagamento")) return "💼";
+    if (texto.includes("aluguel")) return "🏠";
     if (texto.includes("venda")) return "🛍️";
+    if (texto.includes("freela") || texto.includes("servico") || texto.includes("cliente")) return "🧾";
     if (texto.includes("extra")) return "💵";
     if (texto.includes("pix") || texto.includes("transferencia")) return "💵";
     return "💰";

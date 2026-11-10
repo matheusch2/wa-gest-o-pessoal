@@ -278,4 +278,122 @@ module.exports = () => suite("Resumo: extrato, e só", async ({ p, ok, abrir, te
   /* Conta que NÃO é carnê não ganha pílula nenhuma. */
   ok("só o carnê tem pílula",
     (await p.locator(".resumo-secao .lista .carne-pilula").count()) === 2);
+
+
+  /* ─── O CARTÃO DO ALTO NÃO PODE SE CONTRADIZER ───────────────────────
+     Ele dizia "SOBRA DO MÊS" e, logo embaixo, "R$ -294,13". Sobra é o que
+     ficou, e o que ficou não é negativo — eram as duas metades do mesmo
+     cartão discordando. É o defeito que este app mais persegue, desta vez
+     dentro de um retângulo só. */
+  const TOPO = `
+    const M = mesDe(_hojeLocal());
+    mesAtual = M;
+    metas = []; fechamentos = []; reservas = []; movimentosReserva = [];
+    negocios = []; movimentosNegocio = []; conferencias = [];
+    cartoes = []; comprasCartao = []; pagamentosFatura = [];
+    lancamentos = [
+      { id:"e1", tipo:"entrada", valor:1950,    data:M+"-03", categoria:"Salário", descricao:"Salário" },
+      { id:"s1", tipo:"saida",   valor:2823.68, data:M+"-05", categoria:"Casa",    descricao:"Contas" },
+    ];
+    entradasFixas = [{ id:"f1", nome:"Salário audy", valor:800, dia:1, categoria:"Salário" }];
+    contas = [{ id:"a", nome:"Aluguel", valor:500, vencimento:M+"-27",
+                pago:false, categoria:"Casa", recorrente:true }];
+  `;
+  await abrir(TOPO + "; abrirResumo();");
+  const rotulo = await texto(".resumo-saldo-rotulo");
+  const numero = await texto(".resumo-saldo strong");
+  ok("faltando dinheiro, o rótulo diz FALTA", rotulo === "Falta no mês");
+  ok("e não continua dizendo SOBRA", !rotulo.includes("Sobra"));
+  ok("o número aparece sem o sinal de menos", !numero.includes("-") && !numero.includes("−"));
+  ok("porque o rótulo já é o sinal", valor(numero) === 573.68);
+
+  /* A FRASE DE BAIXO QUALIFICA, NÃO REPETE. Ela dizia "Faltam R$ 294,13"
+     embaixo de um número que já era R$ 294,13. */
+  const frase = await texto(".resumo-saldo-status");
+  ok("a frase de baixo não repete o valor", !frase.includes("573,68"));
+  ok("ela diz o que já está contado ali",
+    frase.includes("800,00") && frase.includes("500,00"));
+
+  await abrir(TOPO + `; lancamentos[0].valor = 5000; abrirResumo();`);
+  ok("sobrando, o rótulo volta a ser SOBRA",
+    (await texto(".resumo-saldo-rotulo")) === "Sobra do mês");
+
+  /* SALDO NEGATIVO É OUTRA COISA E FICA. Sem nada a receber nem a pagar,
+     o número é o realizado: saldo negativo existe, é mês em que saiu mais
+     do que entrou. Esse mantém o sinal — com o menos de verdade. */
+  await abrir(`
+    const M = mesDe(_hojeLocal());
+    mesAtual = M;
+    metas = []; fechamentos = []; reservas = []; movimentosReserva = [];
+    negocios = []; movimentosNegocio = []; conferencias = [];
+    cartoes = []; comprasCartao = []; pagamentosFatura = [];
+    contas = []; entradasFixas = [];
+    lancamentos = [
+      { id:"e1", tipo:"entrada", valor:1000, data:M+"-03", categoria:"Salário", descricao:"Salário" },
+      { id:"s1", tipo:"saida",   valor:1300, data:M+"-05", categoria:"Casa",    descricao:"Contas" },
+    ];
+    abrirResumo();`);
+  ok("sem previsão nenhuma, o rótulo é SALDO",
+    (await texto(".resumo-saldo-rotulo")) === "Saldo do mês");
+  const saldoNeg = await texto(".resumo-saldo strong");
+  ok("e aí o sinal fica, porque saldo negativo existe", saldoNeg.includes("−"));
+  ok("com o menos de verdade, não o hífen do teclado", !saldoNeg.includes("-"));
+
+
+  /* ─── ENTRADA QUE NÃO CAIU ───────────────────────────────────────────
+     "Era dia 01/11" estava em cinza, do mesmo tamanho e cor do "cai dia
+     28" — e é informação de outra ordem: o mês está contando com um
+     salário que não entrou. */
+  await abrir(TOPO + "; abrirResumo();");
+  const atrasada = await texto(".resumo-atrasado");
+  ok("a entrada atrasada se identifica", atrasada.includes("Atrasado"));
+  ok("dizendo que dia era", atrasada.includes("era dia"));
+  ok("e só ela", (await p.locator(".resumo-atrasado").count()) === 1);
+
+  /* E A COR TEM QUE CHEGAR NA TELA. A classe sozinha não avisa ninguém:
+     sem a regra no CSS ela fica do mesmo cinza do "cai dia 28", que é
+     exatamente o estado de onde ela saiu. */
+  const cores = await p.evaluate(() => {
+    const linhas = [...document.querySelectorAll(".resumo-secao .lista .item small")];
+    const atrasado = linhas.find(e => e.classList.contains("resumo-atrasado"));
+    const normal = [...document.querySelectorAll(".resumo-secao .lista .item small")]
+      .find(e => !e.classList.contains("resumo-atrasado"));
+    return {
+      atrasado: getComputedStyle(atrasado).color,
+      peso: getComputedStyle(atrasado).fontWeight,
+      normal: normal ? getComputedStyle(normal).color : null,
+    };
+  });
+  ok("o atrasado não fica da cor do texto normal", cores.atrasado !== cores.normal);
+  ok("e vem em negrito", Number(cores.peso) >= 700);
+
+  await abrir(TOPO + `;
+    entradasFixas = [{ id:"f2", nome:"Entrada L", valor:179.17, dia:28, categoria:"Extra" }];
+    abrirResumo();`);
+  ok("entrada que ainda vai cair não vira alerta",
+    (await p.locator(".resumo-atrasado").count()) === 0);
+  ok("ela só diz quando cai",
+    (await texto(".resumo-secao .lista .item small")).includes("Cai dia"));
+
+  /* ─── O ÍCONE DA ENTRADA TAMBÉM VEM DO NOME ──────────────────────────
+     Mesma correção do lado das saídas: só a categoria decidia, e
+     "Salário audy" ficava com o saco de dinheiro genérico igual a todo o
+     resto. */
+  await abrir(TOPO + `;
+    entradasFixas = [
+      { id:"f1", nome:"Salário audy",       valor:800, dia:1,  categoria:"Outros" },
+      { id:"f2", nome:"Aluguel recebido",   valor:700, dia:28, categoria:"Outros" },
+      { id:"f3", nome:"Serviço pra cliente",valor:300, dia:28, categoria:"Outros" },
+    ];
+    abrirResumo();`);
+  const ico = (nome) => p.evaluate(x => {
+    const linha = [...document.querySelectorAll(".resumo-secao .lista .item")]
+      .find(e => e.textContent.includes(x));
+    return linha ? linha.querySelector(".item-icone").textContent.trim() : null;
+  }, nome);
+  ok("salário ganha pasta", (await ico("Salário audy")) === "💼");
+  ok("aluguel recebido ganha casa", (await ico("Aluguel recebido")) === "🏠");
+  ok("serviço pra cliente ganha nota", (await ico("Serviço pra cliente")) === "🧾");
+  ok("e tudo isso com a categoria 'Outros' — quem decidiu foi o nome",
+    (await p.evaluate(() => iconeDoLancamento({ tipo: "entrada", categoria: "Outros" }))) === "💰");
 });

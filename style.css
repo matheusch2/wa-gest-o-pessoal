@@ -2548,3 +2548,9 @@ body.escuro .resumo-secao .item-icone.entrada { background: #17372d; }
   white-space: nowrap;
 }
 .item-txt strong.com-pilula .carne-pilula { flex: none; }
+
+/* ENTRADA QUE NÃO CAIU NO DIA. Em cinza, do mesmo tamanho do "cai dia
+   15", ela se escondia — e é informação de outra ordem: o mês está
+   contando com dinheiro que não entrou. Mesma cor de atenção das contas
+   vencendo, pra ser a mesma ideia em qualquer tela. */
+.resumo-atrasado { color: var(--aviso) !important; font-weight: 700; }
