@@ -88,12 +88,121 @@ module.exports = () => suite("Contas, carnê e assinatura", async ({ p, ok, abri
   ok("e o que venceu continua dizendo há quanto tempo",
     /Venceu há \d+ dias?/.test(voltou));
 
-  /* A aba "Vencidos" não muda de régua por causa do mês que ficou
-     escolhido na outra aba: lá o que importa é sempre há quanto tempo. */
-  await p.evaluate(() => { trocarMesDasContas(1); filtrarContas("vencidos"); });
-  ok("em Vencidos, o prazo é sempre há quantos dias",
-    /Venceu há \d+ dias?/.test(await texto(".lista")));
-  await p.evaluate(() => { filtrarContas("todos"); trocarMesDasContas(-1); });
+  /* ─── O MÊS VALE PRA TELA INTEIRA ────────────────────────────────────
+     DEFEITO REPORTADO: "não tenho nenhuma conta vencendo em dezembro
+     ainda, mas quando eu passo de novembro pra dezembro já aparecem as
+     de novembro como vencendo".
+
+     Era isso mesmo: as outras abas ignoravam o mês. Folhear até dezembro
+     e tocar "Vencendo" mostrava a internet que vence daqui a dois dias.
+     Uma tela com seta de mês e abas que fingem não ver a seta responde
+     duas coisas diferentes sobre o mesmo mês. */
+  const CRUZADO = `
+    const M = mesDe(_hojeLocal());
+    const dia = (n) => { const d = new Date(); d.setDate(d.getDate() + n);
+      return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); };
+    lancamentos = []; cartoes = []; comprasCartao = []; metas = [];
+    pagamentosFatura = []; fechamentos = []; entradasFixas = [];
+    contas = [
+      { id:"i",  nome:"Internet",  valor:150, vencimento:dia(2),  pago:false, categoria:"Internet", recorrente:true },
+      { id:"fa", nome:"Faculdade", valor:160, vencimento:_somaMes(M,1)+"-20", pago:false, categoria:"Educação", recorrente:true },
+      { id:"ve", nome:"Atrasada",  valor:90,  vencimento:_somaMes(M,-1)+"-05", pago:false, categoria:"Casa" },
+      { id:"pg", nome:"Mercado",   valor:70,  vencimento:M+"-02", pago:true, pago_em:M+"-02", categoria:"Mercado" },
+      { id:"pv", nome:"Antiga",    valor:40,  vencimento:_somaMes(M,-1)+"-02", pago:true, pago_em:_somaMes(M,-1)+"-02", categoria:"Mercado" },
+    ];
+    abrirContas();
+  `;
+  await abrir(CRUZADO);
+  const naAba = async (aba) => {
+    await p.evaluate(x => filtrarContas(x), aba);
+    return (await p.locator(".lista .conta-item").count())
+      ? (await texto(".lista")) : "";
+  };
+
+  ok("no mês corrente, Vencendo mostra o que vence em dias",
+    (await naAba("vencendo")).includes("Internet"));
+  ok("e Vencidos mostra o atraso que veio do mês passado",
+    (await naAba("vencidos")).includes("Atrasada"));
+  ok("e Pagos mostra o que foi pago neste mês",
+    (await naAba("pagos")).includes("Mercado"));
+  ok("sem arrastar o pago do mês passado",
+    !(await naAba("pagos")).includes("Antiga"));
+
+  await p.evaluate(() => { filtrarContas("todos"); trocarMesDasContas(1); });
+  ok("passando pra dezembro, A pagar mostra a conta de dezembro",
+    (await naAba("todos")).includes("Faculdade"));
+  ok("Vencendo em dezembro fica VAZIO — nada está vencendo num mês que nem começou",
+    (await naAba("vencendo")) === "");
+  ok("e a tela diz de qual mês está falando",
+    (await texto(".vazio")).includes("Nada vencendo em"));
+  ok("Vencidos em dezembro também fica vazio",
+    (await naAba("vencidos")) === "");
+  ok("Pagos em dezembro também", (await naAba("pagos")) === "");
+
+  /* Voltando pro mês passado, cada coisa aparece onde ela aconteceu. */
+  await p.evaluate(() => { filtrarContas("todos"); trocarMesDasContas(-2); });
+  ok("no mês passado, Pagos mostra o que foi pago lá",
+    (await naAba("pagos")).includes("Antiga"));
+  ok("e Vencidos mostra o atraso de lá",
+    (await naAba("vencidos")).includes("Atrasada"));
+
+  /* ─── A JANELA DOS 5 DIAS NÃO SE CORTA NA VIRADA DO MÊS ──────────────
+     Dia 28 de novembro, o boleto do dia 2 de dezembro está vencendo — e
+     escondê-lo de novembro por causa do calendário seria perder o
+     urgente justamente por ser urgente. É o contrapeso da correção
+     acima: o mês manda em tudo, menos em "o que vence nos próximos
+     cinco dias", que é pergunta sobre hoje.
+
+     Hoje é trocado por um dia 28 aqui dentro, porque o caso só existe no
+     fim do mês e o teste tem que valer em qualquer data. */
+  await abrir(`
+    const M = mesDe(_hojeLocal());
+    const PROX = _somaMes(M, 1);
+    _hojeLocal = () => M + "-28";
+    lancamentos = []; cartoes = []; comprasCartao = []; metas = [];
+    pagamentosFatura = []; fechamentos = []; entradasFixas = [];
+    contas = [
+      { id:"v", nome:"Boleto da virada", valor:200, vencimento:PROX + "-02",
+        pago:false, categoria:"Casa" },
+    ];
+    abrirContas();`);
+  await p.evaluate(() => filtrarContas("vencendo"));
+  ok("no dia 28, o boleto do dia 2 do mês que vem está vencendo",
+    (await texto(".lista")).includes("Boleto da virada"));
+
+  await p.evaluate(() => { filtrarContas("todos"); trocarMesDasContas(1); filtrarContas("vencendo"); });
+  ok("e ele também aparece em Vencendo do mês dele",
+    (await texto(".lista")).includes("Boleto da virada"));
+
+  await p.evaluate(() => { filtrarContas("todos"); trocarMesDasContas(1); filtrarContas("vencendo"); });
+  ok("mas não dois meses à frente",
+    (await p.locator(".lista .conta-item").count()) === 0);
+
+
+  /* A ABA "FIXOS" FICA DE FORA DA SETA: ela não é sobre vencimento, é o
+     cadastro do que se repete — e todo mês é todo mês. */
+  await p.evaluate(() => filtrarContas("fixos"));
+  ok("a aba Fixos não tem barra de mês",
+    (await p.locator(".contas-mes-barra").count()) === 0);
+  for (const aba of ["todos", "vencendo", "vencidos", "pagos"]) {
+    await p.evaluate(x => filtrarContas(x), aba);
+    ok(`a aba ${aba} tem a barra de mês`,
+      (await p.locator(".contas-mes-barra").count()) === 1);
+  }
+
+  /* O TOTAL DA BARRA SEGUE A ABA. Um número fixo embaixo de uma lista
+     que muda seria o mesmo defeito de sempre, de outro jeito. */
+  await abrir(CRUZADO);
+  await p.evaluate(() => filtrarContas("pagos"));
+  ok("em Pagos, a barra soma o que foi pago no mês",
+    valor(await texto(".contas-mes-total")) === 70);
+  await p.evaluate(() => filtrarContas("vencidos"));
+  ok("em Vencidos, ela soma o atraso", valor(await texto(".contas-mes-total")) === 90);
+  await p.evaluate(() => filtrarContas("todos"));
+  ok("e em A pagar, tudo que ainda falta no mês",
+    valor(await texto(".contas-mes-total")) === 240);
+
+  await abrir(CARNE + "; abrirContas();");
 
   // 26 parcelas a partir de setembro de 2026 chegam até outubro de 2028;
   // 30 meses à frente de hoje passa do fim do carnê de propósito.
@@ -152,17 +261,9 @@ module.exports = () => suite("Contas, carnê e assinatura", async ({ p, ok, abri
   await p.evaluate(() => filtrarContas("todos"));
 
 
-  /* A BARRA DE MÊS NÃO APARECE NAS OUTRAS ABAS. Elas não são sobre um
-     mês — "Vencendo" é sobre cinco dias, "Vencidos" sobre tudo que
-     passou, "Pagos" é histórico e "Fixos" é cadastro. */
-  for (const aba of ["vencendo", "vencidos", "pagos", "fixos"]) {
-    await p.evaluate(x => filtrarContas(x), aba);
-    ok(`a aba ${aba} não tem barra de mês`,
-      (await p.locator(".contas-mes-barra").count()) === 0);
-  }
-  await p.evaluate(() => filtrarContas("todos"));
-  ok("e ela volta na aba A pagar",
-    (await p.locator(".contas-mes-barra").count()) === 1);
+  /* Onde a barra aparece e onde não aparece está travado mais abaixo,
+     junto do defeito que fez ela sair da aba "A pagar" e valer pra tela
+     inteira. */
 
   /* ─── Excluir o carnê não mexe no que já foi pago ─────────────────── */
   await abrir(CARNE + `; abrirCarne("Moto");`);

@@ -490,5 +490,13 @@
  [
   "Contas · mês sem nada",
   "abrirContas(); trocarMesDasContas(40)"
+ ],
+ [
+  "Contas · vencendo em mês futuro",
+  "abrirContas(); trocarMesDasContas(1); filtrarContas('vencendo')"
+ ],
+ [
+  "Contas · pagos do mês",
+  "abrirContas(); filtrarContas('pagos')"
  ]
 ]

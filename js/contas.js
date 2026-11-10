@@ -145,16 +145,49 @@ function desenharContas() {
   destruirGrafico();
   const hoje = _hojeLocal();
   const abertas = contas.filter(c => !c.pago).sort((a, b) => a.vencimento.localeCompare(b.vencimento));
-  const pagas = contas.filter(c => c.pago).sort((a, b) => b.vencimento.localeCompare(a.vencimento)).slice(0, 10);
   const total = abertas.reduce((s, c) => s + Number(c.valor), 0);
 
-  const vencidas = abertas.filter(c => c.vencimento < hoje);
-  // "Vencendo" é o que vence de hoje até 5 dias — a janela em que ainda dá
-  // tempo de pagar sem juros.
+  const mesVisivel = _contasMes || mesDe(_hojeLocal());
+  const ehMesCorrente = mesVisivel === mesDe(_hojeLocal());
+
+  /* O MÊS VALE PRA TELA INTEIRA, não só pra aba "A pagar".
+     DEFEITO REPORTADO: "não tenho nenhuma conta vencendo em dezembro
+     ainda, mas quando eu passo de novembro pra dezembro já aparecem as
+     de novembro como vencendo". Era isso mesmo — as outras abas
+     ignoravam o mês por completo, então folhear até dezembro e tocar
+     "Vencendo" mostrava a internet que vence daqui a dois dias.
+
+     Uma tela com seta de mês e abas que fingem não ver a seta é a versão
+     em navegação do defeito que este app mais persegue: dois lugares
+     respondendo coisas diferentes sobre o mesmo mês. */
+  const cabeNoMes = (venc) =>
+    mesDe(venc) === mesVisivel || (ehMesCorrente && venc < hoje);
+
+  /* VENCIDO É DO MÊS EM QUE VENCEU — menos no mês corrente, que junta
+     tudo que já passou. É a mesma regra da lista "A pagar", e pelo mesmo
+     motivo: o que venceu em outubro e não foi pago continua sendo o que
+     se tem pra pagar agora. */
+  const vencidas = abertas.filter(c => c.vencimento < hoje && cabeNoMes(c.vencimento));
+
+  /* "Vencendo" é o que vence de hoje até 5 dias — a janela em que ainda
+     dá tempo de pagar sem juros. Ela é, por natureza, uma pergunta sobre
+     HOJE: num mês que ainda não começou nada está "vencendo", e é por
+     isso que dezembro aparece vazio quando visto de novembro.
+
+     No mês corrente a janela não se corta no fim do mês: o boleto do dia
+     2 de dezembro visto no dia 28 de novembro está vencendo, e escondê-lo
+     por causa da virada seria perder o urgente pelo calendário. */
   const vencendo = abertas.filter(c => {
     const dias = Math.round((_parseDataLocal(c.vencimento) - _parseDataLocal(hoje)) / 86400000);
-    return dias >= 0 && dias <= 5;
+    if (dias < 0 || dias > 5) return false;
+    return ehMesCorrente || mesDe(c.vencimento) === mesVisivel;
   });
+
+  // Pagas do mês que está na tela. Antes eram as dez últimas, de qualquer
+  // mês — um recorte que a seta de mês tornou desnecessário e confuso.
+  const pagasDoMes = contas
+    .filter(c => c.pago && mesDe(c.vencimento) === mesVisivel)
+    .sort((a, b) => b.vencimento.localeCompare(a.vencimento));
 
   const fixos = fixosPorSerie();
 
@@ -175,10 +208,6 @@ function desenharContas() {
      agora; escondê-la no mês de outubro seria perdê-la de vista
      justamente quando ela mais importa. */
   const { grupos: carnes, soltas } = _agruparCarnes(abertas);
-  const mesVisivel = _contasMes || mesDe(_hojeLocal());
-  const ehMesCorrente = mesVisivel === mesDe(_hojeLocal());
-  const cabeNoMes = (venc) =>
-    mesDe(venc) === mesVisivel || (ehMesCorrente && venc < hoje);
 
   const aPagar = soltas
     .filter(c => cabeNoMes(c.vencimento))
@@ -188,8 +217,13 @@ function desenharContas() {
       .map(x => ({ tipo: "carne", carne: g, parcela: x, vencimento: x.vencimento }))))
     .sort((a, b) => a.vencimento.localeCompare(b.vencimento));
 
-  const totalDoMes = aPagar.reduce((s, x) =>
-    s + faltaDaConta(x.tipo === "carne" ? x.parcela : x.conta), 0);
+  // O total da barra é o da lista que está na tela — em "Pagos" ele é o
+  // que saiu, em "A pagar" o que falta. Um total fixo embaixo de uma
+  // lista que muda seria o mesmo defeito de sempre, de outro jeito.
+  const somaDaLista = (itens) => itens.reduce((s, x) => {
+    const c = x.tipo === "carne" ? x.parcela : (x.conta || x);
+    return s + (c.pago ? Number(c.valor) : faltaDaConta(c));
+  }, 0);
 
   // O que ainda está em carnê, somando todos os meses. Dito no cabeçalho
   // porque o total em aberto lá em cima o inclui, e a lista do mês não.
@@ -199,9 +233,16 @@ function desenharContas() {
   const abas = [
     { id: "todos", rotulo: "A pagar", itens: aPagar,
       vazio: `Nada vence em ${soNomeDoMes(mesVisivel)}.` },
-    { id: "vencendo", rotulo: "Vencendo", itens: vencendo, vazio: "Nada vencendo nos próximos dias." },
-    { id: "vencidos", rotulo: "Vencidos", itens: vencidas, vazio: "Nenhuma conta vencida. 🎉" },
-    { id: "pagos", rotulo: "Pagos", itens: pagas, vazio: "Nenhuma conta paga ainda." },
+    { id: "vencendo", rotulo: "Vencendo", itens: vencendo,
+      vazio: ehMesCorrente
+        ? "Nada vencendo nos próximos dias."
+        : `Nada vencendo em ${soNomeDoMes(mesVisivel)}.` },
+    { id: "vencidos", rotulo: "Vencidos", itens: vencidas,
+      vazio: ehMesCorrente
+        ? "Nenhuma conta vencida. 🎉"
+        : `Nenhuma conta vencida em ${soNomeDoMes(mesVisivel)}.` },
+    { id: "pagos", rotulo: "Pagos", itens: pagasDoMes,
+      vazio: `Nenhuma conta paga em ${soNomeDoMes(mesVisivel)}.` },
     { id: "fixos", rotulo: "Fixos", itens: fixos, vazio: "Nenhuma conta fixa ainda. Ao criar uma conta, escolha \"Conta fixa\"." },
   ];
   const abaAtual = abas.find(a => a.id === _contasFiltro) || abas[0];
@@ -337,19 +378,23 @@ function desenharContas() {
                 onclick="filtrarContas('${a.id}')">${a.rotulo}</button>`).join("")}
     </div>
 
-    <!-- A BARRA DO MÊS SÓ NA ABA "A PAGAR". As outras não são sobre um
-         mês: "Vencendo" é sobre os próximos cinco dias, "Vencidos" é
-         sobre tudo que já passou, "Pagos" é histórico e "Fixos" é
-         cadastro. Uma seta de mês ali não mudaria nada, e controle que
-         não faz nada é pior do que controle que falta. -->
-    ${abaAtual.id === "todos" ? `
+    <!-- A BARRA DO MÊS VALE PRA TODAS AS ABAS MENOS "FIXOS".
+         Ela já esteve só na aba "A pagar", e o resultado foi o defeito
+         que o dono do app encontrou: folhear até dezembro e tocar
+         "Vencendo" mostrava a conta que vence daqui a dois dias, em
+         novembro. Uma tela com seta de mês e abas que fingem não ver a
+         seta responde duas coisas diferentes sobre o mesmo mês.
+
+         "Fixos" fica de fora porque ela não é sobre vencimento: é o
+         cadastro do que se repete todo mês, e todo mês é todo mês. -->
+    ${abaAtual.id !== "fixos" ? `
       <div class="contas-mes-barra">
         <div class="resumo-mes" aria-label="Selecionar mês">
           <button onclick="trocarMesDasContas(-1)" aria-label="Mês anterior">‹</button>
           <strong>${mesPorExtenso(mesVisivel)}</strong>
           <button onclick="trocarMesDasContas(1)" aria-label="Próximo mês">›</button>
         </div>
-        <strong class="contas-mes-total">${moeda(totalDoMes)}</strong>
+        <strong class="contas-mes-total${abaAtual.id === "pagos" ? " pago" : ""}">${moeda(somaDaLista(abaAtual.itens))}</strong>
       </div>` : ""}
 
     ${abaAtual.id === "fixos" && fixos.length ? `

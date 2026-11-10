@@ -2573,3 +2573,7 @@ body.escuro .resumo-secao .item-icone.entrada { background: #17372d; }
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
+
+/* Na aba "Pagos" o total da barra é dinheiro que já saiu, e saiu por
+   escolha: verde, não vermelho. Vermelho ali leria como dívida. */
+.contas-mes-total.pago { color: var(--entrada); }
