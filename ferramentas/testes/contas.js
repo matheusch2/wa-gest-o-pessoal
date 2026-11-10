@@ -73,7 +73,33 @@ module.exports = () => suite("Contas, carnê e assinatura", async ({ p, ok, abri
   ok("sem repetir a do mês passado", !/3\/26/.test(proximo));
   ok("e sem arrastar a atrasada, que só aparece no mês corrente",
     !/2\/26/.test(proximo));
-  ok("a energia do mês corrente também não vem junto", !proximo.includes("Energia"));
+  /* A ENERGIA VEM JUNTO, E É O PONTO. Conta fixa não tem linha no banco
+     nos meses à frente — o carnê tem. Sem projetar, dezembro mostrava
+     três parcelas de empréstimo e nenhuma conta de luz. Ela vem marcada
+     como prevista, porque o boleto ainda não existe. */
+  ok("a conta fixa aparece no mês seguinte, projetada", proximo.includes("Energia"));
+  ok("dizendo que é previsão", proximo.includes("prevista"));
+  ok("e sem botão de pagar, porque não há o que pagar ainda",
+    (await p.locator(".conta-item.prevista .botao-pagar").count()) === 0);
+  ok("nem de excluir",
+    (await p.locator(".conta-item.prevista .item-x").count()) === 0);
+  ok("mas ela entra no total do mês",
+    valor(await texto(".contas-mes-total")) === 600 + 180);
+
+  /* E O TRACEJADO TEM QUE CHEGAR NA TELA. A palavra "prevista" é miúda;
+     quem lê a lista de longe lê a borda. Sem a regra no CSS ela fica
+     idêntica a um boleto que existe de verdade. */
+  const borda = await p.evaluate(() => {
+    const prev = document.querySelector(".conta-item.prevista");
+    const real = [...document.querySelectorAll(".conta-item")]
+      .find(e => !e.classList.contains("prevista"));
+    return {
+      prevista: getComputedStyle(prev).borderStyle,
+      real: real ? getComputedStyle(real).borderStyle : null,
+    };
+  });
+  ok("a prevista vem com borda tracejada", borda.prevista === "dashed");
+  ok("e a de verdade não", borda.real !== "dashed");
 
   /* EM MÊS FUTURO, A DATA; NO MÊS CORRENTE, OS DIAS. "Vence em 35 dias"
      é verdade e não serve: quem folheia dezembro quer o DIA de dezembro,
@@ -207,13 +233,28 @@ module.exports = () => suite("Contas, carnê e assinatura", async ({ p, ok, abri
   // 26 parcelas a partir de setembro de 2026 chegam até outubro de 2028;
   // 30 meses à frente de hoje passa do fim do carnê de propósito.
   await p.evaluate(() => trocarMesDasContas(30));
-  ok("passando do fim do carnê, a lista fica vazia",
+  ok("passado o fim do carnê, a parcela some",
+    !(await texto(".lista")).includes("/26"));
+  ok("e sobra a fixa, que não acaba", (await texto(".lista")).includes("Energia"));
+
+  /* Sem fixa nenhuma, o mês vazio é vazio mesmo — e diz de qual mês
+     está falando. */
+  await abrir(`
+    contas = [{ id:"u1", nome:"Moto (1/2)", valor:600, vencimento:"2026-12-10",
+                pago:false, categoria:"Transporte" },
+              { id:"u2", nome:"Moto (2/2)", valor:600, vencimento:"2027-01-10",
+                pago:false, categoria:"Transporte" }];
+    lancamentos = []; cartoes = []; comprasCartao = []; metas = [];
+    pagamentosFatura = []; fechamentos = []; entradasFixas = [];
+    abrirContas(); trocarMesDasContas(30);`);
+  ok("mês sem nada fica vazio",
     (await p.locator(".lista > .conta-item").count()) === 0);
   ok("e a tela diz de qual mês está falando",
     (await texto(".vazio")).startsWith("Nada vence em"));
 
   /* Reabrir a tela volta pro mês corrente: quem entra em Contas quer
      saber o que paga agora, não onde parou de folhear. */
+  await abrir(CARNE + "; abrirContas(); trocarMesDasContas(6);");
   await p.evaluate(() => { voltarInicio(); abrirContas(); });
   ok("reabrir volta pro mês de hoje",
     (await p.locator(".lista > .conta-item").count()) === 3);

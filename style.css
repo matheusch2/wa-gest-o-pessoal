@@ -2577,3 +2577,13 @@ body.escuro .resumo-secao .item-icone.entrada { background: #17372d; }
 /* Na aba "Pagos" o total da barra é dinheiro que já saiu, e saiu por
    escolha: verde, não vermelho. Vermelho ali leria como dívida. */
 .contas-mes-total.pago { color: var(--entrada); }
+
+/* Conta fixa PREVISTA: o app sabe que ela vem, mas ela ainda não existe
+   no banco. Traço pontilhado é o jeito mais curto de dizer isso sem
+   escrever — e ela não ganha botão nenhum, porque não há o que pagar
+   numa conta que ainda não foi gerada. */
+.conta-item.prevista {
+  border-style: dashed;
+  background: transparent;
+}
+.conta-item.prevista .conta-valor { opacity: .85; }

@@ -215,16 +215,37 @@ function desenharContas() {
     .concat(carnes.flatMap(g => g.abertas
       .filter(x => cabeNoMes(x.vencimento))
       .map(x => ({ tipo: "carne", carne: g, parcela: x, vencimento: x.vencimento }))))
+    .concat(fixasProjetadasNoMes(mesVisivel)
+      .map(f => ({ tipo: "prevista", fixa: f, vencimento: f.vencimento })))
     .sort((a, b) => a.vencimento.localeCompare(b.vencimento));
 
   // O total da barra é o da lista que está na tela — em "Pagos" ele é o
   // que saiu, em "A pagar" o que falta. Um total fixo embaixo de uma
   // lista que muda seria o mesmo defeito de sempre, de outro jeito.
   const somaDaLista = (itens) => itens.reduce((s, x) => {
+    if (x.tipo === "prevista") return s + Number(x.fixa.valor);
     const c = x.tipo === "carne" ? x.parcela : (x.conta || x);
     return s + (c.pago ? Number(c.valor) : faltaDaConta(c));
   }, 0);
 
+  /* E AS FIXAS DOS MESES QUE AINDA NÃO TÊM LINHA.
+     DEFEITO REPORTADO: "no futuro só aparecem as parcelas, aquele mesmo
+     erro que acontecia na outra tela".
+
+     É o mesmo, e a causa é a mesma: conta fixa não existe no banco em
+     todo mês — existe uma linha por mês, e a do mês seguinte só nasce
+     quando a atual é paga. O carnê já nasce inteiro, então ele aparecia
+     lá na frente e o aluguel não. Janeiro mostrava três parcelas de
+     empréstimo e nenhuma conta de luz.
+
+     O Resumo e o Balanço já projetavam, por fixasProjetadasNoMes(). Esta
+     tela não chamava ninguém, e era a tela que lista as contas. Agora
+     chama a MESMA função — projeção em dois códigos seria o começo de
+     dois números diferentes pro mesmo mês.
+
+     ELAS NÃO TÊM BOTÃO DE PAGAR NEM DE EXCLUIR, porque não existem: são
+     o que o app sabe que vai vir. A linha diz "prevista" pra ninguém
+     procurar o boleto que ainda não foi gerado. */
   // O que ainda está em carnê, somando todos os meses. Dito no cabeçalho
   // porque o total em aberto lá em cima o inclui, e a lista do mês não.
   const emCarnes = carnes.reduce((s, g) => s + g.falta, 0);
@@ -320,8 +341,32 @@ function desenharContas() {
       </div>`;
   };
 
-  // A aba "A pagar" mistura conta solta e carnê; as outras só têm conta.
-  const linhaAPagar = (x) => x.tipo === "carne" ? linhaCarne(x.carne, x.parcela) : linha(x.conta);
+  /* A LINHA DA FIXA PREVISTA. Mesma cara das outras — o mesmo ícone de
+     categoria, o mesmo prazo — menos as ações: não há o que pagar nem o
+     que excluir numa conta que ainda não foi gerada. O chip "prevista"
+     existe pra ninguém ir procurar o boleto. */
+  const linhaPrevista = (f) => {
+    const dias = Math.round((_parseDataLocal(f.vencimento) - _parseDataLocal(hoje)) / 86400000);
+    const estado = dias < 0 ? "vencida" : dias <= 5 ? "vencendo" : "";
+    return `
+      <div class="conta-item prevista ${estado}">
+        <div class="conta-ico">${iconeDoLancamento({ tipo: "saida", categoria: f.categoria, descricao: f.nome })}</div>
+        <div class="conta-nome">${esc(f.nome)}</div>
+        <div class="conta-valor">${moeda(f.valor)}</div>
+        <div class="conta-prazo">
+          <span class="conta-chip ${estado}">${quandoVence(f.vencimento, dias)}</span>
+          <span class="conta-cat">prevista</span>
+        </div>
+        <div class="conta-acao"></div>
+      </div>`;
+  };
+
+  // A aba "A pagar" mistura conta solta, carnê e fixa prevista; as outras
+  // só têm conta de verdade.
+  const linhaAPagar = (x) =>
+      x.tipo === "carne" ? linhaCarne(x.carne, x.parcela)
+    : x.tipo === "prevista" ? linhaPrevista(x.fixa)
+    : linha(x.conta);
 
   const linhaFixo = (f) => `
     <div class="fixo-item ${f.emDia ? "" : "falta"}">
