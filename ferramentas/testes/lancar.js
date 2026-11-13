@@ -16,12 +16,11 @@ const BASE = `
   mesAtual = mesDe(_hojeLocal());
 `;
 
-module.exports = () => suite("Lançar: um botão só", async ({ p, ok, abrir, texto }) => {
+module.exports = () => suite("Lançar: um botão só", async ({ p, ok, abrir, texto, menu }) => {
 
-  /* ─── O menu ─────────────────────────────────────────────────────── */
+  /* ─── A tela inicial ─────────────────────────────────────────────── */
   await abrir(BASE + "; voltarInicio();");
-  const botoes = await p.locator("#menu .menu-botao").allTextContents();
-  const nomes = botoes.map(t => t.trim());
+  const nomes = await menu();
   ok("há um 'Lançar' no menu", nomes.includes("Lançar"));
   ok("e os dois antigos sumiram",
     !nomes.includes("Lançar saída") && !nomes.includes("Lançar entrada"));

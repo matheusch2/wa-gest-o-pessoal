@@ -88,7 +88,7 @@
   <link rel="preconnect" href="https://efewoxdgfcgkodtqbqsz.supabase.co" crossorigin>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 
-  <link rel="stylesheet" href="style.css?v=92">
+  <link rel="stylesheet" href="style.css?v=93">
 
   <!-- defer: baixa em paralelo e só executa depois da página montada, em
        ordem. Sem ele, cada script trava a leitura do HTML no meio.
@@ -124,78 +124,11 @@
     <!-- Tela de entrada (login/cadastro/recuperar). Montada pelo script. -->
     <div id="area-login"></div>
 
-    <!-- Menu principal. Só aparece depois de entrar. -->
-    <nav id="menu" class="menu" style="display:none">
-      <!-- MEU NEGÓCIO SAIU DO MENU a pedido do dono do app: a tela existe
-           e funciona, mas o jeito de modelar um negócio dentro de um app
-           de finanças pessoais ainda não fechou.
-
-           A TELA E OS DADOS CONTINUAM INTEIROS — js/negocio.js segue
-           carregado, as tabelas seguem no banco e carregarTudo() segue
-           lendo. Só o caminho até ela foi fechado, e devolver o botão é
-           colar este bloco de volta. Apagar o módulo junto teria jogado
-           fora o faturamento e as retiradas já lançados. -->
-      <button class="menu-botao" onclick="abrirResumo()">
-        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-        Resumo do mês
-      </button>
-      <!-- BALANÇO AO LADO DO RESUMO porque são as duas metades da mesma
-           pergunta, e ninguém percebia que faltava a segunda: o Resumo
-           diz o que ACONTECEU no mês, e o Balanço diz quanto você TEM.
-           Até esta tela existir, o app somava lançamentos a partir do
-           zero e nunca soube o ponto de partida de ninguém. -->
-      <button class="menu-botao" onclick="abrirBalanco()">
-        <svg viewBox="0 0 24 24"><line x1="12" y1="3" x2="12" y2="21"/><line x1="5" y1="7" x2="19" y2="7"/><path d="M5 7 2 14h6z"/><path d="M19 7l-3 7h6z"/><line x1="8" y1="21" x2="16" y2="21"/></svg>
-        Balanço
-      </button>
-      <!-- UM BOTÃO SÓ. "Lançar saída" e "Lançar entrada" ocupavam dois dos
-           oito lugares pra fazer a mesma coisa com o sinal trocado; a
-           escolha do sinal virou a primeira tela. Duas portas pro mesmo
-           cômodo deixavam as outras seis mais difíceis de achar. -->
-      <button class="menu-botao" onclick="abrirLancarEscolha()">
-        <svg viewBox="0 0 24 24"><line x1="8" y1="4" x2="8" y2="17"/><polyline points="4 13 8 17 12 13"/><line x1="16" y1="20" x2="16" y2="7"/><polyline points="12 11 16 7 20 11"/></svg>
-        Lançar
-      </button>
-      <button class="menu-botao" onclick="abrirContas()">
-        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-        Contas a pagar
-      </button>
-      <!-- Ajustes não fica aqui: o círculo com as iniciais, no canto superior
-           direito, já abre essa tela. Dois caminhos pro mesmo lugar só
-           ocupavam espaço no menu. -->
-      <button class="menu-botao" onclick="abrirHistorico()">
-        <svg viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><line x1="8" y1="11" x2="16" y2="11"/><line x1="8" y1="15" x2="13" y2="15"/></svg>
-        Histórico
-      </button>
-      <button class="menu-botao" onclick="abrirCartoes()">
-        <svg viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="3"/><line x1="1" y1="10" x2="23" y2="10"/><line x1="5" y1="15" x2="9" y2="15"/></svg>
-        Cartão
-      </button>
-      <button class="menu-botao" onclick="abrirMetas()">
-        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg>
-        Metas de gastos
-      </button>
-      <!-- Meu plano saiu daqui: é assunto de conta, e agora mora em
-           Ajustes, junto com Meus dados e Segurança. O lugar dele no menu
-           ficou pros relatórios. -->
-      <button class="menu-botao" onclick="abrirRelatorios()">
-        <svg viewBox="0 0 24 24"><line x1="4" y1="20" x2="4" y2="10"/><line x1="10" y1="20" x2="10" y2="4"/><line x1="16" y1="20" x2="16" y2="13"/><line x1="22" y1="20" x2="22" y2="7"/></svg>
-        Relatórios
-      </button>
-      <!-- RESERVAS E INVESTIMENTOS ANDAM JUNTOS, e ficam lado a lado no
-           menu de propósito: são as duas metades da mesma pergunta — o
-           que está guardado pra emergência e o que está rendendo. A
-           primeira já funciona; a segunda é o botão antes da tela, porque
-           ela precisa de cotação de mercado que o app ainda não busca. -->
-      <button class="menu-botao" onclick="abrirReservas()">
-        <svg viewBox="0 0 24 24"><path d="M18.5 5.5c-.6.6-1 1.4-1.1 2.3A10.6 10.6 0 0 0 12 6.5c-4.7 0-8.5 2.9-8.5 6.5 0 1.9 1 3.6 2.7 4.8V20h3v-1.7c.4.1.9.1 1.3.1h3c.4 0 .9 0 1.3-.1V20h3v-2.2c.9-.6 1.6-1.5 2-2.4h1.2a.8.8 0 0 0 .8-.8v-2.2a.8.8 0 0 0-.8-.8h-1.3a6 6 0 0 0-1.2-1.7z"/><circle cx="8.5" cy="12" r="1"/><path d="M11.5 6.7 10.5 4"/></svg>
-        Reservas
-      </button>
-      <button class="menu-botao" onclick="abrirInvestimentos()">
-        <svg viewBox="0 0 24 24"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="15 7 21 7 21 13"/></svg>
-        Investimentos
-      </button>
-    </nav>
+    <!-- TELA INICIAL. Só aparece depois de entrar, e aqui é só a âncora:
+         quem a desenha é desenharInicio(), em js/inicio.js, porque esta
+         tela tem números — e número escrito no HTML é o número de quando
+         a página carregou, não o de agora. -->
+    <div id="menu" class="inicio" style="display:none"></div>
 
     <!-- Toda tela interna é desenhada aqui dentro. -->
     <div id="area" class="area"></div>
@@ -242,10 +175,10 @@
 
        O ?v=N no fim de cada um existe pra o celular não servir a versão
        velha do cache. Mexeu no arquivo, sobe o número. -->
-  <script defer src="js/core.js?v=52"></script>
+  <script defer src="js/core.js?v=53"></script>
   <script defer src="js/categorias.js?v=2"></script>
   <script defer src="js/auth.js?v=2"></script>
-  <script defer src="js/resumo.js?v=22"></script>
+  <script defer src="js/resumo.js?v=23"></script>
   <script defer src="js/lancamentos.js?v=14"></script>
   <script defer src="js/entradasfixas.js?v=6"></script>
   <script defer src="js/contas.js?v=15"></script>
@@ -258,6 +191,7 @@
   <script defer src="js/reservas.js?v=4"></script>
   <script defer src="js/negocio.js?v=1"></script>
   <script defer src="js/balanco.js?v=5"></script>
+  <script defer src="js/inicio.js?v=1"></script>
   <script defer src="js/embreve.js?v=8"></script>
   <script defer src="js/app.js?v=7"></script>
 </body>

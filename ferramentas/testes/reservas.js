@@ -55,12 +55,12 @@ const UMA = `
   ];
 `;
 
-module.exports = () => suite("Reservas e investimentos", async ({ p, ok, abrir, texto, valor, chamadas, falharProxima }) => {
+module.exports = () => suite("Reservas e investimentos", async ({ p, ok, abrir, texto, valor, chamadas, falharProxima, menu }) => {
 
   /* ─── OS DOIS BOTÕES NOVOS ───────────────────────────────────────── */
   await abrir(BASE + "; voltarInicio();");
-  const nomes = (await p.locator("#menu .menu-botao").allTextContents()).map(t => t.trim());
-  ok("o menu tem dez botões", nomes.length === 10);
+  const nomes = await menu();
+  ok("a tela inicial tem dez caminhos", nomes.length === 10);
   ok("um deles é 'Reservas'", nomes.includes("Reservas"));
   ok("outro é 'Investimentos'", nomes.includes("Investimentos"));
   ok("e o resto continua lá",
@@ -71,7 +71,7 @@ module.exports = () => suite("Reservas e investimentos", async ({ p, ok, abrir, 
      ela pelo menu. */
   ok("e 'Meu negócio' não está mais lá", !nomes.includes("Meu negócio"));
 
-  await p.click("#menu .menu-botao:has-text('Investimentos')");
+  await p.click("#menu .ini-btn-peq:has-text('Investimentos')");
   ok("Investimentos abre e se declara em construção",
     (await p.locator(".em-breve-selo").count()) === 1 &&
     (await texto("h2")).includes("Investimentos"));

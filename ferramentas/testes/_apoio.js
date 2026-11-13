@@ -188,6 +188,17 @@ async function suite(nome, corpo) {
     if (opcoes.grafico && TEM_CHART) await p.waitForTimeout(400);
   };
 
+  /* OS BOTÕES DA TELA INICIAL, no nome e na ordem em que aparecem.
+
+     MORA AQUI PORQUE QUATRO SUÍTES PERGUNTAM ISSO. Enquanto cada uma
+     escrevia o seletor na mão, a tela inicial virou três níveis (a ação
+     do dia, os atalhos, as pastilhas) e os quatro seletores quebraram
+     juntos — um por um, em quatro arquivos. Agora a estrutura mora num
+     lugar só e a próxima mudança é uma linha. */
+  const menu = () => p.$$eval(
+    "#menu .ini-principal, #menu .ini-btn, #menu .ini-btn-peq",
+    els => els.map(e => (e.textContent || "").replace(/\s+/g, " ").trim()));
+
   const chamadas = () => p.evaluate(() => window.CHAMADAS);
   // A próxima gravação falha com este erro. Use o code de verdade do
   // Postgres: 23505 é índice único violado.
@@ -203,7 +214,7 @@ async function suite(nome, corpo) {
 
   console.log("\n── " + nome);
   try {
-    await corpo({ p, ok, abrir, chamadas, texto, valor, falharProxima, temChart: TEM_CHART });
+    await corpo({ p, ok, abrir, chamadas, texto, valor, falharProxima, menu, temChart: TEM_CHART });
   } catch (e) {
     falhou++;
     console.log("FALHOU  a suíte quebrou: " + e.message);

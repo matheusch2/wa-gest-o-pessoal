@@ -58,8 +58,8 @@ module.exports = () => suite("Meu negócio", async ({ p, ok, abrir, texto, valor
      sobrescreve quem vier antes. Com abrirMeuNegocio() lá dentro, o
      módulo de verdade seria carregado e ignorado. */
   await abrir(BASE + UM + "; voltarInicio();");
-  ok("o menu não tem mais o botão",
-    (await p.locator("#menu .menu-botao:has-text('Meu negócio')").count()) === 0);
+  ok("a tela inicial não tem mais o botão",
+    (await p.locator("#menu button:has-text('Meu negócio')").count()) === 0);
 
   await p.evaluate(() => abrirMeuNegocio());
   ok("mas a tela abre de verdade, não a de 'em construção'",

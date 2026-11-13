@@ -38,23 +38,15 @@ function desenharResumo(filtro) {
   _filtroResumo = filtro || null;
 
   const area = document.getElementById("area");
-  const doMes = lancamentos.filter(l => mesDe(l.data) === mesAtual);
-  const entradas = doMes.filter(l => l.tipo === "entrada").reduce((s, l) => s + Number(l.valor), 0);
-  const saidas = doMes.filter(l => l.tipo === "saida").reduce((s, l) => s + Number(l.valor), 0);
-  const saldo = entradas - saidas;
+
+  /* A CONTA DO MÊS VEM DO CORE, não daqui. O painel da tela inicial
+     mostra esta mesma sobra, e enquanto as duas telas somavam cada uma
+     por conta própria era questão de tempo até divergirem. */
+  const { doMes, entradas, saidas, saldo, aSair, aReceber, previsto, sobra } = extratoDoMes(mesAtual);
 
   if (_filtroResumo) { desenharResumoFiltrado(doMes, entradas, saidas); return; }
 
-  // As duas pontas da previsão: o que ainda tem que sair e o que ainda
-  // tem que entrar. Contar só uma delas era o que deixava o mês começar
-  // no vermelho mesmo com o salário inteiro cadastrado.
-  const aSair = aindaVaiSairDoMes(mesAtual);
-  const aReceber = aReceberDoMes(mesAtual);
-  const previsto = aSair.total > 0 || aReceber.total > 0;
-  const sobra = Math.round((saldo + aReceber.total - aSair.total) * 100) / 100;
-
-  // Contas em aberto olham o mês inteiro, não só até hoje.
-  const vencidas = contas.filter(c => !c.pago && c.vencimento < _hojeLocal());
+  const vencidas = contasVencidas();
 
   /* O QUE SAIU DA CONTA, POR CATEGORIA — e repare no título: é "saiu",
      não "gastou". A rosca soma as MESMAS saídas do card acima, porque

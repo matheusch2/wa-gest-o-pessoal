@@ -9,7 +9,7 @@
 
      1. IDENTIDADE                         cores, modo escuro, reset
      2. TOPO                               cabeçalho com a logo
-     3. ESTRUTURA                          .cartao, .area, o menu
+     3. ESTRUTURA                          .cartao, .area, a tela inicial
      4. TÍTULOS E BLOCOS
      5. SALDO E CARTÕES DE NÚMERO
      6. LISTAS                             .lista e .item, de várias telas
@@ -71,9 +71,12 @@
   --marca-txt: #0f3b5c;    /* a marca quando vira TEXTO/borda, não fundo */
   --marca-cl: #e7eef5;
   --dourado: #c9992e;      /* detalhe dourado, da logo do WA Finanças */
+  --dourado-sombra: rgba(201,153,46,.35);  /* a sombra colorida do botão principal */
   --entrada: #059669;      /* verde-esmeralda = entrou (tom distinto da marca) */
   --saida: #dc2626;        /* vermelho = saiu */
   --aviso: #b45309;        /* âmbar = vencendo */
+  --aviso-cl: #fdf1dc;     /* o âmbar como FUNDO de pastilha, não como texto */
+  --saida-cl: #fde8e8;     /* idem pro vermelho */
   --fundo: #f5f5f5;
   --papel: #ffffff;
   --borda: #e8e8e8;
@@ -91,6 +94,9 @@ body.escuro {
   --marca-txt: #6fb2e3;
   --marca-cl: #16283a;
   --dourado: #e0b74f;
+  --dourado-sombra: rgba(224,183,79,.22);
+  --aviso-cl: #3a2a0d;
+  --saida-cl: #3a1717;
   --fundo: #0e0e1a;
   --papel: #191a2b;
   --borda: #2e2f45;
@@ -206,64 +212,389 @@ body {
 /* Só respira quando tem tela desenhada dentro; vazio não vira espaço morto. */
 .area:not(:empty) { padding: 20px 0 24px; }
 
-/* O menu É o card branco do WA Aqua: ele mesmo é o cartão e a grade.
-   Assim, quando o script esconde o menu, o cartão some junto — não fica
-   um retângulo branco vazio na tela. */
-.menu {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  align-items: stretch;
-  background: var(--papel);
-  width: 100%;
-  max-width: 380px;
-  margin: 30px auto;
-  padding: 20px;
-  border-radius: 14px;
-  box-shadow: 0 2px 6px rgba(33,32,32,.15);
+/* ─── A TELA INICIAL ───────────────────────────────────────────────────
+   Quem desenha é js/inicio.js, e o porquê de cada escolha está lá em
+   cima, no cabeçalho do arquivo. Aqui ficam só as consequências.
+
+   O MENU NÃO É MAIS UM CARD BRANCO com dez botões azuis dentro. Agora
+   cada bloco é o seu próprio cartão, e o espaço entre eles é o que
+   separa os três níveis: a ação do dia, os atalhos e os cadastros.
+   Por isso o container não tem fundo nem sombra — se tivesse, seria um
+   card branco com cards brancos dentro, e nenhuma borda apareceria. */
+
+.inicio { padding: 4px 0 24px; }
+
+.ini-lbl {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--fraco);
+  margin: 18px 2px 8px;
 }
 
-.menu-botao {
-  width: 100%;
-  min-height: 80px;
-  background: var(--marca);
-  border: none;
-  border-radius: 14px;
-  padding: 18px 10px;
+/* ── A AÇÃO DE TODO DIA ───────────────────────────────────────────────
+   Dourado da logo, e texto escuro em cima: dourado com letra branca não
+   se lê. É o único botão da tela com sombra colorida — é assim que ele
+   diz "comece por mim" sem precisar ser o maior. */
+.ini-principal {
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #fff;
+  gap: 12px;
+  width: 100%;
+  margin-top: 14px;
+  /* 20px, e não 18: com 18 ele ficava MAIS BAIXO que os atalhos de
+     baixo, que têm ícone de 32 e dois paddings de 13. O botão mais
+     importante da tela perdendo em altura pros secundários era o
+     defeito que esta tela existe pra consertar. */
+  padding: 20px 18px;
+  border: none;
+  border-radius: 16px;
   cursor: pointer;
-  text-align: center;
-  line-height: 1.25;
+  background: var(--dourado);
+  color: #2d2206;
+  font-family: inherit;
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -.01em;
+  box-shadow: 0 6px 18px var(--dourado-sombra);
 }
 
-.menu-botao:active { background: var(--marca-toque); }
-
-/* O botão da linha inteira. Sem uso hoje: com dez botões o grid de duas
-   colunas fecha em cinco pares e ninguém sobra. A regra fica porque é o
-   que segura o menu quando ele voltar a ter número ímpar — meio botão
-   com meio vazio do lado lê como falha de carregamento. */
-.menu-botao-largo { grid-column: 1 / -1; }
-
-/* Os botões ficam sempre do mesmo tamanho. O vago ao lado do último é
-   lugar guardado pro Cartões (faturas), que entra aqui. */
-
-.menu-botao svg {
-  width: 30px;
-  height: 30px;
-  flex-shrink: 0;
+.ini-principal svg {
+  width: 24px;
+  height: 24px;
+  stroke: #2d2206;
   fill: none;
-  stroke: #fff;
-  stroke-width: 1.8;
+  stroke-width: 2.2;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
+
+/* ── ATALHOS: as quatro telas de consulta ─────────────────────────── */
+
+.ini-grade { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.ini-btn {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  background: var(--papel);
+  border: 1px solid var(--borda);
+  border-radius: 14px;
+  /* 11px de folga lateral e 13px de letra, não 12 e 13.5: "Resumo do mês"
+     é o nome mais comprido da grade e com os valores folgados ele caía
+     pra duas linhas, esticando o cartão do lado junto. */
+  padding: 13px 10px;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--texto);
+  box-shadow: 0 2px 7px rgba(15,59,92,.10);
+}
+
+/* O nome pode ser comprido ("Contas a pagar") e a coluna tem metade da
+   tela: sem isto o flex não deixa o texto quebrar e o cartão estoura. */
+.ini-btn > span { min-width: 0; }
+
+.ini-ico {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ini-ico svg {
+  width: 18px;
+  height: 18px;
+  stroke: #fff;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ── GERENCIAR: cadastro e leitura, não rotina ────────────────────────
+   Pastilha CLARA, não cheia. Dá vida sem competir com os atalhos de
+   cima, que são os de uso frequente — a hierarquia continua de pé. */
+
+.ini-mais { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+.ini-btn-peq {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  background: transparent;
+  border: 1px solid var(--borda);
+  border-radius: 12px;
+  padding: 10px 11px;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--fraco);
+  box-shadow: 0 2px 7px rgba(15,59,92,.07);
+}
+
+.ini-btn-peq > span { min-width: 0; }
+
+/* São cinco pastilhas numa grade de duas colunas, e a quinta fica
+   sozinha. Meia pastilha com meio vazio do lado lê como falha de
+   carregamento; a linha inteira lê como fim da lista. */
+.ini-largo { grid-column: 1 / -1; }
+
+.ini-ico-peq {
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ini-ico-peq svg {
+  width: 15px;
+  height: 15px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2.1;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ── O AVISO DE CONTA VENCIDA ─────────────────────────────────────────
+   Cartão igual aos outros — branco, mesma borda, mesmo raio, mesma
+   sombra — e a cor fica só na pastilha do ícone e numa faixa fina à
+   esquerda. Continua gritando o suficiente pra ser visto, sem dominar a
+   tela inteira como um bloco vermelho de ponta a ponta dominaria. */
+
+.ini-boletos {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  margin: 14px 0 0;
+  background: var(--papel);
+  border: 1px solid var(--borda);
+  border-left: 4px solid var(--aviso);
+  border-radius: 14px;
+  padding: 11px 12px;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  box-shadow: 0 2px 7px rgba(15,59,92,.10);
+}
+
+.ini-boletos-vencido { border-left-color: var(--saida); }
+
+.ini-boletos-ico {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  background: var(--aviso-cl);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ini-boletos-ico svg {
+  width: 17px;
+  height: 17px;
+  stroke: var(--aviso);
+  fill: none;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.ini-boletos-vencido .ini-boletos-ico { background: var(--saida-cl); }
+.ini-boletos-vencido .ini-boletos-ico svg { stroke: var(--saida); }
+
+.ini-boletos-txt { display: flex; flex-direction: column; min-width: 0; }
+
+.ini-boletos-txt strong {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--texto);
+  line-height: 1.25;
+}
+
+.ini-boletos-txt > span {
+  font-size: 12px;
+  color: var(--fraco);
+  line-height: 1.35;
+  margin-top: 1px;
+}
+
+.ini-boletos-vencido .ini-boletos-txt strong { color: var(--saida); }
+
+.ini-boletos-seta { margin-left: auto; color: var(--fraco); font-size: 20px; flex-shrink: 0; }
+
+/* ── O PAINEL DO MÊS ──────────────────────────────────────────────────
+   UM NÚMERO MANDA E TRÊS ACOMPANHAM. Quatro do mesmo tamanho disputavam
+   entre si e nenhum ganhava o olho.
+
+   Escuro porque é o único bloco da tela que não é botão: o contraste
+   diz isso sem precisar de texto explicando. */
+
+.ini-painel {
+  margin-top: 18px;
+  border-radius: 16px;
+  padding: 15px 16px 14px;
+  color: #fff;
+  background: linear-gradient(150deg, var(--marca) 0%, var(--marca-esc) 100%);
+}
+
+.ini-painel-topo {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 13px;
+}
+
+.ini-painel-titulo {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: #8fc6ec;
+}
+
+.ini-painel-data { font-size: 11px; color: rgba(255,255,255,.45); }
+
+/* Os dois números grandes: quanto você TEM e quanto SOBRA. São as duas
+   perguntas que fazem alguém abrir um app de dinheiro. */
+.ini-herois { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: start; }
+
+.ini-heroi small {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: rgba(199,222,242,.62);
+  margin-bottom: 2px;
+}
+
+/* clamp, e não um tamanho fixo: "R$ 1.234,56" e "R$ 128.900,00" têm de
+   caber na mesma meia-tela. Fixo em 26px, o segundo vazava do painel. */
+.ini-heroi b {
+  display: block;
+  font-size: clamp(19px, 6.1vw, 26px);
+  font-weight: 800;
+  letter-spacing: -.03em;
+  line-height: 1.08;
+}
+
+/* O VERDE E O VERMELHO SÓ NO VEREDITO. "Você tem na conta" fica branco
+   porque é um fato, não uma notícia boa nem ruim; a sobra é a notícia. */
+.ini-heroi-bom b { color: #34d399; }
+.ini-heroi-ruim b { color: #fca5a5; }
+
+/* O TRACINHO DE "NÃO SEI" não pode ter o peso de um valor. Sem saldo
+   informado o app não sabe quanto a pessoa tem, e dizer isso apagado é
+   diferente de dizer zero. */
+.ini-heroi-vazio b { color: rgba(255,255,255,.32); }
+
+.ini-risco { height: 1px; background: rgba(255,255,255,.12); margin: 13px 0 12px; }
+
+.ini-nums { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+
+.ini-num small {
+  display: block;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: rgba(199,222,242,.62);
+  margin-bottom: 3px;
+}
+
+.ini-num b {
+  display: block;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: -.02em;
+  line-height: 1.15;
+}
+
+/* A mesma língua do resto do app: verde entrou, vermelho saiu. Aqui nos
+   tons claros, porque o fundo é escuro. */
+.ini-num-entrada b { color: #34d399; }
+.ini-num-saida b { color: #fca5a5; }
+
+/* UMA LINHA, e só quando tem o que dizer. Ela é botão porque sempre
+   leva a algum lugar — avisar sem dar o caminho obriga a pessoa a
+   procurar. */
+.ini-painel-linha {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 13px;
+  padding: 12px 0 0;
+  background: transparent;
+  border: none;
+  border-top: 1px solid rgba(255,255,255,.10);
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #ffd98a;
+}
+
+.ini-painel-linha svg {
+  width: 15px;
+  height: 15px;
+  stroke: #ffd98a;
+  fill: none;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+}
+
+/* ── MOVIMENTO ────────────────────────────────────────────────────────
+   O toque afunda e volta. Saber que o toque pegou vale mais que enfeite
+   — e num app de dinheiro vale ainda mais, porque quem não vê resposta
+   toca de novo. */
+
+.ini-principal, .ini-btn, .ini-btn-peq, .ini-boletos {
+  transition: transform .12s ease, box-shadow .12s ease, background-color .12s ease;
+}
+
+.ini-btn:active, .ini-btn-peq:active { transform: scale(.965); background: var(--marca-cl); }
+.ini-boletos:active { transform: scale(.975); }
+.ini-principal:active { transform: scale(.975); box-shadow: 0 2px 8px var(--dourado-sombra); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .ini-principal, .ini-btn, .ini-btn-peq {
+    animation: ini-sobe .34s cubic-bezier(.2,.7,.3,1) backwards;
+  }
+  .ini-grade .ini-btn:nth-child(1) { animation-delay: .04s; }
+  .ini-grade .ini-btn:nth-child(2) { animation-delay: .08s; }
+  .ini-grade .ini-btn:nth-child(3) { animation-delay: .12s; }
+  .ini-grade .ini-btn:nth-child(4) { animation-delay: .16s; }
+  .ini-mais .ini-btn-peq:nth-child(1) { animation-delay: .20s; }
+  .ini-mais .ini-btn-peq:nth-child(2) { animation-delay: .24s; }
+  .ini-mais .ini-btn-peq:nth-child(3) { animation-delay: .28s; }
+  .ini-mais .ini-btn-peq:nth-child(4) { animation-delay: .32s; }
+  .ini-mais .ini-btn-peq:nth-child(5) { animation-delay: .36s; }
+}
+
+@keyframes ini-sobe { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 
 /* ─── 4. TÍTULOS E BLOCOS ──────────────────────────────────────────────── */
 

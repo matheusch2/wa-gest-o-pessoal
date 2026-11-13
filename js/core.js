@@ -9,7 +9,7 @@
    index.html. Serve pra uma pergunta que já custou tempo: "o defeito que
    você está vendo é do código de agora, ou o celular ainda está com o
    app velho em cache?" — sem isso, a resposta é chute. */
-const VERSAO_APP = "2026-11-10 · 69";
+const VERSAO_APP = "2026-11-13 · 70";
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -604,6 +604,50 @@ function contaParcial(c) {
   return !c.pago && Number(c.valor_pago || 0) >= 0.005;
 }
 
+/* ═══ O MÊS EM NÚMEROS, DO JEITO DO EXTRATO ═══════════════════════════
+   O que entrou e o que saiu da conta no mês, mais as duas pontas do que
+   ainda falta: o que tem que pagar e o que tem que receber. A sobra é a
+   conta dessas quatro.
+
+   MORA AQUI PORQUE DUAS TELAS MOSTRAM A MESMA SOBRA: o card do Resumo e
+   o painel da tela inicial. Enquanto cada uma somava por conta própria,
+   bastava uma ganhar um ajuste pra o app dizer dois números diferentes
+   na mesma viagem de dedo — e dois números que não fecham é o pior
+   defeito de um app de dinheiro. Neste app esse defeito já apareceu
+   quatro vezes, sempre do mesmo jeito: a mesma pergunta somada em dois
+   lugares.
+
+   NÃO CONFUNDIR com _retratoDoMes, dos Relatórios. Aquele é por
+   competência: o que o mês GEROU, pago ou não. Este é o extrato: o que
+   passou pela conta. Os dois estão certos e dão números diferentes de
+   propósito. */
+function extratoDoMes(mesRef) {
+  const doMes = lancamentos.filter(l => mesDe(l.data) === mesRef);
+  const entradas = doMes.filter(l => l.tipo === "entrada").reduce((s, l) => s + Number(l.valor), 0);
+  const saidas = doMes.filter(l => l.tipo === "saida").reduce((s, l) => s + Number(l.valor), 0);
+  const saldo = Math.round((entradas - saidas) * 100) / 100;
+
+  // Contar só uma das pontas era o que deixava o mês começar no vermelho
+  // mesmo com o salário inteiro cadastrado.
+  const aSair = aindaVaiSairDoMes(mesRef);
+  const aReceber = aReceberDoMes(mesRef);
+
+  return {
+    doMes, entradas, saidas, saldo, aSair, aReceber,
+    previsto: aSair.total > 0 || aReceber.total > 0,
+    sobra: Math.round((saldo + aReceber.total - aSair.total) * 100) / 100,
+  };
+}
+
+/* AS CONTAS QUE JÁ PASSARAM DA DATA. Olham o calendário inteiro, não só
+   o mês aberto na tela: boleto de outubro esquecido continua vencido em
+   novembro, e esconder isso porque mudou o mês seria mentir. */
+function contasVencidas() {
+  return contas
+    .filter(c => !c.pago && c.vencimento < _hojeLocal())
+    .sort((a, b) => String(a.vencimento).localeCompare(String(b.vencimento)));
+}
+
 /* ═══ DINHEIRO QUE MUDA DE LUGAR NÃO É GASTO ══════════════════════════
    Três coisas saem da conta sem ser despesa, e as três são a mesma ideia:
    o dinheiro continua sendo seu, só mudou de bolso.
@@ -683,7 +727,10 @@ function voltarInicio() {
   pilha = [];
   destruirGrafico();
   document.getElementById("area").innerHTML = "";
-  document.getElementById("menu").style.display = "grid";
+  // A tela inicial não é mais um bloco de botões parado no HTML: ela tem
+  // números, e número guardado no HTML envelhece. Quem a desenha é
+  // desenharInicio(), em js/inicio.js, e é ela que decide o display.
+  desenharInicio();
   document.getElementById("btn-voltar").style.display = "none";
   window.scrollTo(0, 0);
 }

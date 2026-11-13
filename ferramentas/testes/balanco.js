@@ -71,24 +71,15 @@ const COM_SALDO = `
   conferencias = [{ id:"cfa", data:"${D(-30)}", saldo_informado:2000 }];
 `;
 
-module.exports = () => suite("Balanço: quanto você tem", async ({ p, ok, abrir, texto, valor, chamadas, falharProxima }) => {
+module.exports = () => suite("Balanço: quanto você tem", async ({ p, ok, abrir, texto, valor, chamadas, falharProxima, menu }) => {
 
-  /* ─── O BOTÃO NO MENU ────────────────────────────────────────────── */
+  /* ─── O BOTÃO NA TELA INICIAL ────────────────────────────────────── */
   await abrir(BASE + "; voltarInicio();");
-  const nomes = (await p.locator("#menu .menu-botao").allTextContents()).map(t => t.trim());
-  ok("há um 'Balanço' no menu", nomes.includes("Balanço"));
+  const nomes = await menu();
+  ok("há um 'Balanço' na tela inicial", nomes.includes("Balanço"));
   ok("e ele fica ao lado do Resumo, que é a outra metade da pergunta",
     nomes.indexOf("Balanço") === nomes.indexOf("Resumo do mês") + 1);
-
-  /* O MENU FECHA EM PARES. São dez botões num grid de duas colunas: cinco
-     linhas cheias, sem nenhum meio botão com meio vazio do lado, que lê
-     como falha de carregamento. Era isso que o "Meu negócio" resolvia
-     ocupando a linha inteira quando eram onze; saindo ele, a conta volta
-     a fechar sozinha. */
-  ok("o menu tem dez botões", nomes.length === 10);
-  ok("nenhum precisa ocupar a linha inteira",
-    (await p.locator("#menu .menu-botao-largo").count()) === 0);
-  ok("o Resumo é o primeiro", nomes[0] === "Resumo do mês");
+  ok("os dez caminhos continuam todos lá", nomes.length === 10);
 
 
   /* ─── A TELA É CURTA, E ISSO É O RECURSO ─────────────────────────────
